@@ -1,3 +1,96 @@
 .page-container {
-    background-color: aqua;
+    display: flex;
+    flex-direction: column;
+    background-color: #2D3429;
+}
+
+.page-container div {
+    display: flex;
+}
+
+.logo-header-container, .text-slogan {
+    justify-content: center;
+}
+
+.logo-header-container img {
+    height: 7rem;
+}
+
+.section1 {
+    display: flex;
+    flex-direction: column;
+    padding: 0 20vw;
+    background-color: #2D3429;
+}
+
+.text-slogan p {
+    color: #fff;
+    font-size: 20px;
+}
+
+.buttons-ice { 
+    justify-content: space-evenly;
+    margin: 0 30vh;
+}
+
+.buttons-ice div{
+    padding: 0.8rem 1.2rem;
+    border-radius: 100px;
+    margin: 10px;
+}
+
+.b1 {
+    background-color: #9ED1C4;
+}
+
+.b2{
+    background-color: #CF4E2B;
+}
+
+.vr-experience-vector {
+    color: #9ED1C4;
+    font-size: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.inside-box {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: #E6A318;
+}
+
+.list-box {
+    list-style-type: none; /* Quita los puntos predeterminados de la lista */
+    padding-left: 0; /* Elimina el padding predeterminado de la lista */
+  
+    /* Agrega guiones a los elementos de la lista */
+    li::before {
+      content: '- '; /* Agrega guiones antes de cada elemento */
+    }
+  }
+
+
+
+
+.video-section {
+    height: 100vh;
+    margin: 10vh 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.video {
+    width: 1080px;
+    height: 720px;
+    background-color: #000;
+}
+
+.section2 {
+    min-height: 100vh;
+    background-color: #9ED1C4;
 }
