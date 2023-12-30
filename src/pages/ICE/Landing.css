@@ -1,19 +1,31 @@
+@font-face {
+  font-family: 'KingThings';
+  src: url('../../assets/Fonts/kingthings_organica/Kingthings\ Organica.ttf') format('truetype');
+}
+
+
+
 .page-container {
     display: flex;
     flex-direction: column;
     background-color: #2D3429;
 }
 
-.page-container div {
-    display: flex;
+.logo-header-container{
+  position: fixed;
+  left: 0;
+  right: 0;
 }
 
 .logo-header-container, .text-slogan {
+    
+    display: flex;
     justify-content: center;
+    
 }
 
 .logo-header-container img {
-    height: 7rem;
+    height: 100px;
 }
 
 .section1 {
@@ -21,16 +33,62 @@
     flex-direction: column;
     padding: 0 20vw;
     background-color: #2D3429;
+    /* margin-top: 7rem; */
 }
+
+.vectorial-art-1 {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100vh;
+}
+
+.logo-margin {
+  height: 100px;
+}
+
 
 .text-slogan p {
     color: #fff;
     font-size: 20px;
+    margin:0;
+    margin-bottom: 20px;
+}
+
+.landing-mid-container{
+  display: flex;
+  justify-content: space-between;
+}
+
+.vector-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.vector-image{
+  display: flex;
+  flex: 1;
+  justify-content: space-around;
+}
+
+.vector-image img{
+  width: 35%;
+  object-fit: cover;
+}
+
+.vector-image-i1{
+  object-position: left;
+}
+
+.vector-image-i2{
+  object-position: right;
 }
 
 .buttons-ice { 
+    display: flex;
     justify-content: space-evenly;
-    margin: 0 30vh;
+    margin-top: 30px;
 }
 
 .buttons-ice div{
@@ -47,12 +105,78 @@
     background-color: #CF4E2B;
 }
 
+.landing-lower-container{
+  display: flex;
+  justify-content: space-between;
+}
+
+
+
+.grid-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+}
+
+.vertical-text {
+  writing-mode: vertical-rl; /* Esta línea rota el texto verticalmente */
+  text-orientation: upright; 
+  font-size: 7rem;
+  font-family:'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+  color: #9ED1C4;
+}
+
+.vertical-text p {
+  margin: 0;
+}
+
+.vertical-vector img {
+  width: 150px;
+}
+
+.hor-text{
+  font-size: 7rem;
+  text-align: end;
+  font-family:'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+  margin-right: 100px;
+}
+
+.hor-text p {
+  margin: 0;
+  color: #9ED1C4;
+}
+
+.cross-text{
+  width: 300px;
+}
+
+.cross-text p {
+  font-family:'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+  font-size: 1.5rem;
+  color: #9ED1C4;
+  margin: 5px 0;
+}
+
+.cross-p2 {
+  text-align: center;
+}
+
+.cross-p3 {
+  text-align: end;
+}
+
+/* ------------------------------------------------------------------ */
+
 .vr-experience-vector {
     color: #9ED1C4;
     font-size: 20px;
     display: flex;
     flex-direction: column;
     align-items: center;
+    margin-top: 150px;
+    font-family:'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
 }
 
 .inside-box {
@@ -61,19 +185,27 @@
     justify-content: center;
     align-items: center;
     color: #E6A318;
+    font-family: 'KingThings', sans-serif;
+}
+
+.inside-box h3{
+    margin: 150px 0 30px 0;
+    font-size: 3rem;
 }
 
 .list-box {
     list-style-type: none; /* Quita los puntos predeterminados de la lista */
     padding-left: 0; /* Elimina el padding predeterminado de la lista */
   
-    /* Agrega guiones a los elementos de la lista */
     li::before {
       content: '- '; /* Agrega guiones antes de cada elemento */
     }
   }
 
-
+.list-box li {
+    margin-bottom: 10px;
+    font-size: 1.2rem;
+}
 
 
 .video-section {
@@ -93,4 +225,14 @@
 .section2 {
     min-height: 100vh;
     background-color: #9ED1C4;
+}
+  
+.section2{
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+}
+
+.ice-box-image {
+  width: 25vw; 
 }

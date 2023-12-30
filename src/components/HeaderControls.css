@@ -1,0 +1,42 @@
+.header-container{
+    display: flex;
+    justify-content: space-between;
+}
+
+.header-container img {
+    height: 5rem;
+}
+
+.header-container .hc-section1,
+.header-container .hc-section3 {
+  width: 30VW;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /* Otros estilos */
+}
+
+.nav-list {
+    list-style: none;
+    display: flex;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .nav-list li {
+    margin-right: 20px;
+  }
+  
+  .nav-list li:last-child {
+    margin-right: 0;
+  }
+  
+  .nav-list li a {
+    text-decoration: none;
+    color: #333;
+  }
+  
+  .nav-list li a:hover {
+    color: #ff0000;
+    /* Estilos adicionales al pasar el mouse */
+  }

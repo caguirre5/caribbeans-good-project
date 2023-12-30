@@ -1,0 +1,15 @@
+.vr-page-container{
+    background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvdjk5Ni0wMDlfMS1rcm9pcjRkay5qcGc.jpg');
+}
+
+.main{
+    display: flex;
+    justify-content: center;
+    height: 100vh;
+}
+
+.main h1{
+    color: #fff;
+    margin: 0;
+    font-size: 7rem;
+}

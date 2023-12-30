@@ -1,0 +1,22 @@
+.page-container-cp{
+    min-height: 100vh;
+    background-color: #9ED1C4;
+}
+
+.title-container{
+    background-color: #9ED1C4;
+    text-transform: uppercase;
+    display: flex;
+    justify-content: center;
+}
+
+.title-container p{
+    color: #404E32;
+    display: inline-block;
+    opacity: 0.8;
+    background-image:  linear-gradient(#E1A238 1px, transparent 1px), linear-gradient(to right, #E1A238 1px, #9ED1C4 1px);
+    background-size: 20px 20px;
+    font-size: 7rem;
+    margin: 50px;
+    padding: 60px 30px;
+}

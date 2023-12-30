@@ -1,0 +1,35 @@
+.footer-container {
+    display: flex;
+    justify-content: center;
+    background-color: #044421;
+}
+
+.info-container {
+    color: #fff;
+    width: 50vw;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* Tres columnas en la primera fila */
+    gap: 10px; /* Espacio entre los divs */
+}
+
+.info-container > div {
+    padding: 20px;
+    text-align: center;
+}
+
+.text-container{
+    display: flex;
+    justify-content: space-around;
+}
+
+.icon-container {
+    display: flex;
+    justify-content: space-between;
+}
+
+.icon-container > div {
+    width: 50px;
+    height: 50px;
+    margin: 2px;
+    background-color: #444;
+}

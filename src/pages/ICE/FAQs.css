@@ -1,0 +1,15 @@
+.FAQ-page-container {
+    display: flex;
+    flex-direction: column;
+    min-height : 100vh;
+}
+
+.header-section{
+    background-color: #9ED1C4;
+    height: 30vh;
+}
+
+.questions-section {
+    flex: 1;
+    background-color: #2D3429;
+}
