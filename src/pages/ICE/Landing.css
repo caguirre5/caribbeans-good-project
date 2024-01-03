@@ -1,8 +1,12 @@
 @font-face {
-  font-family: 'KingThings';
-  src: url('../../assets/Fonts/kingthings_organica/Kingthings\ Organica.ttf') format('truetype');
+  font-family: 'PoppinsReg';
+  src: url('../../assets/Fonts/Poppins/Poppins-Regular.ttf') format('truetype');
 }
 
+@font-face {
+  font-family: 'KingsThing';
+  src: url('../../assets/Fonts/kingthings_organica/KingthingsOrganica.ttf') format('truetype');
+}
 
 
 .page-container {
@@ -176,7 +180,7 @@
     flex-direction: column;
     align-items: center;
     margin-top: 150px;
-    font-family:'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+    
 }
 
 .inside-box {
@@ -185,7 +189,7 @@
     justify-content: center;
     align-items: center;
     color: #E6A318;
-    font-family: 'KingThings', sans-serif;
+    font-family: 'KingsThing', sans-serif;
 }
 
 .inside-box h3{

@@ -1,5 +1,14 @@
+@font-face {
+  font-family: 'PoppinsReg';
+  src: url('./assets/Fonts/Poppins/Poppins-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'KingsThing';
+  src: url('../../assets/Fonts/kingthings_organica/KingthingsOrganica.ttf') format('truetype');
+}
 
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
+  font-family: 'PoppinsReg', 'Arial';
 }

@@ -3,7 +3,7 @@ import './Landing.css'
 import logo from '../../assets/white_logo.png'
 import VRVector from '../../assets/Illos23/VR-3D-vector.png'
 import bottomVector from '../../assets/Illos23/bottom-vector.png'
-import iceBox from '../../assets/ICE/Vr box mock (1).jpg'
+import iceBox from '../../assets/ICE/Vrboxmock.jpg'
 import vector1 from '../../assets/Illos23/vector_play.png'
 import leftVector from '../../assets/Illos23/left-vector.png'
 import rightVector from '../../assets/Illos23/right-vector.png'
@@ -37,7 +37,7 @@ function Landing() {
                                 <img className='vector-image-i2' src={rightVector} alt="" />
                             </div>
                             <div className='buttons-ice'>
-                                <div className='b1' onClick={() => {console.log('VR Experience')}}>VR Experience</div>
+                                <div className='b1' onClick={() => redirectTo('/VRExperience')}>VR Experience</div>
                                 <div className='b2' onClick={() => redirectTo('/CoffeeProcess')}>The Coffee Process</div>
                             </div>
                         </div>
@@ -78,7 +78,7 @@ function Landing() {
             </div>
             <img src={bottomVector}/>
             <div className='section2'>
-                {/* <img className='ice-box-image' src={iceBox}/> */}
+                <img className='ice-box-image' src={iceBox}/>
                 <div className='QAsContainer'>
                     <h3>Got a Question?</h3>
                     <p onClick={() => redirectTo('/FAQs')}>Check out our FAQ's</p>

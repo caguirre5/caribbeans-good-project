@@ -12,8 +12,10 @@ function TAQs() {
     return (
         <div className='FAQ-page-container'>
             <div className='header-section'>
-                <h3>FAQs</h3>
-                <p>We want to make sure your experience with your VR headset is a smooth ride, in case you have any issues check out these FAQs to see if we have your question covered! if not send us a message on our chat and we will get back to you.</p>
+                <div>
+                    <h3>FAQs</h3>
+                    <p>We want to make sure your experience with your VR headset is a smooth ride, in case you have any issues check out these FAQs to see if we have your question covered! if not send us a message on our chat and we will get back to you.</p>
+                </div>
             </div>
             <div className='questions-section'></div>
         </div>
