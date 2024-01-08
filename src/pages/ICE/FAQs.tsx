@@ -1,12 +1,21 @@
 import './FAQs.css'
-import { useNavigate } from 'react-router-dom';
+import React from 'react'
+
+interface FAQUnitProps {
+    title: string;
+    text: string;
+  }
+  
+  const FAQUnit: React.FC<FAQUnitProps> = ({ title, text }) => {
+    return (
+      <div className='FAQItem'>
+        <h3>{title}</h3>
+        <p>{text}</p>
+      </div>
+    );
+  };
 
 function TAQs() {
-    const navigate = useNavigate();
-
-    const redirectToCoffeeProcess = (route : string) => {
-        navigate(route); 
-    };
 
 
     return (
@@ -17,7 +26,11 @@ function TAQs() {
                     <p>We want to make sure your experience with your VR headset is a smooth ride, in case you have any issues check out these FAQs to see if we have your question covered! if not send us a message on our chat and we will get back to you.</p>
                 </div>
             </div>
-            <div className='questions-section'></div>
+            <div className='questions-section'>
+                <FAQUnit title={'Title'} text = {'This is a Paragraph. Click on "Edit Text" or double click on the text box to start editing the content and make sure to add any relevant details or information that you want to share with your visitors.'}/>
+                <FAQUnit title={'Title'} text = {'This is a Paragraph. Click on "Edit Text" or double click on the text box to start editing the content and make sure to add any relevant details or information that you want to share with your visitors.'}/>
+                <FAQUnit title={'Title'} text = {'This is a Paragraph. Click on "Edit Text" or double click on the text box to start editing the content and make sure to add any relevant details or information that you want to share with your visitors.'}/>
+            </div>
         </div>
     )
 }
