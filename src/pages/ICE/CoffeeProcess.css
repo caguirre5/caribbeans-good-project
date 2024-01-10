@@ -1,9 +1,15 @@
+@font-face {
+    font-family: 'KingsThing';
+    src: url('../../assets/Fonts/kingthings_organica/KingthingsOrganica.ttf') format('truetype');
+  }
+  
+
 .page-container-cp{
     min-height: 100vh;
     background-color: #9ED1C4;
 }
 
-.title-container{
+.title-container, .grid-layout-container{
     background-color: #9ED1C4;
     text-transform: uppercase;
     display: flex;
@@ -19,4 +25,26 @@
     font-size: 7rem;
     margin: 50px;
     padding: 60px 30px;
+}
+
+.grid-layout-container {
+    height: 300px;
+    display: flex;
+    justify-content: end;
+}
+
+.grid-layout-container p{
+    width: 400px;
+    height: 180px;
+    color: #404E32;
+    display: flex;
+    align-items: center;
+    opacity: 0.8;
+    background-image:  linear-gradient(#E1A238 1px, transparent 1px), linear-gradient(to right, #E1A238 1px, #9ED1C4 1px);
+    background-size: 20px 20px;
+    font-size: 1rem;
+    font-family: 'KingsThing';
+    padding: 30px;
+    text-align: start;
+    margin-right: 100px;
 }
