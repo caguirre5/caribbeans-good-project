@@ -7,6 +7,7 @@ import { faPlus, faMinus, faLongArrowRight } from '@fortawesome/free-solid-svg-i
 import imageBoxLett from '../../assets/ICE/ICEBox-02c.jpg'
 import imgbox_2 from '../../assets/ICE/Vrboxmock.jpg'
 import gif1 from '../../assets/GIFS/GIF_2702.gif'
+import { motion } from 'framer-motion';
 
 
 // Vectorial art
@@ -23,13 +24,37 @@ function ICE() {
             <div className='vectorial-art-2'>
                     <div className='logo-margin'></div>
                     <div className='landing-mid-container'>
-                        <div className="vertical-text">
+                        <motion.div className="vertical-text"
+                            initial={{
+                                opacity:0, 
+                                y:-25
+                            }}
+                            whileInView={{
+                                opacity:1,
+                                y:0
+                            }}
+                            transition={{
+                                duration: 1,
+                                delay: 0.8
+                            }}
+                        >
                             <p>ICE</p>
-                        </div>
+                        </motion.div>
                         <div className=''>
-                            <div className=''>
+                            <motion.div className=''
+                                initial={{
+                                    opacity:0, 
+                                }}
+                                whileInView={{
+                                    opacity:1,
+                                }}
+                                transition={{
+                                    duration: 1,
+                                    delay: 0.3
+                                }}
+                            >
                                 <img className='box-image' src={imageBox} alt="" />
-                            </div>
+                            </motion.div>
                         </div>
                         
                         <div className='cross-text'>
@@ -43,9 +68,22 @@ function ICE() {
                     <div className='vertical-vector'>
                             <img src={vector1} alt="" />
                         </div>
-                        <div className="hor-text">
+                        <motion.div className="hor-text"
+                            initial={{
+                                opacity:0, 
+                                x:-25
+                            }}
+                            whileInView={{
+                                opacity:1,
+                                x:0
+                            }}
+                            transition={{
+                                duration: 1,
+                                delay: 0.8
+                            }}
+                        >
                             <p>BOX</p>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
-                        </div>
+                        </motion.div>
                     </div>
                     <div className='text-slogan2'>
                         <p>This is the ultimate coffee-tasting experience, are you ready?</p>
