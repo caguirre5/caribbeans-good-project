@@ -21,6 +21,7 @@
 
 .page-container-ice{
     background-color: #2D3429;
+    overflow-y: hidden;
     min-height: 100vh;
 }
 
