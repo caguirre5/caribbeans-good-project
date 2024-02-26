@@ -10,7 +10,7 @@ import gif1 from '../../assets/GIFS/GIF_2702.gif'
 import { motion, useViewportScroll, useTransform } from 'framer-motion';
 
 //Animations
-import { PushDiv, BouncingDiv, RotatorDiv } from '../../components/Animations'
+import { PushDiv, BouncingDiv, RotatorDiv, ZoomedButton } from '../../components/Animations'
 
 
 // Vectorial art
@@ -155,10 +155,10 @@ function ICE() {
                     <div>
                         <h2>Pre-Order your box now and save £70!</h2>
                         <p>We have a limited offer for this one off experience box. Order your box now and we will ship them out to you as soon as we officially launch!</p>
-                        <motion.div className='order-button' whileHover={{ scale: 1.2 }}>
+                        <ZoomedButton className='order-button' >
                             <p>let's do it</p>
                             <FontAwesomeIcon className='arrow-icon' icon={faLongArrowRight} />
-                        </motion.div>
+                        </ZoomedButton>
                     </div>
                 </div>
                 <div className='order-img-section'>
@@ -169,10 +169,10 @@ function ICE() {
                     <div className='information-text'>
                         <h3>VR Coffee Tasting Experience</h3>
                         <p>£160.00 £90.00</p>
-                        <motion.div className='order-button' whileHover={{ scale: 1.2 }}>
+                        <ZoomedButton className='order-button' >
                             <p>Pre-order yours</p>
                             <FontAwesomeIcon className='arrow-icon' icon={faLongArrowRight} />
-                        </motion.div>
+                        </ZoomedButton>
                     </div>
                 </div>
             </div>

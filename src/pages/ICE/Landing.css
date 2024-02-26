@@ -179,8 +179,12 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     margin-top: 150px;
-    
+}
+
+.vr-experience-vector img {
+  width: 520px;
 }
 
 .inside-box {

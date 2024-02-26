@@ -9,6 +9,9 @@ import leftVector from '../../assets/Illos23/left-vector.png'
 import rightVector from '../../assets/Illos23/right-vector.png'
 import { useNavigate } from 'react-router-dom';
 
+
+import { BouncingDiv, ZoomedButton, EndingZoomScroll, PushDiv } from '../../components/Animations'
+
 function Landing() {
     const navigate = useNavigate();
 
@@ -28,17 +31,17 @@ function Landing() {
                         <p>This is the ultimate coffee-tasting experience, are you ready?</p>
                     </div>
                     <div className='landing-mid-container'>
-                        <div className="vertical-text">
+                        <BouncingDiv className="vertical-text">
                             <p>ICE</p>
-                        </div>
+                        </BouncingDiv>
                         <div className='vector-container'>
                             <div className='vector-image'>
                                 <img className='vector-image-i1' src={leftVector} alt="" />
                                 <img className='vector-image-i2' src={rightVector} alt="" />
                             </div>
                             <div className='buttons-ice'>
-                                <div className='b1' onClick={() => redirectTo('/VRExperience')}>VR Experience</div>
-                                <div className='b2' onClick={() => redirectTo('/CoffeeProcess')}>The Coffee Process</div>
+                                <ZoomedButton className='b1' onClick={() => redirectTo('/VRExperience')}>VR Experience</ZoomedButton>
+                                <ZoomedButton className='b2' onClick={() => redirectTo('/CoffeeProcess')}>The Coffee Process</ZoomedButton>
                             </div>
                         </div>
                         <div className='vertical-vector'>
@@ -51,14 +54,17 @@ function Landing() {
                             <p className='cross-p2'>Coffee</p>
                             <p className='cross-p3'>Experience</p>
                         </div>
-                        <div className="hor-text">
+                        <BouncingDiv className="hor-text">
                             <p>BOX</p>
-                        </div>
+                        </BouncingDiv>
                     </div>
                 </div>
                 <div className='vr-experience-vector'>
                     <p>You've never had one like this before</p>
-                    <img src={VRVector}/>
+                    <BouncingDiv className=''>
+
+                        <img src={VRVector}/>
+                    </BouncingDiv>
                 </div>
                 <div className='inside-box'>
                     <h3>Inside your box</h3>
@@ -71,19 +77,19 @@ function Landing() {
                         <li>Professional coffee tasting spoon</li>
                     </ul>
                 </div>
-                <div className='video-section'>
+                <PushDiv className='video-section'>
                     <div className='video'></div>
 
-                </div>
+                </PushDiv>
             </div>
             <img src={bottomVector}/>
             <div className='section2'>
                 <img className='ice-box-image' src={iceBox}/>
-                <div className='QAsContainer'>
+                <EndingZoomScroll className='QAsContainer'>
                     <h3>Got a Question?</h3>
                     <p onClick={() => redirectTo('/FAQs')}>Check out our FAQ's</p>
                     <p>Send us a message</p>
-                </div>
+                </EndingZoomScroll>
             </div>
         </div>
     )
