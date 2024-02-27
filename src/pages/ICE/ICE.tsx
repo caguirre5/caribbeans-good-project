@@ -7,7 +7,7 @@ import { faPlus, faMinus, faLongArrowRight } from '@fortawesome/free-solid-svg-i
 import imageBoxLett from '../../assets/ICE/ICEBox-02c.jpg'
 import imgbox_2 from '../../assets/ICE/Vrboxmock.jpg'
 import gif1 from '../../assets/GIFS/GIF_2702.gif'
-import { motion, useViewportScroll, useTransform } from 'framer-motion';
+import { motion, useScroll, useTransform } from 'framer-motion';
 
 //Animations
 import { PushDiv, BouncingDiv, RotatorDiv, ZoomedButton } from '../../components/Animations'
@@ -41,7 +41,7 @@ const ItemBox: React.FC<VectorItemProps> = ({imageSrc, title, description}) => {
 
 function ICE() {
 
-    const { scrollYProgress } = useViewportScroll();
+    const { scrollYProgress } = useScroll();
 
     const scale = useTransform(scrollYProgress, [0, 1], [-1.5, 1]);
     

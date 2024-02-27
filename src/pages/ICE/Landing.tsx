@@ -10,7 +10,7 @@ import rightVector from '../../assets/Illos23/right-vector.png'
 import { useNavigate } from 'react-router-dom';
 
 
-import { BouncingDiv, ZoomedButton, EndingZoomScroll, PushDiv } from '../../components/Animations'
+import { BouncingDiv, ZoomedButton, PushDiv } from '../../components/Animations'
 
 function Landing() {
     const navigate = useNavigate();
@@ -85,11 +85,11 @@ function Landing() {
             <img src={bottomVector}/>
             <div className='section2'>
                 <img className='ice-box-image' src={iceBox}/>
-                <EndingZoomScroll className='QAsContainer'>
+                <div className='QAsContainer'>
                     <h3>Got a Question?</h3>
                     <p onClick={() => redirectTo('/FAQs')}>Check out our FAQ's</p>
                     <p>Send us a message</p>
-                </EndingZoomScroll>
+                </div>
             </div>
         </div>
     )

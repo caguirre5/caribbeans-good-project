@@ -3,11 +3,19 @@
     src: url('../../assets/Fonts/kingthings_organica/KingthingsOrganica.ttf') format('truetype');
   }
   
+.landing-container {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
 
 .page-container-cp{
     min-height: 100vh;
     background-color: #9ED1C4;
     color: #404E32;
+    overflow-y: hidden;
 }
 
 .title-container, .grid-layout-container{
@@ -15,6 +23,10 @@
     text-transform: uppercase;
     display: flex;
     justify-content: center;
+    align-items: center;
+    font-family: 'KingsThing';
+    height: 300px;
+    margin-bottom: 40px;
 }
 
 .title-container p{

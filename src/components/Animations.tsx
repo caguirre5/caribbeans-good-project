@@ -1,14 +1,12 @@
-import {motion, useViewportScroll, useTransform} from 'framer-motion'
+import {motion} from 'framer-motion'
 import {ReactNode} from 'react'
 
-const { scrollYProgress } = useViewportScroll();
-
-const scale = useTransform(scrollYProgress, [0, 1], [-1.5, 1]);
 
 interface BasicProps extends React.HTMLProps<HTMLDivElement>{
     children: ReactNode;
     className: string;
     onClick?: () => void;
+    variantSide?: boolean;
 }
 
 
@@ -20,6 +18,24 @@ export const PushDiv: React.FC<BasicProps> = ({children, className, onClick}) =>
             transition={{
                 delay: 0.3,
                 duration: 0.5,
+            }}
+            className={className}
+            onClick={onClick}
+        >
+            {children}
+        </motion.div>
+    ) 
+}
+
+export const SlideDiv: React.FC<BasicProps> = ({children, className, onClick, variantSide}) => {
+    const Ix = variantSide ? 100 : -100;
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, x:Ix }}
+            whileInView={{ opacity: 1, x:0 }}
+            transition={{
+                duration: 1,
             }}
             className={className}
             onClick={onClick}
@@ -57,7 +73,7 @@ export const RotatorDiv: React.FC<BasicProps> = ({children, className, onClick})
     return (
         <motion.div
             initial={{ scale: 0 }}
-            whileInView={{ rotate: 180, scale: 1 }}
+            animate={{ rotate: 180, scale: 1 }}
             transition={{
             type: "spring",
             stiffness: 200,
@@ -71,10 +87,11 @@ export const RotatorDiv: React.FC<BasicProps> = ({children, className, onClick})
     ) 
 }
 
-export const ZoomedButton: React.FC<BasicProps> = ({children, className, onClick}) => {
+export const InfiniteRotation: React.FC<BasicProps> = ({children, className, onClick}) => {
     return (
         <motion.div
-            whileHover={{ scale: 1.2 }}
+            whileInView={{ rotate: 360 }} // La propiedad "rotate" va de 0 a 360 grados
+            transition={{ duration: 2, loop: Infinity }}
             className={className}
             onClick={onClick}
         >
@@ -83,13 +100,10 @@ export const ZoomedButton: React.FC<BasicProps> = ({children, className, onClick
     ) 
 }
 
-export const EndingZoomScroll: React.FC<BasicProps> = ({children, className, onClick}) => {
+export const ZoomedButton: React.FC<BasicProps> = ({children, className, onClick}) => {
     return (
         <motion.div
-            
-            style={{
-                scale
-            }}
+            whileHover={{ scale: 1.2 }}
             className={className}
             onClick={onClick}
         >
