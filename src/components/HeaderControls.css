@@ -5,6 +5,7 @@
 
 .header-container img {
     height: 5rem;
+    cursor: pointer;
 }
 
 .header-container .hc-section1,

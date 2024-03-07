@@ -111,3 +111,16 @@ export const ZoomedButton: React.FC<BasicProps> = ({children, className, onClick
         </motion.div>
     ) 
 }
+
+export const FadeFixed: React.FC<BasicProps> = ({children, className, onClick}) => {
+    return (
+        <motion.div
+            initial={{opacity: 0}}
+            whileHover={{opacity:1}}
+            className={className}
+            onClick={onClick}
+        >
+            {children}
+        </motion.div>
+    )
+}

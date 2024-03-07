@@ -1,19 +1,20 @@
 import './FAQs.css'
 import React from 'react'
+import { SlideDiv } from '../../components/Animations';
 
 interface FAQUnitProps {
-    title: string;
-    text: string;
-  }
-  
-  const FAQUnit: React.FC<FAQUnitProps> = ({ title, text }) => {
-    return (
-      <div className='FAQItem'>
-        <h3>{title}</h3>
-        <p>{text}</p>
-      </div>
-    );
-  };
+  title: string;
+  text: string;
+}
+
+const FAQUnit: React.FC<FAQUnitProps> = ({ title, text }) => {
+  return (
+    <SlideDiv className='FAQItem' variantSide={false}>
+      <h3>{title}</h3>
+      <p>{text}</p>
+    </SlideDiv>
+  );
+};
 
 function TAQs() {
 

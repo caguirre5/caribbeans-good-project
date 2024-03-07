@@ -10,7 +10,7 @@ import rightVector from '../../assets/Illos23/right-vector.png'
 import { useNavigate } from 'react-router-dom';
 
 
-import { BouncingDiv, ZoomedButton, PushDiv } from '../../components/Animations'
+import { BouncingDiv, ZoomedButton, PushDiv, FadeFixed } from '../../components/Animations'
 
 function Landing() {
     const navigate = useNavigate();
@@ -21,9 +21,9 @@ function Landing() {
 
     return (
         <div className="page-container">
-            <div className="logo-header-container">
-                <img src={logo} alt="Logo"/>
-            </div>
+            <FadeFixed className="logo-header-container">
+                <img src={logo} alt="Logo" onClick={() => redirectTo('/ICE_Members')}/>
+            </FadeFixed>
             <div className='section1'>
                 <div className='vectorial-art-1'>
                     <div className='logo-margin'></div>
@@ -44,16 +44,16 @@ function Landing() {
                                 <ZoomedButton className='b2' onClick={() => redirectTo('/CoffeeProcess')}>The Coffee Process</ZoomedButton>
                             </div>
                         </div>
-                        <div className='vertical-vector'>
+                        <BouncingDiv className='vertical-vector'>
                             <img src={vector1} alt="" />
-                        </div>
+                        </BouncingDiv>
                     </div>
                     <div className='landing-lower-container'>
-                        <div className='cross-text'>
+                        <BouncingDiv className='cross-text'>
                             <p className='cross-p1'>Immersive</p>
                             <p className='cross-p2'>Coffee</p>
                             <p className='cross-p3'>Experience</p>
-                        </div>
+                        </BouncingDiv>
                         <BouncingDiv className="hor-text">
                             <p>BOX</p>
                         </BouncingDiv>
@@ -69,12 +69,25 @@ function Landing() {
                 <div className='inside-box'>
                     <h3>Inside your box</h3>
                     <ul className="list-box">
-                        <li>VR Headset compatible with Iphone/Android</li>
-                        <li>Bluetooth controller for VR</li>
-                        <li>Four Varieties of speciality coffee</li>
-                        <li>Manual coffee grinder</li>
-                        <li>Professional coffee tasting cup</li>
-                        <li>Professional coffee tasting spoon</li>
+                        <ZoomedButton className=''>
+                            <li>VR Headset compatible with Iphone/Android</li>
+                        </ZoomedButton>
+                        <ZoomedButton className=''>
+                            <li>Bluetooth controller for VR</li>
+                        </ZoomedButton>
+                        <ZoomedButton className=''>
+                            <li>Four Varieties of speciality coffee</li>
+                        </ZoomedButton>
+                        <ZoomedButton className=''>
+                            <li>Manual coffee grinder</li>
+                        </ZoomedButton>
+                        <ZoomedButton className=''>
+                            <li>Professional coffee tasting cup</li>
+                        </ZoomedButton>
+                        <ZoomedButton className=''>
+                            <li>Professional coffee tasting spoon</li>
+                        </ZoomedButton>
+                        
                     </ul>
                 </div>
                 <PushDiv className='video-section'>

@@ -11,7 +11,7 @@ function VRExperience() {
                 <div>
                 <iframe
                     title="3Dvista Tour"
-                    src="https://storage.net-fs.com/hosting/2727323/487/"
+                    src="https://caribbeangoodsvr.online/"
                     allowFullScreen
                 ></iframe>
                 </div>

@@ -13,6 +13,7 @@
     display: flex;
     flex-direction: column;
     background-color: #2D3429;
+    user-select: none;
 }
 
 .logo-header-container{
@@ -30,6 +31,7 @@
 
 .logo-header-container img {
     height: 100px;
+    cursor: pointer;
 }
 
 .section1 {
@@ -99,6 +101,7 @@
     padding: 0.8rem 1.2rem;
     border-radius: 100px;
     margin: 10px;
+    cursor: pointer;
 }
 
 .b1 {

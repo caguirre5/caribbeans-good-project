@@ -1,11 +1,13 @@
 import './Footer.css'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faInstagram, faFacebookF, faLinkedin, faYoutube } from '@fortawesome/free-brands-svg-icons';
 
 function Footer() {
     return (
         <div className="footer-container">
             <div className='info-container'>
                 <div className='scotland'>
-                    <h3>scotland</h3>
+                    <h3>Scotland</h3>
                     <p>Strathclyde Inspire 50 Richmond Street Glasgow. G1 1XP</p>
                 </div>
                 <div className='contact'>
@@ -24,10 +26,10 @@ function Footer() {
                 </div>
                 <div className='social'>
                     <div className='icon-container'>
-                        <div className='icon'></div>
-                        <div className='icon'></div>
-                        <div className='icon'></div>
-                        <div className='icon'></div>
+                        <FontAwesomeIcon className='icon' icon={faFacebookF} />
+                        <FontAwesomeIcon className='icon' icon={faInstagram} />
+                        <FontAwesomeIcon className='icon' icon={faLinkedin} />
+                        <FontAwesomeIcon className='icon' icon={faYoutube} />
                     </div>
                     <p>©2023CaribbeanGoodsLtd</p>
                     <div className='text-container'>
