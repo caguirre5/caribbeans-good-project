@@ -12,7 +12,7 @@ function App() {
   return (
     <div className='app-container'>
       <Routes>
-        <Route path='/ICE_Members' element={<Landing/>}/>
+        <Route path='/' element={<Landing/>}/>
         <Route path='/ICE' element={<ICE/>}/>
         <Route path='/CoffeeProcess' element={<CoffeeProcess/>}/>
         <Route path='/FAQs' element={<FAQs/>}/>

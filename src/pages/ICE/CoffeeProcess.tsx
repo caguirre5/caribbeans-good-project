@@ -9,7 +9,7 @@ import gif4 from '../../assets/GIFS/Export ani.gif'
 //Taste Wheel
 import TasteWheelImg from '../../assets/ICE/Tastewheel.png'
 
-import { BouncingDiv, InfiniteRotation, PushDiv, RotatorDiv, SlideDiv } from '../../components/Animations'
+import { BouncingDiv, InfiniteRotation, PushDiv, SlideDiv } from '../../components/Animations'
 
 function CoffeeProcess() {
     return (
