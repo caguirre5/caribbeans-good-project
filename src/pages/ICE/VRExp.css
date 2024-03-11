@@ -16,14 +16,21 @@
     font-size: 7rem;
 }
 
-.main div{
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
 .main iframe{
     width: 1080px;
     height: 60vh;
+}
+
+.grid-cards{
+    width: 70%;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-gap:20px;
+}
+
+.card {
+    width: 350px;
+    text-align: center;
+    border-radius: 20px;
+    border:3px solid #2f4831
 }
