@@ -6,13 +6,31 @@ import Farm1 from '../../assets/ICE/FarmNames/Amatillo.png'
 import Farm2 from '../../assets/ICE/FarmNames/Hunbatz.png'
 import Farm3 from '../../assets/ICE/FarmNames/San José Ocaña.png'
 import Farm4 from '../../assets/ICE/FarmNames/El Socorro.png'
+import { motion } from 'framer-motion';
+import { ZoomedButton } from "../../components/Animations"
+
+interface VideoCardProps {
+    url: string;
+    src: string;
+    text: string;
+  }
+  
+  const VideoCard: React.FC<VideoCardProps> = ({ url, src, text }) => {
+    return (
+      <motion.div className=''
+      whileHover={{ scale: 1.1 }}
+      >
+        <a href={url}><img className='card' src={src} alt="" /></a>
+      </motion.div>
+    );
+  };
 
 function VRExperience() {
     return (
         <div className="vr-page-container">
             <Header/>
             <div className="main">
-                <h1>VR EXPERIENCE</h1>
+                <h1>WELCOME TO THE VR EXPERIENCE</h1>
                 <div>
                 {/* <iframe
                     title="3Dvista Tour"
@@ -21,10 +39,10 @@ function VRExperience() {
                 ></iframe> */}
                 </div>
                 <div className="grid-cards">
-                    <a><img className='card' src={Farm1} alt="" /></a>
-                    <a href="https://caribbeangoodsvr.online/"><img className='card' src={Farm2} alt="" /></a>
-                    <a><img className='card' src={Farm3} alt="" /></a>
-                    <a><img className='card' src={Farm4} alt="" /></a>
+                    <VideoCard url='' src={Farm1} text=""/>
+                    <VideoCard url='https://caribbeangoodsvr.online/' src={Farm2} text=""/>
+                    <VideoCard url='' src={Farm3} text=""/>
+                    <VideoCard url='' src={Farm4} text=""/>
                 </div>
             </div>
             <Footer/>
