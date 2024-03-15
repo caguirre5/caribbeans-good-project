@@ -26,10 +26,10 @@ function Footer() {
                 </div>
                 <div className='social'>
                     <div className='icon-container'>
-                        <FontAwesomeIcon className='icon' icon={faFacebookF} />
-                        <FontAwesomeIcon className='icon' icon={faInstagram} />
-                        <FontAwesomeIcon className='icon' icon={faLinkedin} />
-                        <FontAwesomeIcon className='icon' icon={faYoutube} />
+                        <a target="_blank" href='https://www.facebook.com/caribbeangoodsuk'><FontAwesomeIcon className='icon' icon={faFacebookF} /></a>
+                        <a target="_blank" href='https://www.instagram.com/caribbeangoods'><FontAwesomeIcon className='icon' icon={faInstagram} /></a>
+                        <a target="_blank" href='https://www.linkedin.com/company/caribbean-goods-ltd/?originalSubdomain=uk'><FontAwesomeIcon className='icon' icon={faLinkedin} /></a>
+                        <a target="_blank" href='https://www.youtube.com/channel/UCOLcDN040KZPI7vVYG5XYKQ'><FontAwesomeIcon className='icon' icon={faYoutube} /></a>
                     </div>
                     <p>©2023CaribbeanGoodsLtd</p>
                     <div className='text-container'>

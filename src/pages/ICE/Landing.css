@@ -14,6 +14,7 @@
     flex-direction: column;
     background-color: #2D3429;
     user-select: none;
+    overflow-x: hidden;
 }
 
 .logo-header-container{
@@ -45,7 +46,7 @@
 .vectorial-art-1 {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: space-evenly;
   height: 100vh;
 }
 
@@ -184,6 +185,7 @@
     align-items: center;
     justify-content: center;
     margin-top: 150px;
+    width: auto;
 }
 
 .vr-experience-vector img {
@@ -229,8 +231,9 @@
 
 .video {
     width: 1080px;
-    height: 720px;
+    height: 580px;
     background-color: #000;
+    border-radius: 10px;
 }
 
 .section2 {
@@ -246,4 +249,103 @@
 
 .ice-box-image {
   width: 25vw; 
+}
+
+/* Small Devices (Iphone Vertical) */
+@media screen and (max-width: 576px) {
+  .text-slogan p {
+    text-align: center;
+  }
+
+  .section1 {
+    padding: 0 20px;
+  }
+
+  .landing-mid-container {
+    flex-direction: column;
+  }
+
+  .landing-lower-container {
+    justify-content: end;
+  }
+
+  .cross-text {
+    display: none;
+  }
+
+  .vertical-text {
+    writing-mode:horizontal-tb; /* Esta línea rota el texto verticalmente */
+    font-size: 5rem;
+  }
+
+  .hor-text {
+    font-size: 5rem;
+    margin-right: 0;
+  }
+
+  .buttons-ice {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .b1, .b2 {
+    width: 50%;
+    text-align: center;
+  }
+
+  .vertical-vector {
+    display: none;
+  }
+
+  .vr-experience-vector p{
+    text-align: center;
+    margin-bottom: 50px;
+  }
+
+  .vr-experience-vector img {
+    width: 80vw;
+  }
+
+  /* .inside-box {
+    width: 80vw;
+  } */
+
+  .inside-box h3{
+    text-align: center;
+  }
+  
+  .section2 {
+    flex-direction: column;
+    min-height: 100%;
+    padding: 50px 0;
+  }
+
+  .ice-box-image {
+    
+  width: 80%; 
+    margin-bottom: 30px;
+  }
+
+  .bottom-border {
+    width: 200vw;
+    overflow-x: hidden;
+  }
+
+  .video-section {
+    height: auto;
+  }
+
+  .video{
+    height: auto;
+    width: auto; 
+  }
+}
+
+/* Medium Devices (Tablets Horizontal) */
+@media screen and (min-width: 768px) and (max-width: 992px) {
+
+}
+
+@media screen and (min-width: 1200px) {
+
 }

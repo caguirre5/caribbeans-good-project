@@ -18,11 +18,15 @@
 }
 
 .nav-list {
-    list-style: none;
-    display: flex;
-    padding: 0;
-    margin: 0;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: none; /* Ocultar el menú por defecto */
   }
+
+  .nav-list.open {
+    display: flex; /* Mostrar el menú cuando la clase 'open' está presente */
+}
   
   .nav-list li {
     margin-right: 20px;
@@ -39,5 +43,18 @@
   
   .nav-list li a:hover {
     color: #ff0000;
-    /* Estilos adicionales al pasar el mouse */
   }
+
+  .menu-toggle {
+    display: none; /* Ocultar el botón de menú por defecto */
+}
+
+@media screen and (max-width: 768px) {
+  .menu-toggle {
+      display: block;
+  }
+
+  .nav-list {
+      display: none;
+  }
+}

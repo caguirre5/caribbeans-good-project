@@ -138,7 +138,14 @@ function ICE() {
                     </PushDiv>
                 </div>
                 <div className='minus-section'>
-                    <div className='minus-section-video'></div>
+                    <iframe
+                        className='minus-section-video'
+                        src='https://www.youtube.com/embed/C--rN32u4Oc'
+                        title='YouTube video player'
+                        frameBorder='0'
+                        allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
+                        allowFullScreen
+                    ></iframe>
                     <RotatorDiv
                         className=''
                     >

@@ -7,7 +7,6 @@ import Farm2 from '../../assets/ICE/FarmNames/Hunbatz.png'
 import Farm3 from '../../assets/ICE/FarmNames/San José Ocaña.png'
 import Farm4 from '../../assets/ICE/FarmNames/El Socorro.png'
 import { motion } from 'framer-motion';
-import { ZoomedButton } from "../../components/Animations"
 
 interface VideoCardProps {
     url: string;
@@ -17,10 +16,10 @@ interface VideoCardProps {
   
   const VideoCard: React.FC<VideoCardProps> = ({ url, src, text }) => {
     return (
-      <motion.div className=''
+      <motion.div className="card-item-container"
       whileHover={{ scale: 1.1 }}
       >
-        <a href={url}><img className='card' src={src} alt="" /></a>
+        <a className='card-item' href={url}><img className='card' src={src} alt={text} /></a>
       </motion.div>
     );
   };

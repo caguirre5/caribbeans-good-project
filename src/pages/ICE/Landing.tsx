@@ -21,9 +21,9 @@ function Landing() {
 
     return (
         <div className="page-container">
-            <FadeFixed className="logo-header-container">
+            <div className="logo-header-container">
                 <img src={logo} alt="Logo" onClick={() => redirectTo('/ICE_Members')}/>
-            </FadeFixed>
+            </div>
             <div className='section1'>
                 <div className='vectorial-art-1'>
                     <div className='logo-margin'></div>
@@ -91,11 +91,18 @@ function Landing() {
                     </ul>
                 </div>
                 <PushDiv className='video-section'>
-                    <div className='video'></div>
-
+                    {/* <div className='video'></div> */}
+                    <iframe
+                        className='video'
+                        src='https://www.youtube.com/embed/9ZM9zf2mnJM'
+                        title='YouTube video player'
+                        frameBorder='0'
+                        allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
+                        allowFullScreen
+                    ></iframe>
                 </PushDiv>
             </div>
-            <img src={bottomVector}/>
+            <img className="bottom-border" src={bottomVector}/>
             <div className='section2'>
                 <img className='ice-box-image' src={iceBox}/>
                 <div className='QAsContainer'>
