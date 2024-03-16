@@ -181,3 +181,23 @@
     width: 90vh;
     height: 90vh;
 }
+
+.mural {
+    background-color: #FBF5EC;
+    padding: 0 10vw;
+}
+
+.mural-item img{
+    width: 40vw;
+}
+
+.LMural {
+    display: flex;
+    justify-content: end;
+}
+
+.RMural {
+    
+    display: flex;
+    justify-content: start;
+}
