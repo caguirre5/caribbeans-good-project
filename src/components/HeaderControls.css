@@ -8,25 +8,46 @@
     cursor: pointer;
 }
 
-.header-container .hc-section1,
-.header-container .hc-section3 {
-  width: 30VW;
+.header-container > div {
+  
   display: flex;
-  justify-content: center;
   align-items: center;
-  /* Otros estilos */
 }
+
+
+.hc-section1 {
+  flex: 1;
+  justify-content: space-between;
+  padding-left: 50px;
+}
+
+.hc-section1 img{
+  display: none;
+}
+
+.hc-section2 {
+  justify-content: center;
+  flex: 1;
+}
+
+.hc-section3 {
+  flex: 1;
+  justify-content: end;
+  padding-right: 50px;
+}
+
 
 .nav-list {
   list-style: none;
   padding: 0;
   margin: 0;
-  display: none; /* Ocultar el menú por defecto */
+  display: flex; /* Ocultar el menú por defecto */
   }
 
   .nav-list.open {
     display: flex; /* Mostrar el menú cuando la clase 'open' está presente */
-}
+    flex-direction: column;
+  }
   
   .nav-list li {
     margin-right: 20px;
@@ -56,5 +77,26 @@
 
   .nav-list {
       display: none;
+  }
+
+  .hc-section1 img{
+    display: inline;
+  }
+
+  .hc-section1 p {
+    width: auto;
+  }
+
+  .hc-section1 {
+    
+    padding-left: 0;
+  }
+
+  .hc-section2 {
+    display: none !important; 
+  }
+
+  .hc-section3 {
+    padding-right: 30px;
   }
 }

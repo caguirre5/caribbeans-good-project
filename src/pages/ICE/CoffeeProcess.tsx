@@ -1,10 +1,10 @@
 import './CoffeeProcess.css'
 
 // GIFS
-import gif1 from '../../assets/GIFS/Grow.an.gif'
-import gif2 from '../../assets/GIFS/Wetmill.ani.gif'
-import gif3 from '../../assets/GIFS/DRYMILL.an.gif'
-import gif4 from '../../assets/GIFS/Export ani.gif'
+// import gif1 from '../../assets/GIFS/Grow.an.gif'
+// import gif2 from '../../assets/GIFS/Wetmill.ani.gif'
+// import gif3 from '../../assets/GIFS/DRYMILL.an.gif'
+// import gif4 from '../../assets/GIFS/Export ani.gif'
 
 //Mural Arts
 import Art1 from '../../assets/ICE/CoffeeProcessMural/Artboard1.png'
@@ -34,102 +34,95 @@ import Art23 from '../../assets/ICE/CoffeeProcessMural/Artboard23.png'
 //Taste Wheel
 import TasteWheelImg from '../../assets/ICE/Tastewheel.png'
 
-import { BouncingDiv, InfiniteRotation, PushDiv, SlideDiv } from '../../components/Animations'
+import { BouncingDiv, InfiniteRotation, PushDiv } from '../../components/Animations'
 
 function CoffeeProcess() {
     return (
         <div className='page-container-cp'>
             <div className='landing-container'>
                 <div className='title-container'>
-                    <p>process</p>
+                    <p className='title-text'>coffee process</p>
+                    <p className='title-description'>From skilled farmers to meticulous roasting specifications, coffee beans go through an amazing journey that brings out their unique flavors. It's a fascinating process that involves many different people and places, and one that we are excited to share with you.</p>
                 </div>
                 <div className='intro-text'>
-                    <p>From skilled farmers to meticulous roasting specifications, coffee beans go through an amazing journey that brings out their unique flavors. It's a fascinating process that involves many different people and places, and one that we are excited to share with you.</p>
+                    
                     <p>let us take you on a journey through the world of coffee!</p>
                 </div>
             </div>
             
-            <PushDiv className='grid-layout-container gl1'>
-                <BouncingDiv className=''>
-
-                <p>Guatemala has up to 300 microclimates, each offering unique growing conditions that affect crop development.</p>
-                </BouncingDiv>
-            </PushDiv>
-            <BouncingDiv className='grid-layout-container gl2'>
-                <p>Coffee was first introduced to Guatemala in the mid-1700s, but it was not until 1860 that production seriously took off. Prior to that, the plant was only used for ornamental purposes. As the carmine dye industry began to decline, which was the biggest industry in Guatemala at that point, the government searched for new industries to improve the economy.</p>
-            </BouncingDiv>
+            
             <div className='mural'>
-                <div className='mural-item LMural'>
+                <PushDiv className='mural-item LMural first'>
                     <img src={Art1} alt="" />
-                </div>
-                <div className='mural-item RMural'>
+                </PushDiv>
+                <PushDiv className='mural-item RMural'>
                     <img src={Art2} alt="" />
-                </div>
-                <div className='mural-item LMural'>
+                </PushDiv>
+                <PushDiv className='mural-item LMural'>
                     <img src={Art3} alt="" />
-                </div>
-                <div className='mural-item RMural'>
+                </PushDiv>
+                <PushDiv className='mural-item RMural'>
                     <img src={Art4} alt="" />
-                </div>
-                <div className='mural-item LMural'>
+                </PushDiv>
+                <PushDiv className='mural-item LMural'>
                     <img src={Art5} alt="" />
-                </div>
-                <div className='mural-item RMural'>
+                </PushDiv>
+                <PushDiv className='mural-item RMural'>
                     <img src={Art6} alt="" />
-                </div>
-                <div className='mural-item LMural'>
+                </PushDiv>
+                <PushDiv className='mural-item LMural'>
                     <img src={Art7} alt="" />
-                </div>
-                <div className='mural-item RMural'>
+                </PushDiv>
+                <PushDiv className='mural-item RMural'>
                     <img src={Art8} alt="" />
-                </div>
-                <div className='mural-item LMural'>
+                </PushDiv>
+                <PushDiv className='mural-item LMural'>
                     <img src={Art9} alt="" />
-                </div>
-                <div className='mural-item RMural'>
+                </PushDiv>
+                <PushDiv className='mural-item RMural'>
                     <img src={Art10} alt="" />
-                </div>
-                <div className='mural-item LMural'>
+                </PushDiv>
+                <PushDiv className='mural-item LMural'>
                     <img src={Art11} alt="" />
-                </div>
-                <div className='mural-item RMural'>
+                </PushDiv>
+                <PushDiv className='mural-item RMural'>
                     <img src={Art12} alt="" />
-                </div>
-                <div className='mural-item LMural'>
+                </PushDiv>
+                <PushDiv className='mural-item LMural'>
                     <img src={Art13} alt="" />
-                </div>
-                <div className='mural-item RMural'>
+                </PushDiv>
+                <PushDiv className='mural-item RMural'>
                     <img src={Art14} alt="" />
-                </div>
-                <div className='mural-item LMural'>
+                </PushDiv>
+                <PushDiv className='mural-item LMural'>
                     <img src={Art15} alt="" />
-                </div>
-                <div className='mural-item RMural'>
+                </PushDiv>
+                <PushDiv className='mural-item RMural'>
                     <img src={Art16} alt="" />
-                </div>
-                <div className='mural-item LMural'>
+                </PushDiv>
+                <PushDiv className='mural-item LMural'>
                     <img src={Art17} alt="" />
-                </div>
-                <div className='mural-item RMural'>
+                </PushDiv>
+                <PushDiv className='mural-item RMural'>
                     <img src={Art18} alt="" />
-                </div>
-                <div className='mural-item LMural'>
+                </PushDiv>
+                <PushDiv className='mural-item LMural'>
                     <img src={Art19} alt="" />
-                </div>
-                <div className='mural-item RMural'>
+                </PushDiv>
+                <PushDiv className='mural-item RMural'>
                     <img src={Art20} alt="" />
-                </div>
-                <div className='mural-item LMural'>
+                </PushDiv>
+                <PushDiv className='mural-item LMural'>
                     <img src={Art21} alt="" />
-                </div>
-                <div className='mural-item RMural'>
+                </PushDiv>
+                <PushDiv className='mural-item RMural'>
                     <img src={Art22} alt="" />
-                </div>
-                <div className='mural-item LMural'>
+                </PushDiv>
+                <PushDiv className='mural-item LMural last'>
                     <img src={Art23} alt="" />
-                </div>
+                </PushDiv>
             </div>
-            <div className='gif gif1'>
+            {/* <div className='gif gif1'>
                 <img src={gif1} alt="" />
                 <SlideDiv className='' variantSide={false}>
                     <p>Coffee is harvested once or twice a year, depending on whether it is sun-grown or shade-grown. Guatemala grows coffee under natural shade, using either native species or specific trees. As a result, Guatemala only harvests coffee once a year, making every crop precious to the farmers and their families.</p>
@@ -159,8 +152,18 @@ function CoffeeProcess() {
                 <p>Farmers send their prepared coffees to a unit of our choosing. We do all the paperwork to export them out of Guatemala and import them to the UK. We then store them in the UK and distribute them to local coffee roasters.</p>
                 </SlideDiv>
                 <img src={gif4} alt="" />
-            </div>
-            <div className='taste-wheel-section shapedividers_com-8743 '>
+            </div> */}
+            {/* <PushDiv className='grid-layout-container gl1'>
+                <BouncingDiv className=''>
+
+                <p>Guatemala has up to 300 microclimates, each offering unique growing conditions that affect crop development.</p>
+                </BouncingDiv>
+            </PushDiv>
+            <BouncingDiv className='grid-layout-container gl2'>
+                <p>Coffee was first introduced to Guatemala in the mid-1700s, but it was not until 1860 that production seriously took off. Prior to that, the plant was only used for ornamental purposes. As the carmine dye industry began to decline, which was the biggest industry in Guatemala at that point, the government searched for new industries to improve the economy.</p>
+            </BouncingDiv> */}
+            {/* shapedividers_com-8743 */}
+            <div className='taste-wheel-section  '>
                 <BouncingDiv className=''>
                 <h1>Taste wheel</h1>
                 </BouncingDiv>

@@ -55,7 +55,7 @@ a {
 @media screen and (max-width: 576px) {
     .main{
         flex-direction: column;
-        margin: 0 30px;
+        margin: 50px 30px;
         height: 100%;
         align-items: center;
     }

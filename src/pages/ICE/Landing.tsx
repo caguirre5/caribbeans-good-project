@@ -10,7 +10,7 @@ import rightVector from '../../assets/Illos23/right-vector.png'
 import { useNavigate } from 'react-router-dom';
 
 
-import { BouncingDiv, ZoomedButton, PushDiv, FadeFixed } from '../../components/Animations'
+import { BouncingDiv, ZoomedButton, PushDiv } from '../../components/Animations'
 
 function Landing() {
     const navigate = useNavigate();
