@@ -57,43 +57,51 @@ function ClientsForm() {
       </div>
       <div className="mb-4">
         <label className="block mb-2">Are you a:</label>
-        <div className="flex items-center mb-2">
-          <input
-            type="radio"
-            id="coffeeProfessional"
-            value="Coffee Professional"
-            checked={areYou === 'Coffee Professional'}
-            onChange={(e) => setAreYou(e.target.value)}
-            className="mr-2"
-          />
-          <label htmlFor="coffeeProfessional" className="mr-4">Coffee Professional (Barista, Roaster, etc.)</label>
-          <input
-            type="radio"
-            id="vendorExhibitor"
-            value="Vendor/Exhibitor"
-            checked={areYou === 'Vendor/Exhibitor'}
-            onChange={(e) => setAreYou(e.target.value)}
-            className="mr-2"
-          />
-          <label htmlFor="vendorExhibitor" className="mr-4">Vendor/Exhibitor</label>
-          <input
-            type="radio"
-            id="coffeeEnthusiast"
-            value="Coffee Enthusiast/Attendee"
-            checked={areYou === 'Coffee Enthusiast/Attendee'}
-            onChange={(e) => setAreYou(e.target.value)}
-            className="mr-2"
-          />
-          <label htmlFor="coffeeEnthusiast">Coffee Enthusiast/Attendee</label>
-          <input
-            type="radio"
-            id="other"
-            value="Other"
-            checked={areYou === 'Other'}
-            onChange={(e) => setAreYou(e.target.value)}
-            className="mr-2"
-          />
-          <label htmlFor="other">Other</label>
+        <div className="flex flex-col mb-2 ">
+            <div>
+              <input
+                type="radio"
+                id="coffeeProfessional"
+                value="Coffee Professional"
+                checked={areYou === 'Coffee Professional'}
+                onChange={(e) => setAreYou(e.target.value)}
+                className="mr-2"
+              />
+              <label htmlFor="coffeeProfessional" className="mr-4">Coffee Professional (Barista, Roaster, etc.)</label>
+            </div>
+            <div>
+              <input
+                type="radio"
+                id="vendorExhibitor"
+                value="Vendor/Exhibitor"
+                checked={areYou === 'Vendor/Exhibitor'}
+                onChange={(e) => setAreYou(e.target.value)}
+                className="mr-2"
+              />
+              <label htmlFor="vendorExhibitor" className="mr-4">Vendor/Exhibitor</label>
+            </div>
+            <div>
+              <input
+                type="radio"
+                id="coffeeEnthusiast"
+                value="Coffee Enthusiast/Attendee"
+                checked={areYou === 'Coffee Enthusiast/Attendee'}
+                onChange={(e) => setAreYou(e.target.value)}
+                className="mr-2"
+              />
+              <label htmlFor="coffeeEnthusiast">Coffee Enthusiast/Attendee</label>
+            </div>
+          <div>
+            <input
+              type="radio"
+              id="other"
+              value="Other"
+              checked={areYou === 'Other'}
+              onChange={(e) => setAreYou(e.target.value)}
+              className="mr-2"
+            />
+            <label htmlFor="other">Other</label>
+          </div>
         </div>
         {areYou === 'Other' && (
           <input
