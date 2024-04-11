@@ -1,4 +1,5 @@
 import { useState, ChangeEvent } from 'react';
+import './FormStyles.css'
 
 function ClientsForm() {
   const [name, setName] = useState('');
@@ -22,9 +23,12 @@ function ClientsForm() {
   };
 
   return (
-    <div className="max-w-md mx-auto  p-8 border rounded-md shadow-md">
+
+
+    <div className="w-full h-screen bg-[#044421]">
+    <div className=" bg-[#FAFAFA] p-8 border rounded-md shadow-md form-container">
       <h2 className="text-2xl mb-4">Clients Form</h2>
-      <div className="mb-4 bg-slate-500">
+      <div className="mb-4">
         <label className="block  mb-2">Name:</label>
         <input
           type="text"
@@ -81,6 +85,15 @@ function ClientsForm() {
             className="mr-2"
           />
           <label htmlFor="coffeeEnthusiast">Coffee Enthusiast/Attendee</label>
+          <input
+            type="radio"
+            id="other"
+            value="Other"
+            checked={areYou === 'Other'}
+            onChange={(e) => setAreYou(e.target.value)}
+            className="mr-2"
+          />
+          <label htmlFor="other">Other</label>
         </div>
         {areYou === 'Other' && (
           <input
@@ -166,6 +179,8 @@ function ClientsForm() {
         ></textarea>
       </div>
     </div>
+    </div>
+    
   );
 }
 
