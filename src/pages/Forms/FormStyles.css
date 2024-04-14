@@ -2,8 +2,68 @@
     width: 60%;
 }
 
+.page-bg {
+    background-image: url('../../assets/Illos23/Caribbeangoods.jpg');
+}
+
+.input-container {
+    position: relative;
+  }
+  
+  .input-container input {
+    width: 100%;
+    padding: 2px;
+    border: none;
+    border-bottom: 2px solid #044421; /* Borde inferior transparente */
+    background-color: #9ED1C4; /* Color de fondo */
+    color: #044421; /* Color del texto */
+    outline: none; /* Quita el contorno alrededor del input al hacer focus */
+  }
+  
+  .input-container input:focus {
+    border-bottom: 4px solid #044421; /* Borde inferior al hacer focus */
+
+}
+  
+input[type="checkbox"] {
+    background-color: aqua;
+    outline: 1px solid #044421;
+    accent-color: #9ED1C4;
+}
+
+input[type="checkbox"]::before{
+    background-color: aqua;
+}
+
 @media screen and (max-width: 576px) {
+    .page-bg{
+        height: 100% !important;
+    }
+
     .form-container {
         width: 90%;
+        flex-direction: column;
+        height: 100%;
+        margin: 20px;
+    }
+
+    .divider-bar {
+        display: none;
+    }
+
+    .first-part-form {
+        padding-bottom: 0 !important;
+    }
+
+    .second-part-form {
+        padding-top: 0 !important;
+    }
+
+    .icon-logo-container {
+        display: flex !important;
+    }
+
+    .logo-letters {
+        display: none !important;
     }
 }

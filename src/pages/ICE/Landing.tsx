@@ -22,7 +22,7 @@ function Landing() {
     return (
         <div className="page-container">
             <div className="logo-header-container">
-                <img src={logo} alt="Logo" onClick={() => redirectTo('/ICE_Members')}/>
+                <img src={logo} alt="Logo" onClick={() => redirectTo('/ICE')}/>
             </div>
             <div className='section1'>
                 <div className='vectorial-art-1'>
