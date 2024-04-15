@@ -38,38 +38,42 @@ function ClientsForm() {
       feedback,
       howDidYouHear
     });
-    // Puedes hacer una petición HTTP, enviar los datos a una API, etc.
-    if (!name || !email || !phoneNumber || !areYou ) {
-      // Si falta algún campo obligatorio, mostrar un mensaje de error o tomar alguna acción apropiada
-      alert('Please complete all required fields. (*) indicates mandatory fields');
-      return; // Salir de la función sin enviar el formulario
-    }
-    window.open('https://www.instagram.com/caribbeangoods?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==', '_blank');
     
-    const options = {
-      method: 'POST',
-      headers:{
-        'Content-Type': 'aplication/json'
-      },
-      body: JSON.stringify({
-        name,
-        email,
-        phoneNumber,
-        areYou,
-        otherAreYou,
-        company,
-        mailingList,
-        feedback,
-        howDidYouHear
-      })
-    }
+    const databaseUrl = 'https://caribbean-goods-default-rtdb.europe-west1.firebasedatabase.app';
+    const endpoint = `${databaseUrl}/Costumers.json`;
 
-    const res = fetch(
-      'https://caribbean-goods-default-rtdb.europe-west1.firebasedatabase.app/Costumers',
-      options
-    )
-    console.log(res)
-  };
+    // Construye el objeto de datos a enviar
+    const formData = {
+      name,
+      email,
+      phoneNumber,
+      areYou,
+      otherAreYou,
+      company,
+      mailingList,
+      feedback,
+      howDidYouHear
+    };
+
+    // Realiza una solicitud HTTP POST para enviar los datos a Firebase
+    fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(formData)
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Error al enviar los datos a Firebase');
+      }
+      console.log('Datos enviados a Firebase');
+      // Aquí puedes realizar cualquier otra acción después de enviar los datos
+    })
+    .catch(error => {
+      console.error('Error:', error);
+    });
+};
 
 
   return (
