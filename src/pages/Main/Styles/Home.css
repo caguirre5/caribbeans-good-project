@@ -1,0 +1,81 @@
+/* .main-home- */
+
+.main-home-container {
+    width: 100%; /* Ancho completo */
+    background-color: #fefaf4;
+}
+
+.main-home-landing-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    margin-top: 1rem;
+    padding-top: 10.5vh;
+    background-image: url('../../../assets/Backgrounds/MainHome-WhiteBackground.jpg');
+    background-size: cover;
+    background-position: center;
+}
+
+p {
+    background-color: #fefaf4;
+    border-radius: 50px;
+}
+
+.main-home-text-w-button-1 {
+    display: flex;
+    width: 100%;
+    justify-content: center;
+}
+
+.main-home-icon { 
+    background-color:#a2cfc4;
+    border-radius: 10px;
+    padding: 3px 12px;
+    margin: 0 10px;
+    font-size: 12px;
+}
+
+.main-home-GuatemalaxUK { 
+    display: flex;
+    width: 100%;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+.main-home-GuatemalaxUK p {
+    font-size: 14px;
+}
+
+.main-home-doubleimplication-icon {
+    margin: 0 10px;
+    font-size: 16px;
+    align-self: center;
+}
+
+@media (max-width: 768px) {
+    .main-home-landing-container p {
+        font-size: 12px;
+        font-weight:500;
+    }
+}
+
+/* Media query para dispositivos de pantalla mediana (768px - 991px) */
+@media (min-width: 768px) and (max-width: 991px) {
+}
+
+/* Media query para dispositivos de pantalla grande (992px - 1199px) */
+@media (min-width: 992px)  {
+    .main-home-landing-container {
+        margin-top: 3vh;
+        padding-top: 7vh;
+    }
+
+    .main-home-GuatemalaxUK p{ 
+        font-size: 18px !important;
+    }
+
+    .main-home-landing-container p {
+        font-size: 16px !important;
+        font-weight:500;
+    }
+}

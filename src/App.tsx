@@ -6,13 +6,14 @@ import FAQs from './pages/ICE/FAQs'
 import VRExperience from './pages/ICE/VRExp'
 import ICE from './pages/ICE/ICE'
 import ClientsForm from './pages/Forms/ClientsForm'
-
+import Home from './pages/Main/Home'
 
 function App() {
 
   return (
     <div className='app-container'>
       <Routes>
+        <Route path='/Home' element={<Home/>}/>
         <Route path='/' element={<Landing/>}/>
         <Route path='/ICE' element={<ICE/>}/>
         <Route path='/CoffeeProcess' element={<CoffeeProcess/>}/>
