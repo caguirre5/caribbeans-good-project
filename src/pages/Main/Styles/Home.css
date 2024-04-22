@@ -16,7 +16,7 @@
     background-position: center;
 }
 
-p {
+.main-home-landing-container p {
     background-color: #fefaf4;
     border-radius: 50px;
 }
@@ -52,11 +52,138 @@ p {
     align-self: center;
 }
 
+/* ------------- WELCOME SECTION --------------- */
+
+/* Section Container */
+.main-home-cg2-container {
+    background-color: #044421;
+    padding: 20px 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 50vh;
+}
+
+.main-home-cg2-container p {
+    color: #fafafa;
+}
+
+
+.main-home-cg2-box2{
+    margin-top: 24px;
+}
+
+.cg2-t1 {
+    font-family: 'KingsThing';
+    font-size: 40px;
+    line-height: 45px;
+}
+
+.cg2-t2 {
+    letter-spacing: 5px;
+    font-size: 14px;
+}
+
+.cg2-t3 {
+    font-size: 14px;
+    margin-top: 5px;
+}
+
+/* --------------- FARMERS SECTION ---------------- */
+.main-home-cg5-container {
+    display: flex;
+    flex-direction: column;
+    height: 95vh;
+}
+
+.main-home-cg5-container p, .main-home-cg5-container2 p{
+    font-size: 14px;
+}
+
+.cg5-container1{
+    order: 1;
+    flex:1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: #cf4e2b;
+}
+
+.cg5-container1 > div {
+    margin-bottom: 50px;
+}
+
+.cg5-container1 h1 {
+    font-family: 'KingsThing';
+    font-size: 40px;
+    color: #fafafa;
+}
+
+.cg5-container1 p {
+    color: #fafafa;
+    order: 0;
+}
+
+/* Farmers Picture */
+
+.cg5-container2 {
+    flex: 1;
+    background-image: url('../../../assets/Images/Farmers/Marcelino.jpg');
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: flex-end;
+}
+
+.cg5-container2 p {
+    font-size: 30px;
+    text-align:center;
+    color: #fafafa;
+    padding: 10px 20px;
+    font-family: 'KingsThing';
+}
+
+.main-home-texticonbutton:hover{
+    transform: scale(1.1);
+}
+
+.main-home-cg5-container2 {
+    background-color: #fefaf4;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    align-items: center;
+    padding: 60px 0;
+}
+
+.main-home-cg5-container2 img {
+    width: 150px;
+}
+
+.main-home-cg5-container2 > div {
+    width: 200px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    margin-bottom: 50px;
+}
+
+
+.main-home-cg5-container2 > div > p {
+    height: 70px;
+}
+
+/* -------------- RESPONSIVE MODS ---------------- */
+
 @media (max-width: 768px) {
     .main-home-landing-container p {
         font-size: 12px;
         font-weight:500;
     }
+
 }
 
 /* Media query para dispositivos de pantalla mediana (768px - 991px) */
@@ -65,6 +192,10 @@ p {
 
 /* Media query para dispositivos de pantalla grande (992px - 1199px) */
 @media (min-width: 992px)  {
+    p {
+        font-size: 18px !important;
+    }
+
     .main-home-landing-container {
         margin-top: 3vh;
         padding-top: 7vh;
@@ -77,5 +208,75 @@ p {
     .main-home-landing-container p {
         font-size: 16px !important;
         font-weight:500;
+    }
+
+    /* ------------- WELCOME SECTION --------------- */
+
+    .main-home-cg2-container {
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .main-home-cg2-box1 {
+        width: 30vw;
+    }
+
+    .cg2-t1{
+        
+        font-size: 40px !important;
+    }
+
+    .main-home-cg2-box2 {
+        width: 30vw;
+        margin-top: 0;
+        margin-left: 45px;
+    }
+
+    /* ---------------- FARMERS SECTION ------------ */
+    .main-home-cg5-container {
+        flex-direction: row;
+    }
+    
+    .cg5-container1{
+        order: 0;
+    }
+
+    .cg5-container1 h1 {
+        font-size: 55px;
+    }
+
+    .cg5-container1 p {
+        font-size: 18px;
+    }
+
+    .cg5-container1 > div {
+        margin-bottom: 70px;
+    }
+
+    .cg5-container2 {
+        order: 1;
+    }
+
+    .cg5-container2 p {
+        font-size: 30px !important;
+    }
+
+    .main-home-cg5-container2 {
+        flex-direction: row;
+        padding: 60px 200px;
+    }
+
+    .main-home-cg5-container2 img {
+        width: 200px;
+    }
+    
+    .main-home-cg5-container2 > div {
+        width: 300px;
+        margin-bottom: 20px;
+    }
+    
+    
+    .main-home-cg5-container2 > div > p {
+        height: 100px;
     }
 }
