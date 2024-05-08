@@ -1,7 +1,15 @@
 // ImageCarousel.jsx
-import React, { useState } from 'react';
+import { useState } from 'react';
+interface Image {
+    url: string;
+    alt: string;
+}
 
-const ImageCarousel = ({ images }) => {
+interface ImageCarouselProps {
+    images: Image[];
+}
+
+const ImageCarousel: React.FC<ImageCarouselProps> = ({ images }) => {
     const [current, setCurrent] = useState(0);
     const length = images.length;
 

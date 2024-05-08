@@ -36,7 +36,7 @@ const TextIconButton : React.FC<TextIconButtonProps> = ({text, color="#3f7652", 
             >
                 {text}
             </p>
-            <FontAwesomeIcon style={{color:textColor, alignSelf:'center', marginLeft: 10}} onClick={()=>{}}  icon={faLongArrowRight} />
+            <FontAwesomeIcon style={{color:textColor, alignSelf:'center', marginLeft: 10}} onClick={()=>{console.log(route)}}  icon={faLongArrowRight} />
         </div>
     )
 }

@@ -2,8 +2,6 @@ import Header from "../../components/HeaderControls"
 import Footer from "../../components/Footer"
 import ImageCarousel from "../../components/Carrousel"
 
-import {motion} from 'framer-motion'
-
 import { useMediaQuery } from 'usehooks-ts'
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faLongArrowRight, faArrowsLeftRight } from '@fortawesome/free-solid-svg-icons';
@@ -49,7 +47,7 @@ const TextWButton : React.FC<TextWButtonProps> = ({text, order = 0, route}) => {
         <div className='main-home-text-w-button-1' style={{order:order}}>
             <p>{text}</p>
             <div className='main-home-icon-container'>
-                <FontAwesomeIcon onClick={()=>{}} className='main-home-icon' icon={faLongArrowRight} />
+                <FontAwesomeIcon onClick={()=>{console.log(route)}} className='main-home-icon' icon={faLongArrowRight} />
             </div>
         </div>
     )
@@ -73,7 +71,7 @@ const TextIconButton : React.FC<TextIconButtonProps> = ({text, color="#3f7652", 
             >
                 {text}
             </p>
-            <FontAwesomeIcon style={{color:textColor, alignSelf:'center', marginLeft: 10}} onClick={()=>{}}  icon={faLongArrowRight} />
+            <FontAwesomeIcon style={{color:textColor, alignSelf:'center', marginLeft: 10}} onClick={()=>{console.log(route)}}  icon={faLongArrowRight} />
         </div>
     )
 }
