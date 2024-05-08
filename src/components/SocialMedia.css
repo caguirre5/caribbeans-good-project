@@ -1,0 +1,16 @@
+.icon-container {
+    display: inline-flex;
+    align-self: center;
+}
+
+.icon-container a{
+    text-decoration: none;
+    color: inherit;
+}
+
+.icon {
+    width: 25px;
+    height: 25px;
+    margin: 4px;
+    cursor: pointer;
+}

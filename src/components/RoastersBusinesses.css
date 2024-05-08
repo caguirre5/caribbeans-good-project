@@ -1,0 +1,61 @@
+.roastersb-container {
+    background-color: #cce8e1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-evenly;
+    padding: 60px 0;
+}
+
+.roastersb-text { 
+    
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0 30px;
+    color: #044421; 
+    text-align: center;
+    margin: 35px 0;
+}
+
+.roastersb-text > h2 { 
+    font-family: 'KingsThing';
+    font-size: 50px;
+    line-height: 1;
+    margin-bottom: 30px;
+}
+
+.roastersb-text > p {
+    padding: 0 50px;
+    
+}
+
+.roastersb-logos {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 40px;
+}
+
+.roastersb-logos > img{
+    width: 120px;
+    margin: 20px;
+}
+
+@media (min-width: 992px)  {
+    .roastersb-container { 
+        
+        padding: 30px 0;
+        height: 85vh;
+    }
+
+    .roastersb-logos{
+        flex-direction: row;
+        margin-bottom: 0;
+    }
+
+    .roastersb-text {
+        margin: 0;
+    }
+}

@@ -90,6 +90,7 @@
 }
 
 /* --------------- FARMERS SECTION ---------------- */
+
 .main-home-cg5-container {
     display: flex;
     flex-direction: column;
@@ -176,6 +177,96 @@
     height: 70px;
 }
 
+/* ----------------- FORMS SECTION ---------------- */
+
+.cg5-forms {
+    display: flex;
+    flex-direction: column;
+}
+
+.cg5-forms > * {
+    
+    color: #044421;
+    flex: 1; 
+}
+
+.f--container h2 {
+    font-family: 'KingsThing';
+    font-size: 30px;
+}
+
+.fc-1 {
+    background-color: #e6a318;
+    display: flex;
+    align-items: center;
+}
+
+.fc-1-contact-form {
+    padding: 15%;
+}
+
+.small-text { 
+    font-size: 14px  !important;
+}
+
+.fc-2 {
+    display: flex;
+    background-color: #628f76;
+    align-items: center;
+    justify-content: center;
+}
+
+/* -------------- CWK ------------------------- */
+
+.cwk {
+    background-color: #a2cfc4;
+    color: #fafafa;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-evenly;
+    padding: 60px 0;
+}
+
+.cwk > h1 {
+    font-family: 'KingsThing';
+    font-size: 4rem;
+    text-align: center;
+    padding: 0 40px;
+    line-height: 1;
+}
+
+.cwk h2 {
+    font-family: 'KingsThing';
+    font-size: 2rem;
+    margin-bottom:20px;
+}
+
+.cwk-containers {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    width: 100%;
+}
+
+.cwk-containers > div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 30px 40px;
+}
+
+.cwk-containers {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.cwk-containers svg {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 20px;
+}
+
 /* -------------- RESPONSIVE MODS ---------------- */
 
 @media (max-width: 768px) {
@@ -193,7 +284,7 @@
 /* Media query para dispositivos de pantalla grande (992px - 1199px) */
 @media (min-width: 992px)  {
     p {
-        font-size: 18px !important;
+        font-size: 18px;
     }
 
     .main-home-landing-container {
@@ -279,4 +370,38 @@
     .main-home-cg5-container2 > div > p {
         height: 100px;
     }
+
+    /* ---------------- FORMS ---------------- */
+    .cg5-forms {
+        flex-direction: row;
+    }
+
+    .fc-1-contact-form {
+        padding: 0 20%;
+    }
+
+    /*         CWK            */
+
+    .cwk {
+        
+    height: 80vh;
+    
+    padding: 0;
+    }
+
+    .cwk-containers {
+        flex-direction: row;
+        margin: 0;
+    }
+
+    .cwk-containers > div {
+        width: 25vw;
+        margin:0;
+    }
+
+    .cwk > h1 {
+        margin: 0;
+    }
+
+
 }

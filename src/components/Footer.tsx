@@ -25,7 +25,7 @@ function Footer() {
                     <p>Km 22.1 Carretera al Salvador. Eco Plaza. Bodega 315. Guatemala. 01062</p>
                 </div>
                 <div className='social'>
-                    <div className='icon-container'>
+                    <div className='icon-container' style={{width:'80%'}}>
                         <a target="_blank" href='https://www.facebook.com/caribbeangoodsuk'><FontAwesomeIcon className='icon' icon={faFacebookF} /></a>
                         <a target="_blank" href='https://www.instagram.com/caribbeangoods'><FontAwesomeIcon className='icon' icon={faInstagram} /></a>
                         <a target="_blank" href='https://www.linkedin.com/company/caribbean-goods-ltd/?originalSubdomain=uk'><FontAwesomeIcon className='icon' icon={faLinkedin} /></a>
