@@ -26,11 +26,12 @@ function Header() {
             <div className={`hc-section3 ${menuOpen ? 'open' : ''}`}>
                 <FontAwesomeIcon className="menu-toggle" icon={faBars} onClick={() => setMenuOpen(!menuOpen)}/>
                 <ul className={`nav-list ${menuOpen ? 'open' : ''}`}>
-                    <li><a href="/ICE" onClick={() => redirectTo("/ICE")}>Inicio</a></li>
-                    <li><a href="/ICE" onClick={() => redirectTo("/ICE")}>Productos</a></li>
-                    <li><a href="/ICE" onClick={() => redirectTo("/ICE")}>Servicios</a></li>
-                    <li><a href="/ICE" onClick={() => redirectTo("/ICE")}>Contacto</a></li>
-                    <li><a href="/ICE" onClick={() => redirectTo("/ICE")}>O</a></li>
+                    <li><a className="text-[#044421]" href="/Ethos" onClick={() => redirectTo("/Ethos")}>Ethos</a></li>
+                    <li><a className="text-[#044421]" href="/About" onClick={() => redirectTo("/About")}>About Us</a></li>
+                    <li><a className="text-[#044421]" href="/Roasters" onClick={() => redirectTo("/Roasters")}>Roasters</a></li>
+                    <li><a className="text-[#044421]" href="/Contact" onClick={() => redirectTo("/Contact")}>Contact</a></li>
+                    <li><a className="text-[#044421]" href="/Subscribe" onClick={() => redirectTo("/Subscribe")}>Subscribe</a></li>
+                    <li><a className="text-[#044421]" href="/ICE" onClick={() => redirectTo("/ICE")}>O</a></li>
                 </ul>
             </div>
         </div>

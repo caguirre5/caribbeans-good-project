@@ -3,6 +3,7 @@ import Footer from "../../components/Footer"
 import ImageCarousel from "../../components/Carrousel"
 
 import { useMediaQuery } from 'usehooks-ts'
+import { delay, motion } from "framer-motion"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faLongArrowRight, faArrowsLeftRight } from '@fortawesome/free-solid-svg-icons';
 import SocialMedia from "../../components/SocialMedia";
@@ -76,6 +77,50 @@ const TextIconButton : React.FC<TextIconButtonProps> = ({text, color="#3f7652", 
     )
 }
 
+const fadeInAnimationLeftVariants = {
+    initial: {
+        opacity:0,
+        x:100,
+    },
+    animate: {
+        opacity:1,
+        x:0,
+        transition: {
+            duration: 1,
+            delay: 0.1,
+        },
+    },
+}
+
+const fadeInAnimationRightVariants = {
+    initial: {
+        opacity:0,
+        x:-100,
+    },
+    animate: {
+        opacity:1,
+        x:0,
+        transition: {
+            duration: 1,
+            delay: 0.1,
+        },
+    },
+}
+
+const fadeInAnimationAppearVariants = {
+    initial: {
+        opacity:0,
+    },
+    animate: (value:number) => ({
+        opacity:1,
+        transition: {
+            duration: 1,
+            delay: value,
+        },
+        
+    }),
+}
+
 function Home() {
     const isLargeScreen = useMediaQuery('(min-width: 992px)');
 
@@ -106,13 +151,27 @@ function Home() {
 
             {/* ------------   Section 2 - CG2 -------------- */}
             <div className="main-home-cg2-container">
-                <div className="main-home-cg2-box1">
+                <motion.div className="main-home-cg2-box1"
+                    variants={fadeInAnimationLeftVariants}
+                    initial='initial'
+                    whileInView='animate'
+                    viewport={{
+                        once:true,
+                    }}
+                >
                     <p className="cg2-t1">Welcome to Caribbean Goods</p>
-                </div>
-                <div className="main-home-cg2-box2">
+                </motion.div>
+                <motion.div className="main-home-cg2-box2"
+                    variants={fadeInAnimationRightVariants}
+                    initial='initial'
+                    whileInView='animate'
+                    viewport={{
+                        once:true,
+                    }}
+                >
                     <p className="cg2-t2">Finest Agricultural Imports</p>
                     <p className="cg2-t3">We supply speciality green coffee directly from ethical and sustainable farmers in Guatemala.</p>
-                </div>
+                </motion.div>
             </div>
 
             {/* ------------   Section 5 - CG5 -------------- */}
@@ -129,21 +188,45 @@ function Home() {
                 </div>
             </div>
             <div className="main-home-cg5-container2">
-                <div>
+                <motion.div
+                    variants={fadeInAnimationAppearVariants}
+                    initial="initial"
+                    whileInView="animate"
+                    viewport={{
+                        once:true,
+                    }}
+                    custom={0.2}
+                >
                     <img src={vector1farmer} alt="" />
                     <p>We supply green coffee to roasters throughout the UK </p>
                     <TextIconButton text="Read more"/>
-                </div>
-                <div>
+                </motion.div>
+                <motion.div
+                    variants={fadeInAnimationAppearVariants}
+                    initial="initial"
+                    whileInView="animate"
+                    viewport={{
+                        once:true,
+                    }}
+                    custom={0.4}
+                >
                     <img src={vector2farmer} alt="" />
                     <p>Our coffee really is ethical</p>
                     <TextIconButton text="Find out how"/>
-                </div>
-                <div>
+                </motion.div>
+                <motion.div
+                    variants={fadeInAnimationAppearVariants}
+                    initial="initial"
+                    whileInView="animate"
+                    viewport={{
+                        once:true,
+                    }}
+                    custom={0.6}
+                >
                     <img src={vector3farmer} alt="" />
                     <p>Get in touch for more information</p>
                     <TextIconButton text="Say hello"/>
-                </div>
+                </motion.div>
             </div>
             {/* --------------- Forms Section --------------------- */}
             <div className="home-main-cg5-forms">
