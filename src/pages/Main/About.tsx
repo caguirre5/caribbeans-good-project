@@ -7,17 +7,32 @@ import Roasters from "../../components/RoastersBusinesses"
 import image1 from "../../assets/Images/All/2A8A6795.jpg"
 import image2 from "../../assets/Images/All/Hunbatz-37.jpg"
 
+import videoSrc from "../../assets/Videos/2A8A6990.mp4"
+
 import imageCircle1 from "../../assets/Images/All/Medina-39.jpg"
 import imageCircle2 from "../../assets/Images/All/Medina-28 - Copy.jpg"
 
+import TeamCarousel from "../../components/TeamCarousel"
+
+import teamMember1 from "../../assets/TeamMembers/Javier.jpg"
+import teamMember2 from "../../assets/TeamMembers/Natdanai.jpeg"
+import teamMember3 from "../../assets/TeamMembers/Javier.jpg"
+
 function About() {
-    
+    const teamMembers = [
+        { name: 'Javier Gutierrez', position: 'Founder & CEO', image: teamMember1 },
+        { name: 'Maurice Taylor', position: 'Chair', image: teamMember3 },
+        { name: 'Natdanai Denham', position: 'Consultant', image:teamMember2 },
+        { name: 'Cristian Aguirre', position: 'Chair', image: teamMember3 },
+        { name: 'Natdanai Denham', position: 'Consultant', image:teamMember3 },
+        // Añadir más miembros del equipo aquí...
+      ];
 
     return (
         <div>
             <Header/>
-            <div className="w-full flex flex-col justify-center items-center bg-[#cad4c4] pt-20  px-10 lg:px-[25%]" style={{height:'100vh'}}>
-            <div className="w-[200px] lg:w-[300px] h-[200px] lg:h-[300px] rounded-full">
+            <div className="w-full min-h-[100vh] flex flex-col justify-center items-center bg-[#cad4c4] pt-20 pb-24  px-10 lg:px-[25%]">
+                <div className="w-[200px] lg:w-[300px] h-[200px] lg:h-[300px] rounded-full">
                     <img src={imageCircle2} alt="" className="w-full h-full object-cover rounded-full"/>
                 </div>
                 <h1 className="text-[#044421] text-5xl text-center font-light py-10" style={{fontFamily:'KingsThing'}}>About us</h1>
@@ -42,15 +57,14 @@ function About() {
                 <h3 className="text-xl text-[#044421] mt-8" style={{fontFamily:'KingsThing'}}>‘I consider myself an activist working towards a greener and more educated world. I believe I came to this world to cause a positive impact on the people I meet, and in the meantime, I am selling goods from the Caribbean region ‘ - Javier</h3>
             </div>
             <Roasters/>
-            <div className="w-full flex flex-col justify-center items-center bg-[#cad4c4] py-20 px-10" style={{height:'100vh'}}>
-                <h1 className="text-[#044421] text-5xl font-light" style={{fontFamily:'KingsThing'}}>Meet Our Team</h1>
+            <div className="w-full min-h-[100vh] flex flex-col justify-around items-center bg-[#cad4c4] py-20 px-10">
+                <h1 className="text-[#044421] text-5xl font-light mb-10" style={{fontFamily:'KingsThing'}}>Meet Our Team</h1>
+                <TeamCarousel members={teamMembers} />
             </div>
-            <div className="w-full overflow-hidden" style={{height:'50vh'}}>
-                <img src={image2}
-                alt="Ejemplo"
-                className="w-full h-full object-cover"
-                />
+            <div className="w-full h-[60vh] overflow-hidden relative">
+                <video className="w-full h-full object-cover " src={videoSrc} autoPlay muted loop />
             </div>
+            
             <Footer/>
         </div>
     )

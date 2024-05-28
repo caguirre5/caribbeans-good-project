@@ -1,6 +1,7 @@
 import Header from "../../components/HeaderControls"
 import Footer from "../../components/Footer"
 import ImageCarousel from "../../components/Carrousel"
+import ImageCard from "../../components/ImageArchCard"
 
 import { useMediaQuery } from 'usehooks-ts'
 import { delay, motion } from "framer-motion"
@@ -14,9 +15,17 @@ import vector3farmer from '../../assets/Images/Vectors/vector3-farmers.png'
 
 import Roasters from "../../components/RoastersBusinesses";
 
+import roaster1 from '../../assets/Images/Vectors/Logo/roasters-fower.png'
+import roaster2 from '../../assets/Images/Vectors/Logo/roasters-thomsons.png'
 
 import image1Form from '../../assets/Images/Places/image-form1.jpg'
 import image2Form from '../../assets/Images/All/1.jpg'
+
+import image1 from "../../assets/Images/All/HAR07128.jpg"
+import image2 from "../../assets/Images/All/2A8A7136.jpg"
+import image3 from "../../assets/Images/All/Hunbatz-34.jpg"
+
+import { fadeInAnimationVariants } from "../../components/variantsGallery"
 
 import './Styles/Home.css'
 
@@ -130,6 +139,27 @@ function Home() {
         { url: 'https://images.unsplash.com/photo-1497436072909-60f360e1d4b1?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2560&q=80', alt: 'Description of image 3' },
     ];
 
+    const imageProjects = [
+        {
+          title: 'The Brew Project',
+          description: 'Working with Caribbean goods has been a pleasure from day one. Javier and the team have made sourcing ethical and high-quality coffee extremely easy, consistent, and most importantly all done with excellent service.',
+          imageUrl: image1,
+          logoUrl:roaster1,
+        },
+        {
+          title: 'Thomsons Coffee',
+          description: "We've been working with Javier for the past two years. He has been a key partner in our business, helping us source high-quality micro-lots from Guatemala. Javier is incredibly knowledgeable about coffee, but he also has a deep commitment to sustainability and ethical sourcing. He takes the time to visit each of the farms, building relationships with the farmers and ensuring that they're paid fairly for their hard work. Thanks to Javier's expertise and dedication, we've been able to offer our customers some of the best coffee on the market.",
+          imageUrl: image2,
+          logoUrl:roaster2,
+        },
+        {
+          title: 'Fower',
+          description: "'Great work, great story, great people and most importantly great coffee! We have worked with Caribbean Goods since opening our roastery and have managed to get some great coffees from them that our customers love. We have recommended Caribbean Goods to other roasters and will continue to do so. The passion and drive to work ethically and sustainably is clearly evident from Caribbean Goods. We would not get our Guatemalan coffee anywhere else!",
+          imageUrl: image3,
+          logoUrl:roaster1,
+        },
+      ];
+
     return (
         <div className='main-home-container'>
             <Header/>
@@ -172,6 +202,21 @@ function Home() {
                     <p className="cg2-t2">Finest Agricultural Imports</p>
                     <p className="cg2-t3">We supply speciality green coffee directly from ethical and sustainable farmers in Guatemala.</p>
                 </motion.div>
+            </div>
+
+            <div className="hidden lg:flex flex-col items-center px-20 ">
+                <h2 className="text-6xl text-[#044421] mt-20" style={{fontFamily:'KingsThing'}}>Hear from the people we work with</h2>
+                <div className="flex justify-evenly w-full my-16">
+                    {imageProjects.map((image, index) => (
+                        <ImageCard
+                        key={index}
+                        title={image.title}
+                        description={image.description}
+                        imageUrl={image.imageUrl}
+                        logoUrl={image.logoUrl}
+                        />
+                    ))}
+                </div>
             </div>
 
             {/* ------------   Section 5 - CG5 -------------- */}

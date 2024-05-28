@@ -8,6 +8,9 @@ import image2 from "../../assets/Images/All/HAR07100.jpg"
 import image3 from "../../assets/Images/All/WhatsApp Image 2023-06-16 at 13.12.10.jpeg"
 import image4 from "../../assets/Images/All/Medina-42.jpg"
 
+//Videos
+import videoSrc from "../../assets/Videos/Caribbean Goods Video.mp4"
+
 //Projects
 import project1 from "../../assets/Images/All/2A8A7011.jpg"
 import project2 from "../../assets/Images/All/plantingtree.jpg"
@@ -20,6 +23,7 @@ import logo2 from "../../assets/Images/Vectors/Logo/social bite.png"
 
 //Components
 import SimpleContentSection from "../../components/SimpleContentSection"
+import { generateRandomBorderRadius } from "../../components/utilsFunctions"
 
 
 const fadeInAnimationLeftVariants = {
@@ -38,6 +42,8 @@ const fadeInAnimationLeftVariants = {
 }
 
 function Ethos(){
+    const borderRadiusStyle = generateRandomBorderRadius();
+
     return (
         <div className="bg-[#c9d3c0]">
             <Header/>
@@ -66,9 +72,9 @@ function Ethos(){
                 </div>
             </div>
             <div className="bg-[#202719] px-10 lg:px-[25%] py-24" style={{fontFamily:"KingsThing"}}>
-                <h2 className="text-2xl text-[#c9d3c0]">We envision a world where all the agricultural goods from the Latin-American region will be fairly sourced in a transparent supply chain with fair pay for the farmers who produce them.</h2>
-                <h3 className="text-lg text-[#e6a318] py-8">At Caribbean Goods, making the world a better place is our mission. We started sourcing green coffee from Guatemala and plan to expand and source other agricultural goods in the region shortly.</h3>
-                <h2 className="text-2xl text-[#c9d3c0]">Caribbean Goods was founded to create a better life and work environment for people who work in the fields, their families, and their communities. </h2>
+                <h2 className="text-2xl lg:text-4xl text-[#c9d3c0]">We envision a world where all the agricultural goods from the Latin-American region will be fairly sourced in a transparent supply chain with fair pay for the farmers who produce them.</h2>
+                <h3 className="text-lg lg:text-2xl text-[#e6a318] py-8">At Caribbean Goods, making the world a better place is our mission. We started sourcing green coffee from Guatemala and plan to expand and source other agricultural goods in the region shortly.</h3>
+                <h2 className="text-2xl lg:text-4xl text-[#c9d3c0]">Caribbean Goods was founded to create a better life and work environment for people who work in the fields, their families, and their communities. </h2>
             </div>
             <div className="bg-[#628f76] px-10 py-24 flex flex-col justify-center items-center   lg:flex-row">
                 <div className="lg:w-[35%] lg:mr-8">
@@ -125,14 +131,16 @@ function Ethos(){
             <div className="bg-[#fffaf5] lg:bg-[#c9d3c0] px-8 py-20 flex flex-col justify-center items-center">
                 <h1 className="text-8xl text-[#044421]" style={{fontFamily:'KingsThing'}}>Projects</h1>
                 <div className="flex flex-col lg:flex-row justify-center items-center py-12">
-                    <div className="lg:w-[30%] lg:ml-10 order-1">
+                    <div className="lg:w-[30%] lg:ml-10 order-1"
+                    
+                    >
                         <h3 className="text-xl font-bold text-[#044421] py-8">A Greener World</h3>
                         <p className="text-[#044421]">
                             We plant a tree for every 30kg bag of Hunbatz purchased. We have planted hundreds of trees in the Scottish highlands. 
                             <br/><br/>
                             Also, we work with sustainable farms that have come up with ingenious solutions to generate a more sustainable supply chain. Some of the actions the farmers have incurred are using vermicompost rather than traditional fertilizers, keeping the endemic trees of the region rather than removing them, and planting specific trees to create a shadow for coffee. Using water treatment plants to lower the PH of water after washing the coffee and many more actions take us towards a greener and more sustainable world.</p>
                     </div>
-                    <img src={project1} alt="" className="w-11/12 lg:w-[30%] rounded-lg shadow-lg max-w-full h-auto object-cover mt-8 lg:mr-10 order-0 " style={{ borderRadius: '25% 50% 25% 55% / 25% 56% 25% 46%' }}/>
+                    <img src={project1} alt="" className="w-11/12 lg:w-[30%] rounded-lg shadow-lg max-w-full h-auto object-cover mt-8 lg:mr-10 order-0 " style={{ borderRadius: generateRandomBorderRadius() }}/>
                 </div>
                 <div className="flex flex-col lg:flex-row justify-center items-center py-12">
                     <div className="lg:w-[30%] lg:mr-10 order-1">
@@ -140,14 +148,14 @@ function Ethos(){
                         <h3 className="text-xl font-bold text-[#044421] py-8">Planting Trees in Scotland</h3>
                         <p className="text-[#044421]">Pilgrims Coffee is a Coffee house and Roastery based on Holy Island, a small tidal island off the coast of Northumbria. We donated 350 kg of green coffee to them with one ask to do something great for the planet. They returned and told us our donation helped them plant 200 trees in the Scottish highland through the fantastic charity, Trees for Life! You can check out the change already made and even get involved and donate your tree! Trees For Life UK is a charity committed to rewilding the Scottish highlands.</p>
                     </div>
-                    <img src={project2} alt="" className="w-11/12 lg:w-[30%] rounded-lg shadow-lg max-w-full h-auto object-cover mt-8 lg:ml-10 order-0 lg:order-2" style={{ borderRadius: '45% 50% 25% 55% / 25% 56% 25% 46%' }}/>
+                    <img src={project2} alt="" className="w-11/12 lg:w-[30%] rounded-lg shadow-lg max-w-full h-auto object-cover mt-8 lg:ml-10 order-0 lg:order-2" style={{ borderRadius: generateRandomBorderRadius() }}/>
                 </div>
                 <div className="flex flex-col lg:flex-row justify-center items-center py-12">
                     <div className="lg:w-[30%] lg:ml-10 order-1">
                         <h3 className="text-xl font-bold text-[#044421] py-8">Small steps, Big Differences </h3>
                         <p className="text-[#044421]">One of our farms, Finca Medina, reuses 100% of the water needed to process the coffee beans, so they don't waste a drop! Now, if that's not an inspiration to us all, we don't know what is! </p>
                     </div>
-                    <img src={project3} alt="" className="w-11/12 lg:w-[30%] rounded-lg shadow-lg max-w-full h-auto object-cover mt-8 lg:mr-10 order-0" style={{ borderRadius: '25% 50% 25% 55% / 25% 56% 25% 46%' }}/>
+                    <img src={project3} alt="" className="w-11/12 lg:w-[30%] rounded-lg shadow-lg max-w-full h-auto object-cover mt-8 lg:mr-10 order-0" style={{ borderRadius: generateRandomBorderRadius() }}/>
                 </div>
                 <div className="flex flex-col lg:flex-row justify-center items-center py-12">
                     <div className="lg:w-[30%] lg:mr-10 order-1">
@@ -156,8 +164,11 @@ function Ethos(){
                         <p className="text-[#044421]">Caribbean Goods partnered with Forth Coffee,  and together we donated 350kg of coffee to Social Bite, a charity and social business providing homes, jobs, food, and support to empower people to transform their own lives. dedicated to the mission of ending homelessness in Scotland.</p>
                         <a href="">Read more about their fantastic work here</a>
                     </div>
-                    <img src={project4} alt="" className="w-11/12 lg:w-[30%] rounded-lg shadow-lg max-w-full h-auto object-cover mt-8 lg:ml-10 order-0 lg:order-2" style={{ borderRadius: '25% 50% 25% 55% / 25% 56% 25% 46%' }}/>
+                    <img src={project4} alt="" className="w-11/12 lg:w-[30%] rounded-lg shadow-lg max-w-full h-auto object-cover mt-8 lg:ml-10 order-0 lg:order-2" style={{ borderRadius: generateRandomBorderRadius() }}/>
                 </div>
+            </div>
+            <div className="w-full h-[75vh] overflow-hidden relative">
+                <video className="w-full h-full object-cover " src={videoSrc} autoPlay muted loop />
             </div>
             <Footer/>
         </div>

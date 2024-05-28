@@ -2,6 +2,7 @@ import Header from "../../components/HeaderControls"
 import Footer from "../../components/Footer"
 import ContactForm from "../../components/ContactForm"
 import SocialMedia from "../../components/SocialMedia"
+import LeafletMapComponent from "../../components/LeafletMapComponent"
 
 function Contact() {
     return (
@@ -43,7 +44,7 @@ function Contact() {
                         <ContactForm/>
                     </div>
                 </div>
-                {/* Map */}
+                    <LeafletMapComponent />
                 <div>
 
                 </div>
