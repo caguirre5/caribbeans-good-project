@@ -26,7 +26,7 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({ images }) => {
     }
 
     return (
-<div className="relative overflow-hidden" style={{ height: "60vh" }}>
+<div className="relative overflow-hidden lg:h-[60vh]">
     <div className="flex justify-start items-center transition-transform duration-300" style={{
         width: `${images.length * 100}%`,
         transform: `translateX(-${current * (100 / images.length)}%)`
