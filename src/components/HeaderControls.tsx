@@ -4,18 +4,6 @@ import { To, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBars, faTimes } from '@fortawesome/free-solid-svg-icons';
 
-const MenuButton = (props:any) => {
-    const {label, onClick} = props
-    return (
-        <button
-            onClick={onClick}
-            className='text-2xl font-bold cursor-pointer hover:text-indigo-600 transition-colors'    
-        >
-            {label}
-        </button>
-    )
-}
-
 function Header() {
     const [menuOpen, setMenuOpen] = useState(false);
     

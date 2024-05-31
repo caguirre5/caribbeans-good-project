@@ -1,5 +1,5 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faLongArrowRight, faArrowsLeftRight } from '@fortawesome/free-solid-svg-icons';
+import { faLongArrowRight } from '@fortawesome/free-solid-svg-icons';
 
 interface TextWButtonProps {
     text:string,

@@ -5,7 +5,6 @@ import Roasters from "../../components/RoastersBusinesses"
 
 //Images
 import image1 from "../../assets/Images/All/2A8A6795.jpg"
-import image2 from "../../assets/Images/All/Hunbatz-37.jpg"
 
 import videoSrc from "../../assets/Videos/2A8A6990.mp4"
 
@@ -21,10 +20,11 @@ import teamMember3 from "../../assets/TeamMembers/Javier.jpg"
 function About() {
     const teamMembers = [
         { name: 'Javier Gutierrez', position: 'Founder & CEO', image: teamMember1 },
-        { name: 'Maurice Taylor', position: 'Chair', image: teamMember3 },
         { name: 'Natdanai Denham', position: 'Consultant', image:teamMember2 },
-        { name: 'Cristian Aguirre', position: 'Chair', image: teamMember3 },
-        { name: 'Natdanai Denham', position: 'Consultant', image:teamMember3 },
+        { name: 'Cristian Aguirre', position: 'Web Developer', image: teamMember3 },
+        { name: 'Harold', position: 'Photographer', image:teamMember3 },
+        { name: 'Efren', position: 'Videographer', image:teamMember3 },
+        { name: 'Alice Brown', position: 'Illustrator', image:teamMember3 },
         // Añadir más miembros del equipo aquí...
       ];
 

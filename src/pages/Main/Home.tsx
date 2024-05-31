@@ -4,7 +4,7 @@ import ImageCarousel from "../../components/Carrousel"
 import ImageCard from "../../components/ImageArchCard"
 
 import { useMediaQuery } from 'usehooks-ts'
-import { delay, motion } from "framer-motion"
+import { motion } from "framer-motion"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faLongArrowRight, faArrowsLeftRight } from '@fortawesome/free-solid-svg-icons';
 import SocialMedia from "../../components/SocialMedia";
@@ -25,7 +25,7 @@ import image1 from "../../assets/Images/All/HAR07128.jpg"
 import image2 from "../../assets/Images/All/2A8A7136.jpg"
 import image3 from "../../assets/Images/All/Hunbatz-34.jpg"
 
-import { fadeInAnimationVariants } from "../../components/variantsGallery"
+// import { fadeInAnimationVariants } from "../../components/variantsGallery"
 
 import './Styles/Home.css'
 

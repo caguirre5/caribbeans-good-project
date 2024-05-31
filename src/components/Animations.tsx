@@ -9,11 +9,6 @@ interface BasicProps extends React.HTMLProps<HTMLDivElement>{
     variantSide?: boolean;
 }
 
-interface inViewProps extends React.HTMLProps<HTMLDivElement>{
-    id: string;
-    
-}
-
 
 export const PushDiv: React.FC<BasicProps> = ({children, className, onClick}) => {
     return (

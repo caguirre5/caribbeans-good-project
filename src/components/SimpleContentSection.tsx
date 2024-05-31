@@ -26,19 +26,19 @@ const fadeInAnimationVariants = {
     }),
 }
 
-const fadeInAnimationAppearVariants = {
-    initial: {
-        opacity:0,
-    },
-    animate: (value:number) => ({
-        opacity:1,
-        transition: {
-            duration: 1,
-            delay: value,
-        },
+// const fadeInAnimationAppearVariants = {
+//     initial: {
+//         opacity:0,
+//     },
+//     animate: (value:number) => ({
+//         opacity:1,
+//         transition: {
+//             duration: 1,
+//             delay: value,
+//         },
         
-    }),
-}
+//     }),
+// }
 
 const SimpleContentSection: React.FC<SimpleContentSectionProps> = ({
     title,
@@ -54,8 +54,6 @@ const SimpleContentSection: React.FC<SimpleContentSectionProps> = ({
     const borderRadiusStyle = generateRandomBorderRadius();
     
     const CalculatedxValue = reverseOrder ? window.innerWidth : -window.innerWidth;
-    const delayValueText = 0.8;
-    const delayValueImage = 0.1;
 
     console.log((CalculatedxValue))
 

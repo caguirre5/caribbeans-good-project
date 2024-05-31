@@ -42,7 +42,6 @@ const fadeInAnimationLeftVariants = {
 }
 
 function Ethos(){
-    const borderRadiusStyle = generateRandomBorderRadius();
 
     return (
         <div className="bg-[#c9d3c0]">
