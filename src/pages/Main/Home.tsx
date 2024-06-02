@@ -6,7 +6,8 @@ import ImageCard from "../../components/ImageArchCard"
 import { useMediaQuery } from 'usehooks-ts'
 import { motion } from "framer-motion"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faLongArrowRight, faArrowsLeftRight } from '@fortawesome/free-solid-svg-icons';
+import { faArrowsLeftRight } from '@fortawesome/free-solid-svg-icons';
+import { TextWButton, TextIconButton } from "../../components/Buttons"
 import SocialMedia from "../../components/SocialMedia";
 
 import vector1farmer from '../../assets/Images/Vectors/vector1-farmers.png'
@@ -35,55 +36,8 @@ interface GapdivProps {
     height: string
 }
 
-interface TextWButtonProps {
-    text:string,
-    order?:number,
-    route?:string,
-}
-
-interface TextIconButtonProps {
-    text:string,
-    color?: string,
-    textColor?: string,
-    route?:string,
-}
-
 const GapDiv : React.FC<GapdivProps> = ({height}) =>{
     return <div style={{height: height}}/>
-}
-
-const TextWButton : React.FC<TextWButtonProps> = ({text, order = 0, route}) => {
-    return (
-        <div className='main-home-text-w-button-1' style={{order:order}}>
-            <p>{text}</p>
-            <div className='main-home-icon-container'>
-                <FontAwesomeIcon onClick={()=>{console.log(route)}} className='main-home-icon' icon={faLongArrowRight} />
-            </div>
-        </div>
-    )
-}
-
-const TextIconButton : React.FC<TextIconButtonProps> = ({text, color="#3f7652", textColor="#fafafa", route}) => {
-    return (
-        <div style={{
-            backgroundColor: color,
-            padding: 15,
-            display:'flex',
-            justifyContent:'center',
-            width:250,
-            borderRadius: 30,
-            letterSpacing:4,
-        }}
-        className="main-home-texticonbutton"
-        >
-            <p 
-                style={{color:textColor, fontSize:12}}
-            >
-                {text}
-            </p>
-            <FontAwesomeIcon style={{color:textColor, alignSelf:'center', marginLeft: 10}} onClick={()=>{console.log(route)}}  icon={faLongArrowRight} />
-        </div>
-    )
 }
 
 const fadeInAnimationLeftVariants = {
@@ -168,10 +122,10 @@ function Home() {
                     <p style={{order:0}}>We are a small scale, ethical coffee importers.</p>
                 </div>
                 <GapDiv height={isLargeScreen ? '9vh' : '7.5vh'}/>
-                <TextWButton text={'We Import green coffee'}/>
+                <TextWButton text={'We Import green coffee'} route="About"/>
                 
                 <GapDiv height={isLargeScreen ? '45vh' : '42vh'}/>
-                <TextWButton text={'Are you a roaster? Right this way'}/>
+                <TextWButton text={'Are you a roaster? Right this way'} route="Roasters"/>
                 <div className='main-home-GuatemalaxUK'>
                     <p>Guatemala</p>
                     <FontAwesomeIcon onClick={()=>{}} className="main-home-doubleimplication-icon " icon={faArrowsLeftRight}></FontAwesomeIcon>
@@ -226,7 +180,7 @@ function Home() {
                         <h1>Real Fair Coffee</h1>
                         <p style={{width:250}}>We source Specialty Green Coffee directly from ethical and sustainable farmers in Guatemala.</p>
                     </div>
-                    <TextIconButton text="read more" />
+                    <TextIconButton text="read more" route='/Ethos'/>
                 </div>
                 <div className="cg5-container2">
                     <p>Marcelino</p>
@@ -244,7 +198,7 @@ function Home() {
                 >
                     <img src={vector1farmer} alt="" />
                     <p>We supply green coffee to roasters throughout the UK </p>
-                    <TextIconButton text="Read more"/>
+                    <TextIconButton text="Read more" route="/Roasters"/>
                 </motion.div>
                 <motion.div
                     variants={fadeInAnimationAppearVariants}
@@ -257,7 +211,7 @@ function Home() {
                 >
                     <img src={vector2farmer} alt="" />
                     <p>Our coffee really is ethical</p>
-                    <TextIconButton text="Find out how"/>
+                    <TextIconButton text="Find out how" route="/Ethos"/>
                 </motion.div>
                 <motion.div
                     variants={fadeInAnimationAppearVariants}
@@ -270,7 +224,7 @@ function Home() {
                 >
                     <img src={vector3farmer} alt="" />
                     <p>Get in touch for more information</p>
-                    <TextIconButton text="Say hello"/>
+                    <TextIconButton text="Say hello" route={"/Contact"}/>
                 </motion.div>
             </div>
             {/* --------------- Forms Section --------------------- */}
@@ -406,7 +360,7 @@ function Home() {
                         <p>We work with sustainable farms, using new techniques that use  90% less water than traditional coffee farming practices. Others have water treatment facilities where the water gets re-introduce to the process.</p>
                     </div>
                 </div>
-                <TextIconButton text="read more"/>
+                <TextIconButton text="read more" route={'/Ethos'}/>
                 {/* ------------------ Roasters Bs ---------------------- */}
             </div>
             <Roasters/>

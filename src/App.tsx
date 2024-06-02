@@ -18,18 +18,18 @@ function App() {
   return (
     <div className='app-container'>
       <Routes>
-        <Route path='/Home' element={<Home/>}/>
+        <Route path='/' element={<Home/>}/>
         <Route path='/Contact' element={<Contact/>}/>
         <Route path='/About' element={<About/>}/>
-        <Route path='/Ethos' element={<Ethos/>}></Route>
+        <Route path='/Ethos' element={<Ethos/>}/>
         <Route path='/Roasters' element={<Roasters/>} />
         <Route path='/Subscribe' element={<Subscribe/>} />
-        <Route path='/' element={<Landing/>}/>
+        <Route path='/ICEHome' element={<Landing/>}/>
         <Route path='/ICE' element={<ICE/>}/>
         <Route path='/CoffeeProcess' element={<CoffeeProcess/>}/>
         <Route path='/FAQs' element={<FAQs/>}/>
         <Route path='/VRExperience' element={<VRExperience/>}/>
-        <Route path='/Join' element={<ClientsForm/>}></Route>
+        <Route path='/Join' element={<ClientsForm/>}/>
       </Routes>
     </div>
   )
