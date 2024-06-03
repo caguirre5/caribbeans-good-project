@@ -12,6 +12,7 @@ import About from './pages/Main/About'
 import Ethos from './pages/Main/Ethos'
 import Roasters from './pages/Main/Roasters'
 import Subscribe from './pages/Main/Subscribe'
+import Terms from './pages/Legal/termsPage'
 
 function App() {
 
@@ -30,6 +31,9 @@ function App() {
         <Route path='/FAQs' element={<FAQs/>}/>
         <Route path='/VRExperience' element={<VRExperience/>}/>
         <Route path='/Join' element={<ClientsForm/>}/>
+        <Route path='/Legal/PrivacyPolicy' element={<Terms/>}/>
+        <Route path='/Legal/IPTerms' element={<Terms/>}/>
+        <Route path='/Legal/SalesTerms' element={<Terms/>}/>
       </Routes>
     </div>
   )

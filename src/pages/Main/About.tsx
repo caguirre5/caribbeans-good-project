@@ -6,25 +6,25 @@ import Roasters from "../../components/RoastersBusinesses"
 //Images
 import image1 from "../../assets/Images/All/2A8A6795.jpg"
 
-import videoSrc from "../../assets/Videos/2A8A6990.mp4"
+import videoSrc from "../../assets/Videos/Corporativa Acatenango.mp4"
 
 import imageCircle1 from "../../assets/Images/All/Medina-39.jpg"
 import imageCircle2 from "../../assets/Images/All/Medina-28 - Copy.jpg"
 
 import TeamCarousel from "../../components/TeamCarousel"
 
-import teamMember1 from "../../assets/TeamMembers/Javier.jpg"
-import teamMember2 from "../../assets/TeamMembers/Natdanai.jpeg"
-import teamMember3 from "../../assets/TeamMembers/Javier.jpg"
+import teamMJavier from "../../assets/TeamMembers/Javier.jpg"
+import teamMNatdanai from "../../assets/TeamMembers/Natdanai.jpeg"
+import teamMAlice from "../../assets/TeamMembers/Alice.jpg"
 
 function About() {
     const teamMembers = [
-        { name: 'Javier Gutierrez', position: 'Founder & CEO', image: teamMember1 },
-        { name: 'Natdanai Denham', position: 'Consultant', image:teamMember2 },
-        { name: 'Cristian Aguirre', position: 'Web Developer', image: teamMember3 },
-        { name: 'Harold', position: 'Photographer', image:teamMember3 },
-        { name: 'Efren', position: 'Videographer', image:teamMember3 },
-        { name: 'Alice Brown', position: 'Illustrator', image:teamMember3 },
+        { name: 'Javier Gutierrez', position: 'Founder & CEO', image: teamMJavier },
+        { name: 'Natdanai Denham', position: 'Consultant', image:teamMNatdanai },
+        { name: 'Cristian Aguirre', position: 'Web Developer', image: teamMJavier },
+        { name: 'Harold', position: 'Photographer', image:teamMJavier },
+        { name: 'Efren', position: 'Videographer', image:teamMJavier },
+        { name: 'Alice Brown', position: 'Illustrator', image:teamMAlice },
         // Añadir más miembros del equipo aquí...
       ];
 
@@ -39,6 +39,10 @@ function About() {
                 <hr className="w-9 bg-[#044421] h-1"/>
                 <h3 className="text-[#779da0] text-xl text-center py-5">Ethical Green Coffee Importer </h3>
                 <p className="text-sm text-[#044421]">Welcome to Caribbean Goods, where we specialise in importing green coffee to the UK. Our primary goal is to promote completely transparent trading, ensuring truly ethical coffee. We achieve this by sourcing our coffee directly from farmers we have personally met, which allows us to circumvent the industry issues that many farmers face and provide them with the fair work and pay they deserve. Our commitment to quality means we supply only the finest green coffee beans to roasters throughout the UK.</p>
+            </div>
+            <div className="w-full min-h-[100vh] flex flex-col justify-around items-center bg-[#cad4c4] py-20 px-10">
+                <h1 className="text-[#044421] text-5xl font-light mb-10" style={{fontFamily:'KingsThing'}}>Meet Our Team</h1>
+                <TeamCarousel members={teamMembers} />
             </div>
             <div className="w-full overflow-hidden h-[30vh] lg:h-[50vh]" style={{height:'50vh'}}>
                 <img src={image1}
@@ -57,10 +61,7 @@ function About() {
                 <h3 className="text-xl text-[#044421] mt-8" style={{fontFamily:'KingsThing'}}>‘I consider myself an activist working towards a greener and more educated world. I believe I came to this world to cause a positive impact on the people I meet, and in the meantime, I am selling goods from the Caribbean region ‘ - Javier</h3>
             </div>
             <Roasters/>
-            <div className="w-full min-h-[100vh] flex flex-col justify-around items-center bg-[#cad4c4] py-20 px-10">
-                <h1 className="text-[#044421] text-5xl font-light mb-10" style={{fontFamily:'KingsThing'}}>Meet Our Team</h1>
-                <TeamCarousel members={teamMembers} />
-            </div>
+            
             <div className="w-full h-[60vh] overflow-hidden relative">
                 <video className="w-full h-full object-cover " src={videoSrc} autoPlay muted loop />
             </div>

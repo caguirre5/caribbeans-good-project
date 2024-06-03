@@ -6,7 +6,7 @@
 
 .info-container {
     color: #fff;
-    width: 50vw;
+    width: 55vw;
     display: grid;
     grid-template-columns: repeat(3, 1fr); /* Tres columnas en la primera fila */
     gap: 10px; /* Espacio entre los divs */
@@ -28,18 +28,6 @@
     
 }
 
-.icon-container a{
-    width: auto;
-    text-decoration: none;
-    color: inherit;
-}
-
-.icon {
-    width: 30px;
-    height: 30px;
-    margin: 2px;
-    cursor: pointer;
-}
 
 @media screen and (max-width: 576px) {
     .info-container {

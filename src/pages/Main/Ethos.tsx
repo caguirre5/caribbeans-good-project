@@ -9,7 +9,7 @@ import image3 from "../../assets/Images/All/WhatsApp Image 2023-06-16 at 13.12.1
 import image4 from "../../assets/Images/All/Medina-42.jpg"
 
 //Videos
-import videoSrc from "../../assets/Videos/Caribbean Goods Video.mp4"
+import videoSrc from "../../assets/Videos/2A8A6990.mp4"
 
 //Projects
 import project1 from "../../assets/Images/All/2A8A7011.jpg"
