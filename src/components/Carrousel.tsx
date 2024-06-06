@@ -1,51 +1,51 @@
-// ImageCarousel.jsx
-import { useState } from 'react';
-interface Image {
-    url: string;
-    alt: string;
+import React, { useState, useEffect } from 'react';
+
+interface CarouselItemProps {
+  src: string;
+  alt: string;
+  isActive: boolean;
 }
 
-interface ImageCarouselProps {
-    images: Image[];
-}
-
-const ImageCarousel: React.FC<ImageCarouselProps> = ({ images }) => {
-    const [current, setCurrent] = useState(0);
-    const length = images.length;
-
-    const nextSlide = () => {
-        setCurrent(current === length - 1 ? 0 : current + 1);
-    };
-
-    const prevSlide = () => {
-        setCurrent(current === 0 ? length - 1 : current - 1);
-    };
-
-    if (!Array.isArray(images) || images.length <= 0) {
-        return null;
-    }
-
-    return (
-<div className="relative overflow-hidden lg:h-[60vh]">
-    <div className="flex justify-start items-center transition-transform duration-300" style={{
-        width: `${images.length * 100}%`,
-        transform: `translateX(-${current * (100 / images.length)}%)`
-    }}>
-        {images.map((image, index) => (
-            <div key={index} className="flex-shrink-0" style={{ width: `calc(100% / 3)`, height: "100%" }}>
-                <img src={image.url} alt={image.alt} className="w-full h-full object-cover" />
-            </div>
-        ))}
+const CarouselItem: React.FC<CarouselItemProps> = ({ src, alt, isActive }) => {
+  return (
+    <div
+      className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out ${
+        isActive ? 'opacity-100' : 'opacity-0'
+      }`}
+      data-twe-carousel-item
+      data-twe-carousel-active={isActive}
+    >
+      <img src={src} className="block w-full h-full object-cover" alt={alt} />
     </div>
-    <button onClick={prevSlide} className="absolute top-1/2 left-5 z-10 bg-white rounded-full p-1 text-black focus:outline-none transform -translate-y-1/2">
-        &#10094;
-    </button>
-    <button onClick={nextSlide} className="absolute top-1/2 right-5 z-10 bg-white rounded-full p-1 text-black focus:outline-none transform -translate-y-1/2">
-        &#10095;
-    </button>
-</div>
-
-    );
+  );
 };
 
-export default ImageCarousel;
+interface CarouselProps {
+  images: { url: string }[];
+}
+
+const Carousel: React.FC<CarouselProps> = ({ images }) => {
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveIndex((prevIndex) => (prevIndex + 1) % images.length);
+    }, 3000); // Cambia la imagen cada 3 segundos
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [images.length]);
+
+  return (
+    <div id="carouselExampleSlidesOnly" className="relative w-full h-[70vh]" data-twe-carousel-init data-twe-ride="carousel">
+      <div className="relative w-full h-full overflow-hidden">
+        {images.map((image, index) => (
+          <CarouselItem key={index} src={image.url} alt={`Carousel image ${index + 1}`} isActive={index === activeIndex} />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default Carousel;

@@ -37,13 +37,13 @@ const TeamCarousel: React.FC<TeamCarouselProps> = ({ members }) => {
       </div>
       <button
         onClick={prevSlide}
-        className="absolute top-1/2 left-0 transform -translate-y-1/2 bg-white p-2 rounded-full shadow-lg focus:outline-none"
+        className="absolute top-1/2 left-0 transform text-[#044421] -translate-y-1/2 bg-white p-2 rounded-full shadow-lg focus:outline-none"
       >
         ‹
       </button>
       <button
         onClick={nextSlide}
-        className="absolute top-1/2 right-0 transform -translate-y-1/2 bg-white p-2 rounded-full shadow-lg focus:outline-none"
+        className="absolute top-1/2 right-0 transform text-[#044421] -translate-y-1/2 bg-white p-2 rounded-full shadow-lg focus:outline-none"
       >
         ›
       </button>

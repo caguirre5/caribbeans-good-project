@@ -13,7 +13,7 @@
     padding-top: 10.5vh;
     background-image: url('../../../assets/Backgrounds/MainHome-WhiteBackground.jpg');
     background-size: cover;
-    background-position: center;
+    background-position: top;
 }
 
 .main-home-landing-container p {

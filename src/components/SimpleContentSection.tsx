@@ -63,7 +63,7 @@ const SimpleContentSection: React.FC<SimpleContentSectionProps> = ({
                 <motion.div 
                     className="lg:hidden flex justify-center mb-8"
                 >
-                    <img src={image} alt="Coffee beans" className="rounded-lg shadow-lg max-w-full h-auto object-cover" 
+                    <img src={image} alt="Coffee beans" className="rounded-lg shadow-lg max-w-full max-h-[50vh] h-auto object-cover" 
                         style={{ borderRadius: borderRadiusStyle }} />
                 </motion.div>
                 <h2 className="w-full text-center text-4xl lg:text-7xl mb-8 lg:mb-20 order-1" style={{color:titleColor, fontFamily: 'KingsThing' }}>{title}</h2>
@@ -94,7 +94,7 @@ const SimpleContentSection: React.FC<SimpleContentSectionProps> = ({
                         }}
                         custom={{xValue: reverseOrder ? -100 : 100, delayValue:0.1}}
                     >
-                        <img src={image} alt="Coffee beans" className="rounded-lg shadow-lg max-w-full h-auto object-cover" 
+                        <img src={image} alt="Coffee beans" className="max-h-[50vh] rounded-lg shadow-lg max-w-full h-auto object-cover" 
                             style={{ borderRadius: borderRadiusStyle }} />
                     </motion.div>
                 </div>

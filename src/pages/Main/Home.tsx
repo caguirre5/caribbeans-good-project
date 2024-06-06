@@ -26,6 +26,12 @@ import image1 from "../../assets/Images/All/HAR07128.jpg"
 import image2 from "../../assets/Images/All/2A8A7136.jpg"
 import image3 from "../../assets/Images/All/Hunbatz-34.jpg"
 
+
+import imageCarousel1 from "../../assets/Images/Carousels/EFR06209.jpg"
+import imageCarousel2 from "../../assets/Images/Carousels/EFR06251.jpg"
+import imageCarousel3 from "../../assets/Images/Carousels/EFR06273.jpg"
+import imageCarousel4 from "../../assets/Images/Carousels/EFR06394.jpg"
+
 // import { fadeInAnimationVariants } from "../../components/variantsGallery"
 
 import './Styles/Home.css'
@@ -88,9 +94,10 @@ function Home() {
     const isLargeScreen = useMediaQuery('(min-width: 992px)');
 
     const images = [
-        { url: 'https://images.unsplash.com/photo-1497436072909-60f360e1d4b1?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2560&q=80', alt: 'Description of image 1' },
-        { url: 'https://images.unsplash.com/photo-1497436072909-60f360e1d4b1?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2560&q=80', alt: 'Description of image 2' },
-        { url: 'https://images.unsplash.com/photo-1497436072909-60f360e1d4b1?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2560&q=80', alt: 'Description of image 3' },
+        { url: imageCarousel1 },
+        { url: imageCarousel2 },
+        { url: imageCarousel3 },
+        { url: imageCarousel4 },
     ];
 
     const imageProjects = [
@@ -364,7 +371,7 @@ function Home() {
                 {/* ------------------ Roasters Bs ---------------------- */}
             </div>
             <Roasters/>
-            <ImageCarousel images={images} />
+            <ImageCarousel images={images}/>
             <Footer/>
         </div>
     )

@@ -14,15 +14,19 @@ import imageCircle2 from "../../assets/Images/All/Medina-28 - Copy.jpg"
 import TeamCarousel from "../../components/TeamCarousel"
 
 import teamMJavier from "../../assets/TeamMembers/Javier.jpg"
-import teamMNatdanai from "../../assets/TeamMembers/Natdanai.jpeg"
+import teamMMaurice from "../../assets/TeamMembers/Maurice.jpg"
 import teamMAlice from "../../assets/TeamMembers/Alice.jpg"
+import teamMBruce from "../../assets/TeamMembers/Bruce.jpg"
+
+import TeamCard from "../../components/TeamCard"
 
 function About() {
     const teamMembers = [
         { name: 'Javier Gutierrez', position: 'Founder & CEO', image: teamMJavier },
-        { name: 'Natdanai Denham', position: 'Consultant', image:teamMNatdanai },
-        { name: 'Cristian Aguirre', position: 'Web Developer', image: teamMJavier },
+        { name: 'Mr. Maurice Taylor', position: 'OBE Advisory Board', image:teamMMaurice },
+        { name: 'Bruce Lean', position: 'Consultant', image:teamMBruce },
         { name: 'Harold', position: 'Photographer', image:teamMJavier },
+        { name: 'Cristian Aguirre', position: 'Web Developer', image: teamMJavier },
         { name: 'Efren', position: 'Videographer', image:teamMJavier },
         { name: 'Alice Brown', position: 'Illustrator', image:teamMAlice },
         // Añadir más miembros del equipo aquí...
@@ -40,9 +44,23 @@ function About() {
                 <h3 className="text-[#779da0] text-xl text-center py-5">Ethical Green Coffee Importer </h3>
                 <p className="text-sm text-[#044421]">Welcome to Caribbean Goods, where we specialise in importing green coffee to the UK. Our primary goal is to promote completely transparent trading, ensuring truly ethical coffee. We achieve this by sourcing our coffee directly from farmers we have personally met, which allows us to circumvent the industry issues that many farmers face and provide them with the fair work and pay they deserve. Our commitment to quality means we supply only the finest green coffee beans to roasters throughout the UK.</p>
             </div>
-            <div className="w-full min-h-[100vh] flex flex-col justify-around items-center bg-[#cad4c4] py-20 px-10">
+            <div className="w-full min-h-[100vh] flex flex-col justify-around items-center bg-[#fcf9f4] py-20 px-10">
                 <h1 className="text-[#044421] text-5xl font-light mb-10" style={{fontFamily:'KingsThing'}}>Meet Our Team</h1>
-                <TeamCarousel members={teamMembers} />
+                <div className="hidden lg:flex flex-wrap justify-center w-full lg:w-[80%] mx-auto">
+                    {teamMembers.map((member, index) => (
+                        <div className="w-full lg:w-1/4 p-4" key={index}>
+                        <TeamCard
+                            name={member.name}
+                            position={member.position}
+                            image={member.image}
+                        />
+                        </div>
+                    ))}
+                </div>
+                <div className="flex lg:hidden">
+                    <TeamCarousel members={teamMembers} />
+                </div>
+                    
             </div>
             <div className="w-full overflow-hidden h-[30vh] lg:h-[50vh]" style={{height:'50vh'}}>
                 <img src={image1}
@@ -62,7 +80,7 @@ function About() {
             </div>
             <Roasters/>
             
-            <div className="w-full h-[60vh] overflow-hidden relative">
+            <div className="w-full h-[640px] overflow-hidden relative">
                 <video className="w-full h-full object-cover " src={videoSrc} autoPlay muted loop />
             </div>
             

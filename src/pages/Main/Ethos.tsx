@@ -5,16 +5,16 @@ import { motion } from "framer-motion"
 
 import image1 from "../../assets/Images/All/HAR07128.jpg"
 import image2 from "../../assets/Images/All/HAR07100.jpg"
-import image3 from "../../assets/Images/All/WhatsApp Image 2023-06-16 at 13.12.10.jpeg"
-import image4 from "../../assets/Images/All/Medina-42.jpg"
+import image3 from "../../assets/Images/All/EFR05859.jpg"
+import image4 from "../../assets/Images/All/EFR05845.jpg"
 
 //Videos
 import videoSrc from "../../assets/Videos/2A8A6990.mp4"
 
 //Projects
-import project1 from "../../assets/Images/All/2A8A7011.jpg"
+// import project1 from "../../assets/Images/All/2A8A7011.jpg"
 import project2 from "../../assets/Images/All/plantingtree.jpg"
-import project3 from "../../assets/Images/All/WAER TREATMENT FROM MILLING PROCESS.jpg"
+// import project3 from "../../assets/Images/All/WAER TREATMENT FROM MILLING PROCESS.jpg"
 import project4 from "../../assets/Images/All/2de2d8186972333cb53304a542184cb5-cover-large.jpg"
 
 //Logos
@@ -24,6 +24,7 @@ import logo2 from "../../assets/Images/Vectors/Logo/social bite.png"
 //Components
 import SimpleContentSection from "../../components/SimpleContentSection"
 import { generateRandomBorderRadius } from "../../components/utilsFunctions"
+import { redirect } from "react-router-dom"
 
 
 const fadeInAnimationLeftVariants = {
@@ -128,8 +129,8 @@ function Ethos(){
                 titleColor="#044421"
             />
             <div className="bg-[#fffaf5] lg:bg-[#c9d3c0] px-8 py-20 flex flex-col justify-center items-center">
-                <h1 className="text-8xl text-[#044421]" style={{fontFamily:'KingsThing'}}>Projects</h1>
-                <div className="flex flex-col lg:flex-row justify-center items-center py-12">
+                <h1 className="text-8xl text-[#044421]" style={{fontFamily:'KingsThing'}}>Social Impact</h1>
+                {/* <div className="flex flex-col lg:flex-row justify-center items-center py-12">
                     <div className="lg:w-[30%] lg:ml-10 order-1"
                     
                     >
@@ -140,22 +141,22 @@ function Ethos(){
                             Also, we work with sustainable farms that have come up with ingenious solutions to generate a more sustainable supply chain. Some of the actions the farmers have incurred are using vermicompost rather than traditional fertilizers, keeping the endemic trees of the region rather than removing them, and planting specific trees to create a shadow for coffee. Using water treatment plants to lower the PH of water after washing the coffee and many more actions take us towards a greener and more sustainable world.</p>
                     </div>
                     <img src={project1} alt="" className="w-11/12 lg:w-[30%] rounded-lg shadow-lg max-w-full h-auto object-cover mt-8 lg:mr-10 order-0 " style={{ borderRadius: generateRandomBorderRadius() }}/>
-                </div>
+                </div> */}
                 <div className="flex flex-col lg:flex-row justify-center items-center py-12">
                     <div className="lg:w-[30%] lg:mr-10 order-1">
-                        <img src={logo1} alt="" className=""/>
+                        <a href="https://treesforlife.org.uk/groves/474546/" target="_blank"><img src={logo1} alt="" className=""/></a>
                         <h3 className="text-xl font-bold text-[#044421] py-8">Planting Trees in Scotland</h3>
                         <p className="text-[#044421]">Pilgrims Coffee is a Coffee house and Roastery based on Holy Island, a small tidal island off the coast of Northumbria. We donated 350 kg of green coffee to them with one ask to do something great for the planet. They returned and told us our donation helped them plant 200 trees in the Scottish highland through the fantastic charity, Trees for Life! You can check out the change already made and even get involved and donate your tree! Trees For Life UK is a charity committed to rewilding the Scottish highlands.</p>
                     </div>
-                    <img src={project2} alt="" className="w-11/12 lg:w-[30%] rounded-lg shadow-lg max-w-full h-auto object-cover mt-8 lg:ml-10 order-0 lg:order-2" style={{ borderRadius: generateRandomBorderRadius() }}/>
+                    <img src={project2} alt="" className="w-11/12 lg:w-[30%] rounded-lg shadow-lg max-w-full h-auto object-cover mt-8 lg:ml-10 order-0 lg:order-2" style={{ borderRadius: generateRandomBorderRadius() }} />
                 </div>
-                <div className="flex flex-col lg:flex-row justify-center items-center py-12">
+                {/* <div className="flex flex-col lg:flex-row justify-center items-center py-12">
                     <div className="lg:w-[30%] lg:ml-10 order-1">
                         <h3 className="text-xl font-bold text-[#044421] py-8">Small steps, Big Differences </h3>
                         <p className="text-[#044421]">One of our farms, Finca Medina, reuses 100% of the water needed to process the coffee beans, so they don't waste a drop! Now, if that's not an inspiration to us all, we don't know what is! </p>
                     </div>
                     <img src={project3} alt="" className="w-11/12 lg:w-[30%] rounded-lg shadow-lg max-w-full h-auto object-cover mt-8 lg:mr-10 order-0" style={{ borderRadius: generateRandomBorderRadius() }}/>
-                </div>
+                </div> */}
                 <div className="flex flex-col lg:flex-row justify-center items-center py-12">
                     <div className="lg:w-[30%] lg:mr-10 order-1">
                         <img src={logo2} alt="" className="h-[50px]"/>
