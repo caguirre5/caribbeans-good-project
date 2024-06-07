@@ -241,7 +241,7 @@ function Home() {
                         <img src={image1Form} alt="" style={{}}/>
                     </div>
                     <div className="f--container fc-1">
-                        <div className="fc-1-contact-form">
+                        <div className="fc-1-contact-form lg:max-w-[50vw]">
                             <h2>Join our Mailing List</h2>
                             <p>Sign-up below to get a monthly update</p>
 
@@ -270,69 +270,68 @@ function Home() {
                     </div>
                 </div>
                 <div className="cg5-forms">
-                    <div className="f--container fc-2">
-                    <div className="fc-1-contact-form">
-                        <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">Contact Us</h2>
-                        <form className="space-y-4">
-                        <div className="flex flex-col lg:flex-row ">
-                            <div className="">
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300" htmlFor="firstName">
-                                First Name
-                            </label>
-                            <input
-                                className=" rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400"
-                                id="firstName"
-                                name="firstName"
-                                placeholder="John"
-                                type="text"
-                            />
+                    <div className="f--container fc-2 lg:max-w-[50vw]">
+                        <div className="fc-1-contact-form ">
+                            <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">Contact Us</h2>
+                            <form className="space-y-4">
+                            <div className="flex flex-col lg:flex-row ">
+                                <div className="">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300" htmlFor="firstName">
+                                    First Name
+                                </label>
+                                <input
+                                    className=" rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                                    id="firstName"
+                                    name="firstName"
+                                    placeholder="John"
+                                    type="text"
+                                />
+                                </div>
+                                <div className="">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300" htmlFor="lastName">
+                                    Last Name
+                                </label>
+                                <input
+                                    className=" rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                                    id="lastName"
+                                    name="lastName"
+                                    placeholder="Doe"
+                                    type="text"
+                                />
+                                </div>
                             </div>
-                            <div className="">
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300" htmlFor="lastName">
-                                Last Name
-                            </label>
-                            <input
-                                className=" rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400"
-                                id="lastName"
-                                name="lastName"
-                                placeholder="Doe"
-                                type="text"
-                            />
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300" htmlFor="email">
+                                Email
+                                </label>
+                                <input
+                                className="mt-1 block w-full px-4 py-2 rounded-full border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                id="email"
+                                name="email"
+                                placeholder="john@example.com"
+                                type="email"
+                                />
                             </div>
+                            <div>
+                                <label className="block text-sm font-medium  text-gray-700 dark:text-gray-300" htmlFor="message">
+                                Message
+                                </label>
+                                <textarea
+                                className="mt-1 block w-full px-4 py-2 rounded-2xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                id="message"
+                                name="message"
+                                placeholder="Your message..."
+                                rows={4}
+                                />
+                            </div>
+                            <button
+                                className=" rounded-full bg-[#c9d3c0] py-2 px-12 text-sm font-medium text-white shadow-sm transition duration-300 ease-in-out hover:bg-[#9ed1c4] hover:text-[#044421] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                                type="submit"
+                            >
+                                Send 
+                            </button>
+                            </form>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300" htmlFor="email">
-                            Email
-                            </label>
-                            <input
-                            className="mt-1 block w-full px-4 py-2 rounded-full border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                            id="email"
-                            name="email"
-                            placeholder="john@example.com"
-                            type="email"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium  text-gray-700 dark:text-gray-300" htmlFor="message">
-                            Message
-                            </label>
-                            <textarea
-                            className="mt-1 block w-full px-4 py-2 rounded-2xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                            id="message"
-                            name="message"
-                            placeholder="Your message..."
-                            rows={4}
-                            />
-                        </div>
-                        <button
-                            className=" rounded-full bg-[#c9d3c0] py-2 px-12 text-sm font-medium text-white shadow-sm transition duration-300 ease-in-out hover:bg-[#9ed1c4] hover:text-[#044421] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                            type="submit"
-                        >
-                            Send 
-                        </button>
-                        </form>
-                    </div>
-
                     </div>
                     <div className="f--container">
                         <img src={image2Form} alt="" style={{}}/>
