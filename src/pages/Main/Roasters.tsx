@@ -2,11 +2,12 @@ import Header from "../../components/HeaderControls";
 import Footer from "../../components/Footer";
 import RoastersBusiness from "../../components/RoastersBusinesses";
 import CallbackForm from "../Forms/RoastersCallBackForm";
-import { TextIconButton } from "../../components/Buttons";
 
 import Image1 from '../../assets/Images/All/Hunbatz-39.jpg'
 import Image2 from '../../assets/Images/All/HAR07078.jpg'
 import Image3 from '../../assets/Images/All/HAR07092.jpg'
+
+import { IconButton, TextIconButton } from "../../components/Buttons";
 
 const sections = [
     {
@@ -31,7 +32,8 @@ const sections = [
     },
     {
       title: "Social Impact",
-      content: "We are a transparent, ethical green coffee importer. Read all about our ethics and the impact of the projects we have worked on."
+      content: "We are a transparent, ethical green coffee importer. Read all about our ethics and the impact of the projects we have worked on.",
+      href:"/About"
     }
   ];
 
@@ -40,13 +42,19 @@ const Roasters: React.FC = () => {
       <div className="min-h-screen   ">
         <Header/>
         <div className="bg-[#fcf9f4] flex flex-col items-center p-8 lg:flex-row lg:flex-wrap lg:justify-between lg:py-20 lg:px-[20%] pt-20 lg:pt-24 text-[#044421] pb-8">
-            <h1 className="text-5xl font-bold mb-6 lg:w-full lg:text-center py-8" style={{ fontFamily: 'KingsThing' }}>
+            <h1 className="text-4xl lg:text-5xl font-bold mb-6 lg:w-full lg:text-center py-8" style={{ fontFamily: 'KingsThing' }}>
                 Working with Us
             </h1>
             {sections.map((section, index) => (
                 <div key={index} className="w-full mb-6 lg:w-1/3 lg:mb-0 lg:px-4">
-                <h2 className="text-xl font-bold mb-2" style={{ fontFamily: 'KingsThing' }}>{section.title}</h2>
-                <p className="text-base">{section.content}</p>
+                  <div className="flex flex-row mb-2">
+                    <h2 className="text-xl font-bold mr-4" style={{ fontFamily: 'KingsThing' }}>{section.title}</h2>
+                    {section.href && (
+                      <IconButton route={'/Ethos'}/>
+                    )}
+                  </div>
+                  <p className="text-base">{section.content}</p>
+                  
                 </div>
             ))}
         </div>
@@ -55,12 +63,13 @@ const Roasters: React.FC = () => {
                     <img src={Image2} alt="" className="w-full lg:h-full lg:w-full object-cover" />
                 </div>
                 <div className="flex-1 flex flex-col py-20 lg:py-0 justify-center items-center bg-[#044421] text-[#9ed1c4]">
-                    <h3 className="px-10 lg:px-[22%] text-xl lg:text-2xl text-center mb-8" style={{fontFamily:'KingsThing'}}>
+                    <h3 className="px-10  text-2xl lg:text-4xl text-center mb-8" style={{fontFamily:'KingsThing'}}>
                     Already a roaster with us?
                     </h3>
-                    <p className="text-sm text-center font-bold w-[40%]">
+                    <p className="mb-10 text-sm text-center font-bold w-[80%] lg:w-[40%]">
                       Sign up or Login now to visit the  brand new Roaster Portal for full information on stock, farms & ordering
                     </p>
+                    <TextIconButton text="Sing in" color="#FAFAFA" textColor="#044421"/>
                 </div>
             </div>
         <RoastersBusiness/>

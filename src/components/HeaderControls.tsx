@@ -37,6 +37,7 @@ function Header() {
                     <li className="my-5 lg:mr-8 last:mr-0"><a className="font-semibold hover:text-[#e99c18]" href="/Roasters" onClick={() => redirectTo("/Roasters")}>Roasters</a></li>
                     <li className="my-5 lg:mr-8 last:mr-0"><a className="font-semibold hover:text-[#e99c18]" href="/Contact" onClick={() => redirectTo("/Contact")}>Contact</a></li>
                     <li className="my-5 lg:mr-8 last:mr-0"><a className="font-semibold hover:text-[#e99c18]" href="/Subscribe" onClick={() => redirectTo("/Subscribe")}>Subscribe</a></li>
+                    <li className="my-5 lg:mr-8 last:mr-0"><a className="font-semibold hover:text-[#e99c18]" href="/ICEHome" onClick={() => redirectTo("/ICEHome")}>ICX</a></li>
                     <li className="my-5 lg:mr-8 last:mr-0"><a className="w-[40px] h-[40px] rounded-full bg-[#044421] flex items-center justify-center text-white" href="/ICE" onClick={() => redirectTo("/ICE")}>O</a></li>
                 </ul>
             </div>

@@ -80,8 +80,8 @@ function About() {
             </div>
             <Roasters/>
             
-            <div className="w-full h-[640px] overflow-hidden relative">
-                <video className="w-full h-full object-cover " src={videoSrc} autoPlay muted loop />
+            <div className="w-full h-[640px] overflow-hidden relative pointer-events-none">
+                <video className="w-full h-full object-cover " src={videoSrc} autoPlay muted loop playsInline/>
             </div>
             
             <Footer/>

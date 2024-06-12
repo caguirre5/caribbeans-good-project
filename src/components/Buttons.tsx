@@ -13,6 +13,12 @@ interface TextIconButtonProps {
     color?: string,
     textColor?: string,
     route?:To,
+    blank?:string,
+}
+
+interface IconButtonProps {
+    color?: string,
+    route?:To,
 }
 
 
@@ -29,7 +35,7 @@ const TextWButton : React.FC<TextWButtonProps> = ({text, order = 0, route='/'}) 
     )
 }
 
-const TextIconButton : React.FC<TextIconButtonProps> = ({text, color="#3f7652", textColor="#fafafa", route='/'}) => {
+const TextIconButton : React.FC<TextIconButtonProps> = ({text, color="#3f7652", textColor="#fafafa", route='/', blank}) => {
     const navigate = useNavigate();
     return (
         <div style={{
@@ -42,7 +48,14 @@ const TextIconButton : React.FC<TextIconButtonProps> = ({text, color="#3f7652", 
             letterSpacing:4,
         }}
         className="main-home-texticonbutton cursor-pointer"
-        onClick={()=>{navigate(route)}}
+        onClick={()=>{
+            if (blank) {
+                window.open(blank, '_blank');
+            } 
+            else {
+                navigate(route)
+            }
+        }}
         >
             <p 
                 style={{color:textColor, fontSize:12}}
@@ -54,4 +67,13 @@ const TextIconButton : React.FC<TextIconButtonProps> = ({text, color="#3f7652", 
     )
 }
 
-export { TextWButton, TextIconButton };
+const IconButton : React.FC<IconButtonProps> = ({color='#cce8e1', route='/'}) => {
+    const navigate = useNavigate();
+    return (
+            <div className='flex items-center cursor-pointer' onClick={()=>{navigate(route)}}>
+                <FontAwesomeIcon  className={`bg-[${color}] rounded-full px-6 py-[2px] w-10 hover:bg-[#3f7652] hover:text-[#FAFAFA]`} icon={faLongArrowRight} />
+            </div>
+    )
+}
+
+export { TextWButton, TextIconButton, IconButton };

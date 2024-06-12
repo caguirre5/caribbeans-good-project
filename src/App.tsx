@@ -13,6 +13,7 @@ import Ethos from './pages/Main/Ethos'
 import Roasters from './pages/Main/Roasters'
 import Subscribe from './pages/Main/Subscribe'
 import Terms from './pages/Legal/termsPage'
+import PortalHome from './pages/Portal/Home'
 
 function App() {
 
@@ -34,6 +35,7 @@ function App() {
         <Route path='/Legal/PrivacyPolicy' element={<Terms/>}/>
         <Route path='/Legal/IPTerms' element={<Terms/>}/>
         <Route path='/Legal/SalesTerms' element={<Terms/>}/>
+        <Route path='/Portal' element={<PortalHome/>}/>
       </Routes>
     </div>
   )

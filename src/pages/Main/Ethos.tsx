@@ -6,7 +6,7 @@ import { motion } from "framer-motion"
 import image1 from "../../assets/Images/All/HAR07128.jpg"
 import image2 from "../../assets/Images/All/HAR07100.jpg"
 import image3 from "../../assets/Images/All/EFR05859.jpg"
-import image4 from "../../assets/Images/All/EFR05845.jpg"
+import image4 from "../../assets/Images/All/EFR06884.jpg"
 
 //Videos
 import videoSrc from "../../assets/Videos/2A8A6990.mp4"
@@ -24,7 +24,7 @@ import logo2 from "../../assets/Images/Vectors/Logo/social bite.png"
 //Components
 import SimpleContentSection from "../../components/SimpleContentSection"
 import { generateRandomBorderRadius } from "../../components/utilsFunctions"
-import { redirect } from "react-router-dom"
+import { TextIconButton } from "../../components/Buttons"
 
 
 const fadeInAnimationLeftVariants = {
@@ -129,7 +129,7 @@ function Ethos(){
                 titleColor="#044421"
             />
             <div className="bg-[#fffaf5] lg:bg-[#c9d3c0] px-8 py-20 flex flex-col justify-center items-center">
-                <h1 className="text-8xl text-[#044421]" style={{fontFamily:'KingsThing'}}>Social Impact</h1>
+                <h1 className="text-5xl lg:text-8xl text-[#044421]" style={{fontFamily:'KingsThing'}}>Social Impact</h1>
                 {/* <div className="flex flex-col lg:flex-row justify-center items-center py-12">
                     <div className="lg:w-[30%] lg:ml-10 order-1"
                     
@@ -146,7 +146,8 @@ function Ethos(){
                     <div className="lg:w-[30%] lg:mr-10 order-1">
                         <a href="https://treesforlife.org.uk/groves/474546/" target="_blank"><img src={logo1} alt="" className=""/></a>
                         <h3 className="text-xl font-bold text-[#044421] py-8">Planting Trees in Scotland</h3>
-                        <p className="text-[#044421]">Pilgrims Coffee is a Coffee house and Roastery based on Holy Island, a small tidal island off the coast of Northumbria. We donated 350 kg of green coffee to them with one ask to do something great for the planet. They returned and told us our donation helped them plant 200 trees in the Scottish highland through the fantastic charity, Trees for Life! You can check out the change already made and even get involved and donate your tree! Trees For Life UK is a charity committed to rewilding the Scottish highlands.</p>
+                        <p className="text-[#044421] mb-8">Pilgrims Coffee is a Coffee house and Roastery based on Holy Island, a small tidal island off the coast of Northumbria. We donated 350 kg of green coffee to them with one ask to do something great for the planet. They returned and told us our donation helped them plant 200 trees in the Scottish highland through the fantastic charity, Trees for Life! You can check out the change already made and even get involved and donate your tree! Trees For Life UK is a charity committed to rewilding the Scottish highlands.</p>
+                        <TextIconButton text="See the grove" blank="https://treesforlife.org.uk/groves/474546/"/>
                     </div>
                     <img src={project2} alt="" className="w-11/12 lg:w-[30%] rounded-lg shadow-lg max-w-full h-auto object-cover mt-8 lg:ml-10 order-0 lg:order-2" style={{ borderRadius: generateRandomBorderRadius() }} />
                 </div>
@@ -159,7 +160,7 @@ function Ethos(){
                 </div> */}
                 <div className="flex flex-col lg:flex-row justify-center items-center py-12">
                     <div className="lg:w-[30%] lg:mr-10 order-1">
-                        <img src={logo2} alt="" className="h-[50px]"/>
+                        <img src={logo2} alt="" className="h-[50px] mt-8 lg:mt-0"/>
                         <h3 className="text-xl font-bold text-[#044421] py-8">Helping Where We Can</h3>
                         <p className="text-[#044421]">Caribbean Goods partnered with Forth Coffee,  and together we donated 350kg of coffee to Social Bite, a charity and social business providing homes, jobs, food, and support to empower people to transform their own lives. dedicated to the mission of ending homelessness in Scotland.</p>
                         <a href="">Read more about their fantastic work here</a>
@@ -167,8 +168,8 @@ function Ethos(){
                     <img src={project4} alt="" className="w-11/12 lg:w-[30%] rounded-lg shadow-lg max-w-full h-auto object-cover mt-8 lg:ml-10 order-0 lg:order-2" style={{ borderRadius: generateRandomBorderRadius() }}/>
                 </div>
             </div>
-            <div className="w-full h-[75vh] overflow-hidden relative">
-                <video className="w-full h-full object-cover " src={videoSrc} autoPlay muted loop />
+            <div className="w-full h-[75vh] overflow-hidden relative pointer-events-none">
+                <video className="w-full h-full object-cover " src={videoSrc} autoPlay muted loop playsInline/>
             </div>
             <Footer/>
         </div>
