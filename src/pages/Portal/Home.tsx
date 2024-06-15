@@ -23,15 +23,32 @@ const PortalHome: React.FC = () => {
       case 'files':
         return <Files />;
       default:
-        return <Portal/>;
+        return <Portal />;
     }
   };
 
   return (
     <div className="w-full">
-      <Header/>
+      <Header />
       <div className='mx-auto flex flex-col items-center justify-center'>
-        <nav className="w-full flex justify-center space-x-6 py-4 border-b mt-20 bg-[#c9d3c0]">
+        {/* Dropdown para móviles */}
+        <div className="w-full flex justify-center py-4 border-b mt-20 bg-[#c9d3c0] lg:hidden">
+          <select
+            value={activeTab}
+            onChange={(e) => setActiveTab(e.target.value)}
+            className="bg-[#c9d3c0] text-gray-700 p-2 rounded-md"
+          >
+            <option value="home">Portal Home</option>
+            <option value="resource-library">Resource Library</option>
+            <option value="coffee-charts">Coffee Charts</option>
+            <option value="place-order">Place an Order</option>
+            <option value="my-account">My Account</option>
+            <option value="files">Files</option>
+          </select>
+        </div>
+
+        {/* Navbar para pantallas grandes */}
+        <nav className="hidden w-full justify-center space-x-6 py-4 border-b mt-20 bg-[#c9d3c0] lg:flex">
           <button
             onClick={() => setActiveTab('home')}
             className={activeTab === 'home' ? 'text-green-700 font-semibold border-b-2 border-green-700' : 'text-gray-700'}
@@ -69,7 +86,8 @@ const PortalHome: React.FC = () => {
             Files
           </button>
         </nav>
-        <div className="w-[80%] p-4">
+
+        <div className="mt-8 lg:mt-4 lg:w-[80%] lg:p-4">
           {renderContent()}
         </div>
       </div>

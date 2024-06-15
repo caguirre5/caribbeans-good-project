@@ -27,7 +27,7 @@ const TextWButton : React.FC<TextWButtonProps> = ({text, order = 0, route='/'}) 
     const navigate = useNavigate();
     return (
         <div className='main-home-text-w-button-1 cursor-pointer' onClick={()=>{navigate(route)}} style={{order:order}}>
-            <p>{text}</p>
+            <p className="text-sm lg:text-base">{text}</p>
             <div className='main-home-icon-container '>
                 <FontAwesomeIcon  className='main-home-icon w-10 hover:bg-[#3f7652]' icon={faLongArrowRight} />
             </div>

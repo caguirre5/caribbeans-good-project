@@ -1,5 +1,6 @@
 import Header from "../../components/HeaderControls"
 import Footer from "../../components/Footer"
+
 import ImageCarousel from "../../components/Carrousel"
 import ImageCard from "../../components/ImageArchCard"
 
@@ -32,9 +33,13 @@ import imageCarousel2 from "../../assets/Images/Carousels/EFR06251.jpg"
 import imageCarousel3 from "../../assets/Images/Carousels/EFR06273.jpg"
 import imageCarousel4 from "../../assets/Images/Carousels/EFR06394.jpg"
 
+import background from "../../assets/Backgrounds/MainHome-WhiteBackground.jpg"
+
 // import { fadeInAnimationVariants } from "../../components/variantsGallery"
 
 import './Styles/Home.css'
+import { useEffect, useState } from "react"
+import Loader from "../../components/Loader"
 
 //Prefix CalssName:     main-home-
 
@@ -91,6 +96,8 @@ const fadeInAnimationAppearVariants = {
 }
 
 function Home() {
+    const [loaded, setLoaded] = useState(false);
+    const [isExiting, setIsExiting] = useState(false);
     const isLargeScreen = useMediaQuery('(min-width: 992px)');
 
     const images = [
@@ -121,22 +128,44 @@ function Home() {
         },
       ];
 
+    useEffect(() => {
+    let timer = setTimeout(() => {
+        setIsExiting(true);
+        console.log(isExiting)
+    }, 5000); // Tiempo para mostrar el loader
+    return () => {
+        clearTimeout(timer);
+    };
+    }, []);
+
     return (
         <div className='main-home-container'>
+            {!loaded && 
+            // <div className='bg-white h-screen w-full'>
+                <Loader onExitComplete={() => setLoaded(true)} />
+            // </div>
+            } 
             <Header/>
-            <div className="main-home-landing-container">
-                <div style={{display:'flex', justifyContent:'center'}}>
-                    <p style={{order:0}}>We are a small scale, ethical coffee importers.</p>
+            <div 
+                className="h-screen bg-cover lg:bg-contain"
+                style={{
+                    backgroundImage: `url(${background})`,
+                    backgroundRepeat:'no-repeat',
+                    backgroundPosition: 'top',
+                }}  
+            >
+                <div className="flex justify-center pt-[10vh]">
+                    <p className="text-sm lg:text-base" style={{order:0}}>We are a small scale, ethical coffee importers.</p>
                 </div>
-                <GapDiv height={isLargeScreen ? '9vh' : '7.5vh'}/>
+                <GapDiv height={isLargeScreen ? '7.5vh' :'6.5vh'}/>
                 <TextWButton text={'We Import green coffee'} route="About"/>
                 
                 <GapDiv height={isLargeScreen ? '45vh' : '42vh'}/>
                 <TextWButton text={'Are you a roaster? Right this way'} route="Roasters"/>
                 <div className='main-home-GuatemalaxUK'>
-                    <p>Guatemala</p>
+                    <p className="text-sm lg:text-base">Guatemala</p>
                     <FontAwesomeIcon onClick={()=>{}} className="main-home-doubleimplication-icon " icon={faArrowsLeftRight}></FontAwesomeIcon>
-                    <p>United Kingdom</p>
+                    <p className="text-sm lg:text-base">United Kingdom</p>
                 </div>
             </div>
 

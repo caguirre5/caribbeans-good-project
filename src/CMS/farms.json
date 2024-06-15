@@ -1,0 +1,117 @@
+{
+    "farms": [
+      {
+        "title": "Niagara",
+        "region": "Fraijanes",
+        "altitude": "1,730 °",
+        "description": "A collection of small coffee producers in the western region known as 'the highlands' of Guatemala. With each 30kg bag of Hunbatz, we sell we plant a tree.",
+        "details": [
+          "The owner and administrator of Finca El Niagara is Mynor Daniel Zamora Salazar, an agricultural engineer...",
+          "He is the third generation of coffee growers. Since Mynor’s grandfather acquired the farm, it has produced coffee...",
+          "Finca El Niagara has a complicated story through time..."
+        ],
+        "buttonText": "Price & Availability",
+        "buttonIcon": "path/to/priceAvailabilityIcon.png",
+        "mapImage": "path/to/guatemalaMap.png",
+        "finca":true,
+        "color":"#df9a87"
+      },
+      {
+        "title": "Hunbatz",
+        "region": "Region XYZ",
+        "altitude": "1,500 °",
+        "description": "Another farm description...",
+        "details": [
+          "Detail 1 about Finca XYZ...",
+          "Detail 2 about Finca XYZ...",
+          "Detail 3 about Finca XYZ..."
+        ],
+        "buttonText": "Contact Us",
+        "buttonIcon": "path/to/contactIcon.png",
+        "mapImage": "path/to/xyzMap.png",
+        "finca":false,
+        "color":"#9ed1c4"
+      },
+      {
+        "title": "Medina",
+        "region": "",
+        "altitude": "",
+        "description": "Another farm description...",
+        "details": [
+          "Detail 1 about Finca XYZ...",
+          "Detail 2 about Finca XYZ...",
+          "Detail 3 about Finca XYZ..."
+        ],
+        "buttonText": "Contact Us",
+        "buttonIcon": "path/to/contactIcon.png",
+        "mapImage": "path/to/xyzMap.png",
+        "finca":true,
+        "color":"#eecc84"
+      },
+      {
+        "title": "San José Ocaña",
+        "region": "Region XYZ",
+        "altitude": "1,500 °",
+        "description": "Another farm description...",
+        "details": [
+          "Detail 1 about Finca XYZ...",
+          "Detail 2 about Finca XYZ...",
+          "Detail 3 about Finca XYZ..."
+        ],
+        "buttonText": "Contact Us",
+        "buttonIcon": "path/to/contactIcon.png",
+        "mapImage": "path/to/xyzMap.png",
+        "finca":true,
+        "color":"#0084c1"
+      },
+      {
+        "title": "El Socorro",
+        "region": "Region XYZ",
+        "altitude": "1,500 °",
+        "description": "Another farm description...",
+        "details": [
+          "Detail 1 about Finca XYZ...",
+          "Detail 2 about Finca XYZ...",
+          "Detail 3 about Finca XYZ..."
+        ],
+        "buttonText": "Contact Us",
+        "buttonIcon": "path/to/contactIcon.png",
+        "mapImage": "path/to/xyzMap.png",
+        "finca":true,
+        "color":"#f0af83"
+      },
+      {
+        "title": "Santa Ana",
+        "region": "Region XYZ",
+        "altitude": "1,500 °",
+        "description": "Another farm description...",
+        "details": [
+          "Detail 1 about Finca XYZ...",
+          "Detail 2 about Finca XYZ...",
+          "Detail 3 about Finca XYZ..."
+        ],
+        "buttonText": "Contact Us",
+        "buttonIcon": "path/to/contactIcon.png",
+        "mapImage": "path/to/xyzMap.png",
+        "finca":true,
+        "color":"#c9d3c0"
+      },
+      {
+        "title": "La Merced",
+        "region": "Region XYZ",
+        "altitude": "1,500 °",
+        "description": "Another farm description...",
+        "details": [
+          "Detail 1 about Finca XYZ...",
+          "Detail 2 about Finca XYZ...",
+          "Detail 3 about Finca XYZ..."
+        ],
+        "buttonText": "Contact Us",
+        "buttonIcon": "path/to/contactIcon.png",
+        "mapImage": "path/to/xyzMap.png",
+        "finca":true,
+        "color":"#8a341d"
+      }
+    ]
+  }
+  
