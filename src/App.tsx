@@ -15,6 +15,9 @@ import Subscribe from './pages/Main/Subscribe'
 import Terms from './pages/Legal/termsPage'
 import PortalHome from './pages/Portal/Home'
 
+import farmData from './CMS/farms.json';
+import FarmInfo from './components/FarmInfo'
+
 function App() {
 
   return (
@@ -35,7 +38,16 @@ function App() {
         <Route path='/Legal/PrivacyPolicy' element={<Terms/>}/>
         <Route path='/Legal/IPTerms' element={<Terms/>}/>
         <Route path='/Legal/SalesTerms' element={<Terms/>}/>
-        <Route path='/Portal' element={<PortalHome/>}/>
+        <Route path='/Portal' element={<PortalHome/>}>
+          </Route>
+          {farmData.farms.map((farm, index) => (
+            <Route
+              key={index}
+              path={`/Portal/farm/${farm.title.replace(/\s+/g, '-').toLowerCase()}`}
+              element={<FarmInfo data={farm} />}
+            />
+          ))}
+        
       </Routes>
     </div>
   )

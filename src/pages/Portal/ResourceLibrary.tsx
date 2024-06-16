@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate, Outlet } from 'react-router-dom';
 import farmData from '../../CMS/farms.json';
 
 interface FarmData {
@@ -14,14 +15,16 @@ interface FarmData {
   color:string;
 }
 
-const CardComponent: React.FC<{ title: string, color: string, finca:boolean }> = ({ title, color, finca }) => {
+const CardComponent: React.FC<{ title: string, color: string, finca:boolean, onClick: () => void }> = ({ title, color, finca, onClick }) => {
   return (
-    <div className={`p-4 shadow-md lg:rounded-md flex flex-col justify-center items-center text-center text-white`} 
+    <div 
+      className={`p-4 shadow-md lg:rounded-md flex flex-col justify-center items-center text-center text-white`} 
       style={{ 
         minHeight: '250px',
         backgroundColor: color,
         fontFamily: 'KingsThing'
       }}
+      onClick={onClick}
     >
       {finca && (
         <h3 className='text-2xl lg:text-4xl font-bold'>Finca</h3>
@@ -33,6 +36,7 @@ const CardComponent: React.FC<{ title: string, color: string, finca:boolean }> =
 
 const ResourceLibrary: React.FC = () => {
   const [data, setData] = useState<FarmData[]>([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Simulando una llamada API, aunque aquí usamos importación directa
@@ -53,9 +57,16 @@ const ResourceLibrary: React.FC = () => {
       
       <div className="mt-12 grid grid-cols-2 lg:grid-cols-3 lg:gap-8 w-full max-w-5xl">
         {data.map((farm, index) => (
-          <CardComponent key={index} title={farm.title} color={farm.color} finca={farm.finca}/>
+          <CardComponent 
+            key={index} 
+            title={farm.title} 
+            color={farm.color} 
+            finca={farm.finca}
+            onClick={() => navigate(`farm/${farm.title.replace(/\s+/g, '-').toLowerCase()}`)}
+          />
         ))}
       </div>
+      <Outlet />
     </div>
   );
 };
