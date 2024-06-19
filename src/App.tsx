@@ -21,7 +21,7 @@ import FarmInfo from './components/FarmInfo'
 function App() {
 
   return (
-    <div className='app-container'>
+    <div className='app-container overflow-x-hidden'>
       <Routes>
         <Route path='/' element={<Home/>}/>
         <Route path='/Contact' element={<Contact/>}/>

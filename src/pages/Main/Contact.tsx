@@ -17,7 +17,7 @@ function Contact() {
                 </div>
                 {/* Form */}
                 <div className="bg-[#c9d3c0] flex flex-col lg:flex-row h-auto lg:h-[70vh]" style={{}}>
-                    <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-2 py-10">
+                    <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-2 py-10 text-[#044421]">
                         <div className="flex flex-col justify-center items-center">
                             {/* icon    */}
                             <h3 className="text-xl font-bold">Address</h3>
@@ -44,7 +44,7 @@ function Contact() {
                         <ContactForm/>
                     </div>
                 </div>
-                    <LeafletMapComponent />
+                    <LeafletMapComponent coordinates={[55.860910, -4.241640]}/>
                 <div>
 
                 </div>

@@ -16,13 +16,17 @@ let DefaultIcon = L.icon({
 L.Marker.prototype.options.icon = DefaultIcon;
 
 // Define la posición como una tupla con dos elementos de tipo number
-const position: [number, number] = [55.89963499180381, -4.251106637225583];
+interface LeafletMapComponentProps {
+  coordinates: [number, number];
+  popupDescription:string;
+}
+// const position: [number, number] = [55.860910, -4.241640];
 
-const LeafletMapComponent: React.FC = () => {
+const LeafletMapComponent: React.FC<LeafletMapComponentProps> = ({ coordinates, popupDescription }) => {
   return (
     <MapContainer
-      center={position}
-      zoom={15}
+      center={[15.877539, -90.358891]}
+      zoom={7}
       style={{ height: '80vh', width: '100%' }}
       scrollWheelZoom={false}
       dragging={false}
@@ -33,9 +37,9 @@ const LeafletMapComponent: React.FC = () => {
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url='https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
       />
-      <Marker position={position}>
+      <Marker position={coordinates}>
         <Popup>
-          A pretty CSS3 popup. <br /> Easily customizable.
+          {popupDescription}
         </Popup>
       </Marker>
     </MapContainer>
