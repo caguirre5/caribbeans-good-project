@@ -13,7 +13,7 @@ interface FarmData {
   mapImage: string;
   finca:boolean;
   color:string;
-  coordinates:[number, number];
+  coordinates?:[number, number];
 }
 
 interface FarmInfoProps {
@@ -49,7 +49,7 @@ const FarmInfo: React.FC<FarmInfoProps> = ({ data }) => {
           </div>
         </div>
         <div className="flex justify-center lg:justify-center">
-          <LeafletMapComponent coordinates={[14.556650,-90.944061]} popupDescription={data.title}/>
+          <LeafletMapComponent coordinates={[14.556650,-90.944061]} center={[15.877539, -90.358891]} popupDescription={data.title} zoom={7}/>
         </div>
       </div>
     </div>

@@ -19,14 +19,16 @@ L.Marker.prototype.options.icon = DefaultIcon;
 interface LeafletMapComponentProps {
   coordinates: [number, number];
   popupDescription:string;
+  center:[number, number];
+  zoom:number;
 }
 // const position: [number, number] = [55.860910, -4.241640];
 
-const LeafletMapComponent: React.FC<LeafletMapComponentProps> = ({ coordinates, popupDescription }) => {
+const LeafletMapComponent: React.FC<LeafletMapComponentProps> = ({ coordinates, popupDescription, center, zoom }) => {
   return (
     <MapContainer
-      center={[15.877539, -90.358891]}
-      zoom={7}
+      center={center}
+      zoom={zoom}
       style={{ height: '80vh', width: '100%' }}
       scrollWheelZoom={false}
       dragging={false}
