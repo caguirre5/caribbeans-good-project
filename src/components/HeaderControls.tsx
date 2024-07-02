@@ -4,8 +4,11 @@ import { To, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBars, faTimes } from '@fortawesome/free-solid-svg-icons';
 
+import { useAuth0 } from '@auth0/auth0-react';
+
 function Header() {
     const [menuOpen, setMenuOpen] = useState(false);
+    const {loginWithRedirect, user, isAuthenticated} = useAuth0();
     
     const navigate = useNavigate();
 
@@ -13,6 +16,8 @@ function Header() {
         navigate(route);
         setMenuOpen(false); // Cerrar el menú después de hacer clic en un enlace
     };
+
+    const firstLetter = user?.name ? user.name.charAt(0) : '';
 
     return (
         <div className="absolute w-full flex justify-between items-center px-4 lg:px-12">
@@ -38,7 +43,17 @@ function Header() {
                     <li className="my-5 lg:mr-8 last:mr-0"><a className="font-semibold hover:text-[#e99c18]" href="/Contact" onClick={() => redirectTo("/Contact")}>Contact</a></li>
                     <li className="my-5 lg:mr-8 last:mr-0"><a className="font-semibold hover:text-[#e99c18]" href="/Subscribe" onClick={() => redirectTo("/Subscribe")}>Subscribe</a></li>
                     <li className="my-5 lg:mr-8 last:mr-0"><a className="font-semibold hover:text-[#e99c18]" href="/ICEHome" onClick={() => redirectTo("/ICEHome")}>ICX</a></li>
-                    <li className="my-5 lg:mr-8 last:mr-0"><a className="w-[40px] h-[40px] rounded-full bg-[#044421] flex items-center justify-center text-white" href="/ICE" onClick={() => redirectTo("/ICE")}>O</a></li>
+
+                    { !isAuthenticated ?
+                        <button
+                            onClick={() => loginWithRedirect()}
+                            className="border-[#044421] border hover:bg-[#044421] text-[#044421] hover:text-white font-bold py-2 px-4 rounded"
+                        >
+                            Log In
+                        </button>
+                    :
+                        <li className="my-5 lg:mr-8 last:mr-0 w-[40px] h-[40px] rounded-full bg-[#044421] flex items-center justify-center text-white" onClick={() => redirectTo("/Portal")}>{firstLetter}</li>
+                    }
                 </ul>
             </div>
         </div>

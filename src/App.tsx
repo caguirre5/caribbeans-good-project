@@ -14,11 +14,11 @@ import Roasters from './pages/Main/Roasters'
 import Subscribe from './pages/Main/Subscribe'
 import Terms from './pages/Legal/termsPage'
 import PortalHome from './pages/Portal/Home'
-
-import farmData from './CMS/farms.json';
-import FarmInfo from './components/FarmInfo'
+import Profile from './components/Profile'
+import { useAuth0 } from '@auth0/auth0-react'
 
 function App() {
+  const {isAuthenticated} = useAuth0()
 
   return (
     <div className='app-container overflow-x-hidden'>
@@ -38,16 +38,8 @@ function App() {
         <Route path='/Legal/PrivacyPolicy' element={<Terms/>}/>
         <Route path='/Legal/IPTerms' element={<Terms/>}/>
         <Route path='/Legal/SalesTerms' element={<Terms/>}/>
-        <Route path='/Portal' element={<PortalHome/>}>
-          </Route>
-          {farmData.farms.map((farm, index) => (
-            <Route
-              key={index}
-              path={`/Portal/farm/${farm.title.replace(/\s+/g, '-').toLowerCase()}`}
-              element={<FarmInfo data={farm} />}
-            />
-          ))}
-        
+        {isAuthenticated &&<Route path='/Portal' element={<PortalHome/>}/>}
+        {isAuthenticated && <Route path='/MyAccount' element={<Profile/>}/>}
       </Routes>
     </div>
   )

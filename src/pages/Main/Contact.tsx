@@ -44,7 +44,7 @@ function Contact() {
                         <ContactForm/>
                     </div>
                 </div>
-                    <LeafletMapComponent coordinates={[55.860910, -4.241640]} center={[55.860910, -4.241640]} popupDescription="Caribbean Goods" zoom={15}/>
+                    <LeafletMapComponent coordinates={[55.860910, -4.241640]} center={[55.860910, -4.241640]} popupDescription="Caribbean Goods" zoom={15} type="marker"/>
                 <div>
 
                 </div>

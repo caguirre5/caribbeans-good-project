@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -21,10 +21,11 @@ interface LeafletMapComponentProps {
   popupDescription:string;
   center:[number, number];
   zoom:number;
+  type:"marker"|"radius";
 }
 // const position: [number, number] = [55.860910, -4.241640];
 
-const LeafletMapComponent: React.FC<LeafletMapComponentProps> = ({ coordinates, popupDescription, center, zoom }) => {
+const LeafletMapComponent: React.FC<LeafletMapComponentProps> = ({ coordinates, popupDescription, center, zoom, type }) => {
   return (
     <MapContainer
       center={center}
@@ -39,11 +40,20 @@ const LeafletMapComponent: React.FC<LeafletMapComponentProps> = ({ coordinates, 
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url='https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
       />
-      <Marker position={coordinates}>
-        <Popup>
-          {popupDescription}
-        </Popup>
-      </Marker>
+      {type == "marker" ? (
+        <Marker position={coordinates}>
+          <Popup>
+            {popupDescription}
+          </Popup>
+        </Marker>
+      ): (
+        <Circle center={coordinates} radius={20000}>
+          <Popup>
+            {popupDescription}
+          </Popup>
+        </Circle>
+      )}
+      
     </MapContainer>
   );
 };

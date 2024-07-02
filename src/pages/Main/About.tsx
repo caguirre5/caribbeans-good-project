@@ -17,6 +17,7 @@ import teamMJavier from "../../assets/TeamMembers/Javier.jpg"
 import teamMMaurice from "../../assets/TeamMembers/Maurice.jpg"
 import teamMAlice from "../../assets/TeamMembers/Alice.jpg"
 import teamMBruce from "../../assets/TeamMembers/Bruce.jpg"
+import teamMCristian from "../../assets/TeamMembers/Cristian.jpg"
 
 import TeamCard from "../../components/TeamCard"
 
@@ -26,7 +27,7 @@ function About() {
         { name: 'Mr. Maurice Taylor', position: 'OBE Advisory Board', image:teamMMaurice },
         { name: 'Bruce Lean', position: 'Consultant', image:teamMBruce },
         { name: 'Harold', position: 'Photographer', image:teamMJavier },
-        { name: 'Cristian Aguirre', position: 'Web Developer', image: teamMJavier },
+        { name: 'Cristian Aguirre', position: 'Web Developer', image: teamMCristian },
         { name: 'Efren', position: 'Videographer', image:teamMJavier },
         { name: 'Alice Brown', position: 'Illustrator', image:teamMAlice },
         // Añadir más miembros del equipo aquí...
