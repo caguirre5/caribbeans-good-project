@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import ResourceLibrary from './ResourceLibrary';
 import CoffeeCharts from './CoffeeCharts';
 import PlaceOrder from './PlaceOrder';
-import MyAccount from './Account';
 import Files from './Files';
 import Header from '../../components/HeaderControls';
 import Footer from '../../components/Footer';

@@ -18,6 +18,7 @@ import teamMMaurice from "../../assets/TeamMembers/Maurice.jpg"
 import teamMAlice from "../../assets/TeamMembers/Alice.jpg"
 import teamMBruce from "../../assets/TeamMembers/Bruce.jpg"
 import teamMCristian from "../../assets/TeamMembers/Cristian.jpg"
+import teamHarold from "../../assets/TeamMembers/Harold.jpeg"
 
 import TeamCard from "../../components/TeamCard"
 
@@ -26,7 +27,7 @@ function About() {
         { name: 'Javier Gutierrez', position: 'Founder & CEO', image: teamMJavier },
         { name: 'Mr. Maurice Taylor OBE', position: 'Advisory Board', image:teamMMaurice },
         { name: 'Bruce Lean', position: 'Consultant', image:teamMBruce },
-        { name: 'Harold', position: 'Photographer', image:teamMJavier },
+        { name: 'Harold', position: 'Photographer', image:teamHarold },
         { name: 'Cristian Aguirre', position: 'Web Developer', image: teamMCristian },
         { name: 'Efren', position: 'Videographer', image:teamMJavier },
         { name: 'Alice Brown', position: 'Illustrator', image:teamMAlice },

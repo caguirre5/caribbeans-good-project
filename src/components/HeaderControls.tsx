@@ -8,10 +8,11 @@ import { useAuth0 } from '@auth0/auth0-react';
 function Header() {
     const [menuOpen, setMenuOpen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    
     const { loginWithRedirect, user, isAuthenticated } = useAuth0();
     
     const navigate = useNavigate();
-    const dropdownRef = useRef(null);
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
     const redirectTo = (route: To) => {
         navigate(route);
@@ -21,18 +22,21 @@ function Header() {
 
     const firstLetter = user?.name ? user.name.charAt(0) : '';
 
+    
+    
+
     useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
                 setDropdownOpen(false);
             }
         };
+
         document.addEventListener('mousedown', handleClickOutside);
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, []);
-
     return (
         <div className="absolute w-full flex justify-between items-center px-4 lg:px-12">
             <div className="flex lg:flex-1 items-center lg:justify-start h-20">

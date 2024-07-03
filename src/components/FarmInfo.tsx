@@ -1,6 +1,5 @@
 import React from 'react';
 import LeafletMapComponent from './LeafletMapComponent';
-import { TextIconButton } from './Buttons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faLongArrowRight } from '@fortawesome/free-solid-svg-icons';
 
