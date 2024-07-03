@@ -52,17 +52,21 @@ const Portal: React.FC = () => {
         <p className='text-sm text-center px-8 lg:px-0 mb-4 lg:mb-0 w-[260px]'>We are delighted to welcome you to the brand new Roasters Portal! </p>
         <FontAwesomeIcon icon={faChevronDown} className="text-[#a4cfc5] w-8 h-8 mt-40" />
       </main>
-      <section className="flex flex-wrap w-full h-screen lg:px-[15%] bg-white justify-center items-center py-[10%] lg:gap-4 lg:p-10">
+      <section className="grid grid-cols-2 lg:grid-cols-3 gap-4 w-full h-screen lg:px-[15%] bg-white justify-items-center content-center py-[10%] lg:gap-4 lg:p-10">
         {menuContent.map((card, index) => (
-          <div key={index} className="h-[250px] cursor-pointer flex flex-col items-center lg:justify-center p-2 py-4 lg:p-6 text-center w-[50%] border border-none lg:w-[25%] rounded-md hover:border-[#c9d3c0]hover:bg-[#c9d3c0]hover:text-white transition duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg">
+          <div 
+            key={index} 
+            className="h-[250px] cursor-pointer flex flex-col items-center justify-center p-2 py-4 lg:p-6 text-center w-[90%] border border-none lg:w-[80%] rounded-md transition duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg"
+          >
             <div className="flex justify-center mb-4">
               <FontAwesomeIcon icon={card.icon} className="text-[#cf583a] w-10 h-10" />
             </div>
             <h3 className="text-md font-semibold mb-2">{card.title}</h3>
-            <p className="text-sm lg:h-[110px]">{card.description}</p>
+            <p className="text-sm">{card.description}</p>
           </div>
         ))}
       </section>
+
     </div>
   );
 };

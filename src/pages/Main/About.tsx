@@ -24,7 +24,7 @@ import TeamCard from "../../components/TeamCard"
 function About() {
     const teamMembers = [
         { name: 'Javier Gutierrez', position: 'Founder & CEO', image: teamMJavier },
-        { name: 'Mr. Maurice Taylor', position: 'OBE Advisory Board', image:teamMMaurice },
+        { name: 'Mr. Maurice Taylor OBE', position: 'Advisory Board', image:teamMMaurice },
         { name: 'Bruce Lean', position: 'Consultant', image:teamMBruce },
         { name: 'Harold', position: 'Photographer', image:teamMJavier },
         { name: 'Cristian Aguirre', position: 'Web Developer', image: teamMCristian },

@@ -2,6 +2,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import React, {useState} from 'react';
 import { faCalendarCheck, faCartShopping } from '@fortawesome/free-solid-svg-icons';
 import OrderForm from '../Forms/OrderForm';
+import ReserveForm from '../Forms/ReserveForm';
 
 const PlaceOrder: React.FC = () => {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
@@ -20,7 +21,7 @@ const PlaceOrder: React.FC = () => {
   }
 
   if (selectedOption === 'reserve') {
-    return <div>Hola</div>;
+    return <ReserveForm onBack={handleBackClick}/>
   }
 
   return (
