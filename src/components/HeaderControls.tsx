@@ -9,7 +9,7 @@ function Header() {
     const [menuOpen, setMenuOpen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     
-    const { loginWithRedirect, user, isAuthenticated } = useAuth0();
+    const { loginWithRedirect, user, isAuthenticated, logout } = useAuth0();
     
     const navigate = useNavigate();
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -21,9 +21,6 @@ function Header() {
     };
 
     const firstLetter = user?.name ? user.name.charAt(0) : '';
-
-    
-    
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -85,7 +82,7 @@ function Header() {
                                     <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/MyOrders")}>My Orders</li>
                                     <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/MySubscriptions")}>My Subscriptions</li>
                                     <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/MyAccount")}>My Account</li>
-                                    <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer border-t border-gray-200" onClick={() => redirectTo("/Logout")}>Log Out</li>
+                                    <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer border-t border-gray-200" onClick={() => logout()}>Log Out</li>
                                 </ul>
                             )}
                         </div>

@@ -21,7 +21,7 @@ const PortalHome: React.FC = () => {
       case 'services':
         return <Files />;
       default:
-        return <Portal />;
+        return <Portal setActiveTab={setActiveTab} />;
     }
   };
 
