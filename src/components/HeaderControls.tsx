@@ -5,7 +5,11 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBars, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { useAuth0 } from '@auth0/auth0-react';
 
-function Header() {
+interface HeaderProp {
+    setActiveTab?: (tab: string) => void;
+} 
+
+const Header: React.FC<HeaderProp> = ({setActiveTab}) => {
     const [menuOpen, setMenuOpen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     
@@ -76,11 +80,11 @@ function Header() {
                             {dropdownOpen && (
                                 <ul className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg py-1 z-50 text-[#044421]">
                                     <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/Portal")}>Portal Home</li>
-                                    <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/ResourceLibrary")}>Resource Library</li>
-                                    <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/CoffeeCharts")}>Coffee Charts</li>
-                                    <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/RoastersForum")}>Roasters Forum</li>
-                                    <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/MyOrders")}>My Orders</li>
-                                    <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/MySubscriptions")}>My Subscriptions</li>
+                                    {/* <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/Portal")}>Resource Library</li>
+                                    <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/Portal")}>Coffee Charts</li> */}
+                                    <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/Portal")}>Roasters Forum</li>
+                                    <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/Portal")}>My Orders</li>
+                                    <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/Portal")}>My Subscriptions</li>
                                     <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/MyAccount")}>My Account</li>
                                     <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer border-t border-gray-200" onClick={() => logout()}>Log Out</li>
                                 </ul>

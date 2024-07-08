@@ -20,7 +20,7 @@ const ReserveForm: React.FC<OrderFormProps> = ({ onBack }) => {
   };
 
   return (
-    <div className="bg-[#9da793] p-10 lg:flex lg:items-center lg:justify-center lg:space-x-8 text-white w-[80%]">
+    <div className="bg-[#c9d3c0] p-10 lg:flex lg:items-center lg:justify-center lg:space-x-8 text-white w-[80%]">
       <form className="lg:w-1/2 space-y-4">
         <button 
           type="button" 

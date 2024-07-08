@@ -16,6 +16,7 @@ import Terms from './pages/Legal/termsPage'
 import PortalHome from './pages/Portal/Home'
 import Profile from './components/Profile'
 import { useAuth0 } from '@auth0/auth0-react'
+import ResourceLibraryCMS from './pages/CMS/ResourceLibraryCMS'
 
 function App() {
   const {isAuthenticated} = useAuth0()
@@ -40,6 +41,7 @@ function App() {
         <Route path='/Legal/SalesTerms' element={<Terms/>}/>
         {isAuthenticated &&<Route path='/Portal' element={<PortalHome/>}/>}
         {isAuthenticated && <Route path='/MyAccount' element={<Profile/>}/>}
+        <Route path='/CMS' element={<ResourceLibraryCMS/>}/>
       </Routes>
     </div>
   )
