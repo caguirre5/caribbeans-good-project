@@ -14,17 +14,18 @@
         "buttonIcon": "path/to/priceAvailabilityIcon.png",
         "mapImage": "path/to/guatemalaMap.png",
         "finca":true,
+        "coordenates":[5,5],
         "color":"#df9a87"
       },
       {
         "title": "Hunbatz",
-        "region": "Region XYZ",
-        "altitude": "1,500 °",
-        "description": "Another farm description...",
+        "region": "Cuilco, Huehuetenango.",
+        "altitude": "1,800 - 1,900°",
+        "description": "A collection of small coffee producers in the northwestern highlands of Guatemala, specifically in the Cuilco region of Huehuetenango, form the backbone of Hunbatz. For each 30 kg bag of Hunbatz coffee we sell, we plant a tree on behalf of the coffee roaster who purchased it. ",
         "details": [
-          "Detail 1 about Finca XYZ...",
-          "Detail 2 about Finca XYZ...",
-          "Detail 3 about Finca XYZ..."
+          "Among the Mayans, the howler monkey god was a primary deity of art and music and a patron of the artisans, especially the scribes and sculptors.",
+          "According to the sixteenth-century Popol Vuh creation myth, two brothers, Hunbatz and Hunchouen, were once talented dancers and artists. By nature, these two sons were wise, and their wisdom was great. All the arts were taught to Hunbatz and Hunchouén, the sons of Hun-Hunahpú. They were flautists, singers, shooters with blowguns, painters, sculptors, jewellers and silversmiths. ",
+          "The story goes that they climbed a tree; it grew up so tall that Hunbatz and Hunchouen could not get down. As they struggled in the branches, their loincloths came loose and turned into tails; they both became monkeys, one a spider monkey, the other a howler monkey. "
         ],
         "buttonText": "Contact Us",
         "buttonIcon": "path/to/contactIcon.png",
