@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import farmData from '../../CMS/farms.json';
 import FarmInfo from '../../components/FarmInfo';
+
+import { faSquarePlus } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 interface FarmData {
   title: string;
@@ -52,7 +54,20 @@ const ResourceLibrary: React.FC<ResourceLibraryProps> = ({ setActiveTab }) => {
   const [selectedFarm, setSelectedFarm] = useState<FarmData | null>(null);
 
   useEffect(() => {
-    setData(farmData.farms as FarmData[]);
+    const fetchFarmData = async () => {
+      try {
+        const response = await fetch('https://9r9f3lx5u4.execute-api.eu-west-2.amazonaws.com/dev/caribbeangoods-content-s3/file1.json');
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        setData(data.farms as FarmData[]);
+      } catch (error) {
+        console.error('Failed to fetch farm data:', error);
+      }
+    };
+
+    fetchFarmData();
   }, []);
 
   if (data.length === 0) {
@@ -85,7 +100,21 @@ const ResourceLibrary: React.FC<ResourceLibraryProps> = ({ setActiveTab }) => {
             finca={farm.finca}
             onClick={() => setSelectedFarm(farm)}
           />
+          
         ))}
+        <div 
+          className={`p-4 shadow-md lg:rounded-md flex flex-col justify-center items-center text-center text-white cursor-pointer`} 
+          style={{ 
+            minHeight: '300px',
+            backgroundColor: 'white',
+            fontFamily: 'KingsThing',
+            boxShadow: 'inset 0 4px 8px rgba(0, 0, 0, 0.1), inset 0 -4px 8px rgba(0, 0, 0, 0.1)'
+          }}
+          onClick={()=>{}}
+        >
+          <FontAwesomeIcon icon={faSquarePlus} className='text-[#e9e9e9] text-5xl'/>
+        </div> 
+
       </div>
     </div>
   );
