@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import FarmInfo from '../../components/FarmInfo';
+import Modal from '../../components/ModalPopUp';
+import CoffeeFarmCMSPage from '../CMS/Components/FarmForm';
+import { AnimatePresence } from 'framer-motion';
 
 import { faSquarePlus } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -52,6 +55,15 @@ interface ResourceLibraryProps {
 const ResourceLibrary: React.FC<ResourceLibraryProps> = ({ setActiveTab }) => {
   const [data, setData] = useState<FarmData[]>([]);
   const [selectedFarm, setSelectedFarm] = useState<FarmData | null>(null);
+  const [showModal, setShowModal] = useState(false);
+
+  const handleOpenModal = () => {
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+  };
 
   useEffect(() => {
     const fetchFarmData = async () => {
@@ -71,7 +83,16 @@ const ResourceLibrary: React.FC<ResourceLibraryProps> = ({ setActiveTab }) => {
   }, []);
 
   if (data.length === 0) {
-    return <div>Loading...</div>;
+    return (
+      <div
+        className="min-h-screen"
+        style={{
+          fontFamily:"KingsThing"
+        }}
+      >
+        Loading...
+      </div>
+    )
   }
 
   if (selectedFarm) {
@@ -102,7 +123,7 @@ const ResourceLibrary: React.FC<ResourceLibraryProps> = ({ setActiveTab }) => {
           />
           
         ))}
-        <div 
+        <motion.div 
           className={`p-4 shadow-md lg:rounded-md flex flex-col justify-center items-center text-center text-white cursor-pointer`} 
           style={{ 
             minHeight: '300px',
@@ -110,11 +131,19 @@ const ResourceLibrary: React.FC<ResourceLibraryProps> = ({ setActiveTab }) => {
             fontFamily: 'KingsThing',
             boxShadow: 'inset 0 4px 8px rgba(0, 0, 0, 0.1), inset 0 -4px 8px rgba(0, 0, 0, 0.1)'
           }}
-          onClick={()=>{}}
+          onClick={handleOpenModal}
+          whileHover={{ scale: 1.05, backgroundColor:"#f9f9f9"}}
+        transition={{ type: 'tween' }}
         >
           <FontAwesomeIcon icon={faSquarePlus} className='text-[#e9e9e9] text-5xl'/>
-        </div> 
-
+        </motion.div> 
+        <AnimatePresence>
+          {showModal && (
+            <Modal show={showModal} onClose={handleCloseModal}>
+              <CoffeeFarmCMSPage/>
+            </Modal>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

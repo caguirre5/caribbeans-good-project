@@ -17,6 +17,7 @@ import PortalHome from './pages/Portal/Home'
 import Profile from './components/Profile'
 import { useAuth0 } from '@auth0/auth0-react'
 import ResourceLibraryCMS from './pages/CMS/ResourceLibraryCMS'
+import PdfViewer from './pages/Legal/PdfViewer'
 
 function App() {
   const {isAuthenticated} = useAuth0()
@@ -42,6 +43,7 @@ function App() {
         {isAuthenticated &&<Route path='/Portal' element={<PortalHome/>}/>}
         {isAuthenticated && <Route path='/MyAccount' element={<Profile/>}/>}
         <Route path='/CMS' element={<ResourceLibraryCMS/>}/>
+        <Route path="/pdf-viewer" element={<PdfViewer/>} />
       </Routes>
     </div>
   )
