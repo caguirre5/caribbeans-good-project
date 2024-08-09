@@ -13,14 +13,12 @@ import Ethos from './pages/Main/Ethos'
 import Roasters from './pages/Main/Roasters'
 import Subscribe from './pages/Main/Subscribe'
 import Terms from './pages/Legal/termsPage'
-import PortalHome from './pages/Portal/Home'
-import Profile from './components/Profile'
-import { useAuth0 } from '@auth0/auth0-react'
 import ResourceLibraryCMS from './pages/CMS/ResourceLibraryCMS'
 import PdfViewer from './pages/Legal/PdfViewer'
 
+import ProtectedRoutes from './ProtectedRoutes';
+
 function App() {
-  const {isAuthenticated} = useAuth0()
 
   return (
     <div className='app-container overflow-x-hidden'>
@@ -40,8 +38,7 @@ function App() {
         <Route path='/Legal/PrivacyPolicy' element={<Terms/>}/>
         <Route path='/Legal/IPTerms' element={<Terms/>}/>
         <Route path='/Legal/SalesTerms' element={<Terms/>}/>
-        {isAuthenticated &&<Route path='/Portal' element={<PortalHome/>}/>}
-        {isAuthenticated && <Route path='/MyAccount' element={<Profile/>}/>}
+        <Route path='/*' element={<ProtectedRoutes />} />
         <Route path='/CMS' element={<ResourceLibraryCMS/>}/>
         <Route path="/pdf-viewer" element={<PdfViewer/>} />
       </Routes>
