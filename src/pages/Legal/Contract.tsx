@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
 import { useNavigate } from 'react-router-dom';
 import { useAuth0 } from "@auth0/auth0-react";
 import { useData } from '../../contexts/Datacontent';
+import { createPDF } from '../../components/utils/PDFGenerator';
+import watermark from '../../assets/green_logo_icon.png'
 
 interface DeliverySchedule {
   month: string;
@@ -63,7 +63,6 @@ const CoffeeSupplyAgreementForm: React.FC = () => {
   const labelClass = "block text-gray-700";
   const containerClass = "mb-4";
 
-
   const navigate = useNavigate();
 
   const handleChange = (
@@ -92,20 +91,15 @@ const CoffeeSupplyAgreementForm: React.FC = () => {
       );
     }
   };  
-  
 
   const updateDeliverySchedule = (totalQuantity: number, numberOfMonths: number) => {
     if (totalQuantity && numberOfMonths && numberOfMonths <= totalQuantity) {
-      // Cantidad base por mes
       const baseQuantity = Math.floor(totalQuantity / numberOfMonths);
-      // Resto a distribuir
       const remainder = totalQuantity % numberOfMonths;
-      // Genera el nuevo cronograma
       const newSchedule = Array.from({ length: numberOfMonths }, (_, index) => ({
         month: `Month ${index + 1}`,
         quantity: `${baseQuantity + (index < remainder ? 1 : 0)}`
       }));
-      // Actualiza el estado del formulario con el nuevo cronograma
       setFormData({ ...formData, deliverySchedule: newSchedule });
     }
   };
@@ -117,143 +111,88 @@ const CoffeeSupplyAgreementForm: React.FC = () => {
     if (selectedData) {
       setFormData({
         ...formData,
-        coffeeVarietal: selectedVariety,  // Actualiza esta línea
+        coffeeVarietal: selectedVariety,
         process: selectedData.Process,
         pricePerKg: selectedData.Price.replace('£ ', '')
       });
     }
   };
-  
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     console.log(formData);
   };
 
-  const generatePDFContent = (data: FormData): string[] => {
+  const handleGeneratePdf = async () => {
     let deliveryScheduleText = '';
-    data.deliverySchedule.forEach((schedule, index) => {
+    formData.deliverySchedule.forEach((schedule, index) => {
       deliveryScheduleText += `- Month ${index + 1}: ${schedule.quantity} kg\n`;
     });
 
-    const content = `
-### Coffee Supply Agreement
+    const content = [
+      `### Coffee Supply Agreement`,
+      `**This Coffee Supply Agreement ("Agreement") is made and entered into as of ${formData.date}, by and between:**`,
+      `**Supplier:**`,
+      `Caribbean Goods Ltd`,
+      `Rooms 6.01-6.13. Strathclyde Inspire`,
+      `Graham Hills Building. 50 Richmond St.`,
+      `Glasgow. G1 1XN`,
 
-**This Coffee Supply Agreement ("Agreement") is made and entered into as of ${data.date}, by and between:**
+      `Contact Person: Javier Enrique Gutierrez Abril`,
+      `Email: info@caribbeangoods.co.uk`,
+      `Telephone: +447413981290`,
+      `**Purchaser:**`,
+      `${formData.purchaserCompanyName}`,
+      `${formData.purchaserCompanyAddress}`,
+      `${formData.purchaserCityPostalCountry}`,
+      `Contact Person: ${formData.purchaserContactName}`,
+      `Email: ${formData.purchaserEmail}`,
+      `Telephone: ${formData.purchaserPhone}`,
+      `**Recitals**`,
+      `WHEREAS, the Supplier is engaged in the business of importing and selling green coffee;`,
+      `WHEREAS, the Purchaser is engaged in the business of roasting and selling coffee;`,
+      `WHEREAS, the Purchaser wishes to book certain quantities of green coffee from the Supplier over a specified period;`,
+      `NOW, THEREFORE, in consideration of the mutual covenants and agreements herein contained, the parties hereto agree as follows:`,
+      `### 1. **Product Description and Quality**`,
+      `The Supplier agrees to supply, and the Purchaser agrees to purchase, the following green coffee:`,
+      `- ${formData.process} ${formData.coffeeVarietal}`,
+      `### 2. **Quantity and Delivery Schedule**`,
+      `The Purchaser agrees to book and purchase a total quantity of ${formData.totalQuantity} kg over a period of ${formData.numberOfMonths} months, according to the following schedule:`,
+      `${deliveryScheduleText}`,
+      `### 3. **Price and Payment Terms**`,
+      `3.1. **Price**: The price per kilogram of green coffee is £ ${formData.pricePerKg} GBP.`,
+      `3.2. **Payment Terms**: Payment for each shipment shall be made within ${formData.paymentDays} days of the delivery date. Payments shall be made via ${formData.paymentMethod}.`,
+      `3.3. **Late Payments**: Any payments not made within the specified period shall incur a late fee of 1% per late week.`,
+      `### 4. **Delivery Terms**`,
+      `4.1. **Delivery Location**: The green coffee shall be delivered to ${formData.deliveryAddress}.`,
+      `4.2. **Delivery Schedule**: Deliveries shall be made according to the schedule specified in Section 2.`,
+      `4.3. **Risk of Loss**: Risk of loss and title to the green coffee shall pass to the Purchaser upon delivery at the specified location.`,
+      `### 5. **Acceptance and Inspection**`,
+      `5.1. The Purchaser shall inspect the delivered coffee within 5 business days of receipt. If the coffee does not meet the agreed specifications, the Purchaser shall notify the Supplier in writing within 7-10 days of inspection.`,
+      `5.2. The Supplier shall replace any non-conforming coffee at no additional cost to the Purchaser.`,
+      `### 6. **Force Majeure**`,
+      `Neither party shall be liable for any delay or failure in performance due to events beyond their reasonable control, including but not limited to acts of God, war, strikes, or government regulations.`,
+      `### 7. **Termination**`,
+      `This Agreement may be terminated by either party with 30 days' written notice if the other party breaches any material term of this Agreement and fails to cure such breach within 30 days of receiving notice of the breach.`,
+      `### 8. **Governing Law**`,
+      `This Agreement shall be governed by and construed in accordance with the laws of England and Wales.`,
+      `### 9. **Dispute Resolution**`,
+      `Any disputes arising out of or in connection with this Agreement shall be resolved through negotiation in good faith. If the dispute cannot be resolved through negotiation, it shall be submitted to mediation or arbitration as agreed by the parties.`,
+      `### 10. **Entire Agreement**`,
+      `This Agreement constitutes the entire agreement between the parties and supersedes all prior agreements and understandings, whether written or oral, relating to the subject matter hereof.`,
+      `**IN WITNESS WHEREOF, the parties hereto have executed this Agreement as of the day and year first above written.**`,
+      `<break>`,
+      `**Supplier:**`,
+      `Caribbean Goods Ltd`,
+      `\n\n\n_______________________________`,
+      `Javier Enrique Gutierrez Abril\n`,
+      `**Purchaser:**`,
+      `${formData.purchaserCompanyName}`,
+      `\n\n\n_______________________________`,
+      `${formData.purchaserContactName}`
+    ];
 
-**Supplier:**
-Caribbean Goods Ltd
-Rooms 6.01-6.13. Strathclyde Inspire
-Graham Hills Building. 50 Richmond St.
-Glasgow. G1 1XN
-
-Contact Person: Javier Enrique Gutierrez Abril
-Email: info@caribbeangoods.co.uk
-Telephone: +447413981290
-
-**Purchaser:**
-${data.purchaserCompanyName}
-${data.purchaserCompanyAddress}
-${data.purchaserCityPostalCountry}
-Contact Person: ${data.purchaserContactName}
-Email: ${data.purchaserEmail}
-Telephone: ${data.purchaserPhone}
-
-**Recitals**
-
-WHEREAS, the Supplier is engaged in the business of importing and selling green coffee;
-WHEREAS, the Purchaser is engaged in the business of roasting and selling coffee;
-WHEREAS, the Purchaser wishes to book certain quantities of green coffee from the Supplier over a specified period;
-
-NOW, THEREFORE, in consideration of the mutual covenants and agreements herein contained, the parties hereto agree as follows:
-
-### 1. **Product Description and Quality**
-
-The Supplier agrees to supply, and the Purchaser agrees to purchase, the following green coffee:
-- ${data.process} ${data.coffeeVarietal}
-
-### 2. **Quantity and Delivery Schedule**
-
-The Purchaser agrees to book and purchase a total quantity of ${data.totalQuantity} kg over a period of ${data.numberOfMonths} months, according to the following schedule:
-${deliveryScheduleText}
-
-### 3. **Price and Payment Terms**
-
-3.1. **Price**: The price per kilogram of green coffee is £ ${data.pricePerKg} GBP.
-
-3.2. **Payment Terms**: Payment for each shipment shall be made within ${data.paymentDays} days of the delivery date. Payments shall be made via ${data.paymentMethod}.
-
-3.3. **Late Payments**: Any payments not made within the specified period shall incur a late fee of 1% per late week.
-
-### 4. **Delivery Terms**
-
-4.1. **Delivery Location**: The green coffee shall be delivered to ${data.deliveryAddress}.
-
-4.2. **Delivery Schedule**: Deliveries shall be made according to the schedule specified in Section 2.
-
-4.3. **Risk of Loss**: Risk of loss and title to the green coffee shall pass to the Purchaser upon delivery at the specified location.
-
-### 5. **Acceptance and Inspection**
-
-5.1. The Purchaser shall inspect the delivered coffee within 5 business days of receipt. If the coffee does not meet the agreed specifications, the Purchaser shall notify the Supplier in writing within 7-10 days of inspection.
-
-5.2. The Supplier shall replace any non-conforming coffee at no additional cost to the Purchaser.
-
-### 6. **Force Majeure**
-
-Neither party shall be liable for any delay or failure in performance due to events beyond their reasonable control, including but not limited to acts of God, war, strikes, or government regulations.
-
-### 7. **Termination**
-
-This Agreement may be terminated by either party with 30 days' written notice if the other party breaches any material term of this Agreement and fails to cure such breach within 30 days of receiving notice of the breach.
-
-### 8. **Governing Law**
-
-This Agreement shall be governed by and construed in accordance with the laws of England and Wales.
-
-### 9. **Dispute Resolution**
-
-Any disputes arising out of or in connection with this Agreement shall be resolved through negotiation in good faith. If the dispute cannot be resolved through negotiation, it shall be submitted to mediation or arbitration as agreed by the parties.
-
-### 10. **Entire Agreement**
-
-This Agreement constitutes the entire agreement between the parties and supersedes all prior agreements and understandings, whether written or oral, relating to the subject matter hereof.
-
-**IN WITNESS WHEREOF, the parties hereto have executed this Agreement as of the day and year first above written.**
-
-**Supplier:**
-Caribbean Goods Ltd
-
-By: _______________________________
-Name: Javier Enrique Gutierrez Abril
-
-**Purchaser:**
-${data.purchaserCompanyName}
-
-By: _______________________________
-Name: ${data.purchaserContactName}
-  `;
-
-    const lines = content.split('\n');
-    return lines;
-  };
-
-  const handleGeneratePdf = () => {
-    const doc = new jsPDF();
-    const content = generatePDFContent(formData);
-
-    doc.setFontSize(12);
-    doc.autoTable({
-      head: [],
-      body: content.map(line => [line]),
-      theme: 'plain',
-      styles: { font: 'courier', fontSize: 12 },
-      startY: 10,
-      margin: { left: 10, right: 10 },
-      pageBreak: 'auto',
-    });
-
-    const pdfBlob = doc.output('blob');
+    const pdfBlob = await createPDF(content, watermark);
     const pdfUrl = URL.createObjectURL(pdfBlob);
     navigate('/pdf-viewer', { state: { pdfUrl } });
   };
@@ -293,7 +232,6 @@ Name: ${data.purchaserContactName}
       </div>
     );
   };
-  
 
   const renderPaymentDaysDropdown = () => {
     const options = ['30 days', 'Cash on Delivery'];
@@ -324,9 +262,7 @@ Name: ${data.purchaserContactName}
       </div>
     );
   };
-  
-  
-  
+
   const calculateTotalAmount = () => {
     const totalQuantity = parseInt(formData.totalQuantity);
     const pricePerKg = parseFloat(formData.pricePerKg);
@@ -394,7 +330,6 @@ Name: ${data.purchaserContactName}
       </form>
     </div>
   );
-  
 };
 
 export default CoffeeSupplyAgreementForm;

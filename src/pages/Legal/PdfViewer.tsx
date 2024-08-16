@@ -24,12 +24,14 @@ const PdfViewer: React.FC = () => {
       const lastPage = pages[pages.length - 1];
       const pngImage = await pdfDoc.embedPng(signatureData);
       const { width, height } = lastPage.getSize();
+
+
       
       lastPage.drawImage(pngImage, {
-        x: width / 2 - 100,
-        y: 50,
-        width: 200,
-        height: 100,
+        x: 60,
+        y: height - 250,
+        width: 180,
+        height: 50,
       });
 
       const pdfDataUri = await pdfDoc.saveAsBase64({ dataUri: true });
