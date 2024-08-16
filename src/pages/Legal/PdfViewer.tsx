@@ -23,7 +23,7 @@ const PdfViewer: React.FC = () => {
       const pages = pdfDoc.getPages();
       const lastPage = pages[pages.length - 1];
       const pngImage = await pdfDoc.embedPng(signatureData);
-      const { width, height } = lastPage.getSize();
+      const { height } = lastPage.getSize();
 
 
       
