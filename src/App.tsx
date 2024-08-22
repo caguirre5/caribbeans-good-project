@@ -14,9 +14,9 @@ import Roasters from './pages/Main/Roasters'
 import Subscribe from './pages/Main/Subscribe'
 import Terms from './pages/Legal/termsPage'
 import ResourceLibraryCMS from './pages/CMS/ResourceLibraryCMS'
-import PdfViewer from './pages/Legal/PdfViewer'
 
 import ProtectedRoutes from './ProtectedRoutes';
+import CookieConsentBanner from './pages/Legal/CookieConsentBanner'
 
 function App() {
 
@@ -40,8 +40,8 @@ function App() {
         <Route path='/Legal/SalesTerms' element={<Terms/>}/>
         <Route path='/*' element={<ProtectedRoutes />} />
         <Route path='/CMS' element={<ResourceLibraryCMS/>}/>
-        <Route path="/pdf-viewer" element={<PdfViewer/>} />
       </Routes>
+      <CookieConsentBanner />
     </div>
   )
 }

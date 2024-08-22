@@ -29,12 +29,6 @@ const menuContent = [
     description:"A place to connect, share and learn from each other."
   },
   {
-    icon:faMugHot,
-    id:"home",
-    title:"Book a cupping",
-    description:"Chose a date for a visit and a cupping session with our founder Javier."
-  },
-  {
     icon:faUser,
     id:"my-account",
     title:"My Account",

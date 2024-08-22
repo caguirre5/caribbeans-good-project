@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import ResourceLibrary from './ResourceLibrary';
 import CoffeeCharts from './CoffeeCharts';
 import PlaceOrder from './PlaceOrder';
-import Files from './Files';
 import Header from '../../components/HeaderControls';
 import Footer from '../../components/Footer';
 import Portal from './Portal';
@@ -18,8 +17,6 @@ const PortalHome: React.FC = () => {
         return <CoffeeCharts />;
       case 'place-order':
         return <PlaceOrder />;
-      case 'services':
-        return <Files />;
       default:
         return <Portal setActiveTab={setActiveTab} />;
     }
@@ -39,9 +36,8 @@ const PortalHome: React.FC = () => {
           >
             <option value="home">Portal Home</option>
             <option value="resource-library">Resource Library</option>
-            <option value="coffee-charts">Coffee Charts</option>
+            <option value="coffee-charts">Prices & Availability</option>
             <option value="place-order">Place an Order</option>
-            <option value="files">Services</option>
           </select>
         </div>
 
@@ -63,19 +59,13 @@ const PortalHome: React.FC = () => {
             onClick={() => setActiveTab('coffee-charts')}
             className={activeTab === 'coffee-charts' ? 'text-[#044421] font-semibold border-t-2 border-[#044421]' : 'text-[#044421]'}
           >
-            Coffee Charts
+            Prices & Availability
           </button>
           <button
             onClick={() => setActiveTab('place-order')}
             className={activeTab === 'place-order' ? 'text-[#044421] font-semibold border-t-2 border-[#044421]' : 'text-[#044421]'}
           >
             Place an Order
-          </button>
-          <button
-            onClick={() => setActiveTab('services')}
-            className={activeTab === 'services' ? 'text-[#044421] font-semibold border-t-2 border-[#044421]' : 'text-[#044421]'}
-          >
-            Services
           </button>
         </nav>
 
