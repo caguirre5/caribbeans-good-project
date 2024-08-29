@@ -20,6 +20,8 @@ import Signup from './pages/Auth/Signup';
 import ProtectedRoutes from './ProtectedRoutes';
 import { AuthProvider } from './contexts/AuthContext'; // Importa AuthProvider
 
+import CookieConsentBanner from './pages/Legal/CookieConsentBanner'
+
 function App() {
 
   return (
@@ -45,6 +47,8 @@ function App() {
           <Route path='/login' element={<Login />} /> {/* Ruta de Login */}
           <Route path='/signup' element={<Signup />} /> {/* Ruta de Signup */}
         </Routes>
+        
+        <CookieConsentBanner />
       </div>
     </AuthProvider>
   );

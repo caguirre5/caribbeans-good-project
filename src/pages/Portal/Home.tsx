@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import ResourceLibrary from './ResourceLibrary';
 import CoffeeCharts from './CoffeeCharts';
 import PlaceOrder from './PlaceOrder';
-import Files from './Files';
 import Header from '../../components/HeaderControls';
 import Footer from '../../components/Footer';
 import Portal from './Portal';
 import UserList from './Admin';
+import Files from './Files';
 
 const PortalHome: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('home');
@@ -42,7 +42,7 @@ const PortalHome: React.FC = () => {
           >
             <option value="home">Portal Home</option>
             <option value="resource-library">Resource Library</option>
-            <option value="coffee-charts">Coffee Charts</option>
+            <option value="coffee-charts">Prices & Availability</option>
             <option value="place-order">Place an Order</option>
             <option value="files">Services</option>
             <option value="admin">Users</option>
@@ -67,7 +67,7 @@ const PortalHome: React.FC = () => {
             onClick={() => setActiveTab('coffee-charts')}
             className={activeTab === 'coffee-charts' ? 'text-[#044421] font-semibold border-t-2 border-[#044421]' : 'text-[#044421]'}
           >
-            Coffee Charts
+            Prices & Availability
           </button>
           <button
             onClick={() => setActiveTab('place-order')}

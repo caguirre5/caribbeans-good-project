@@ -3,9 +3,13 @@ import React, {useState} from 'react';
 import { faCalendarCheck, faCartShopping } from '@fortawesome/free-solid-svg-icons';
 import OrderForm from '../Forms/OrderForm';
 import ReserveForm from '../Forms/ReserveForm';
+import { AnimatePresence } from 'framer-motion';
+import Modal from '../../components/ModalPopUp';
+import Contract from '../Legal/Contract';
 
 const PlaceOrder: React.FC = () => {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [showModal, setShowModal] = useState(false);
 
   const handleOptionClick = (option: string) => {
     setSelectedOption(option);
@@ -23,6 +27,14 @@ const PlaceOrder: React.FC = () => {
   if (selectedOption === 'reserve') {
     return <ReserveForm onBack={handleBackClick}/>
   }
+
+  const handleOpenModal = () => {
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+  };
 
   return (
     <div 
@@ -42,7 +54,7 @@ const PlaceOrder: React.FC = () => {
         </div>
 
         <div className="cursor-pointer flex flex-col items-center lg:justify-center p-2 py-4 lg:p-6 text-center w-[50%] h-[260px] border border-white lg:w-[210px] rounded-md hover:border-[#c9d3c0]hover:bg-[#c9d3c0]hover:text-white transition duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg"
-          onClick={() => handleOptionClick('reserve')}
+          onClick={handleOpenModal}
         >
           <div className="flex justify-center mb-4">
             <FontAwesomeIcon icon={faCalendarCheck} className="text-[#cf583a] w-10 h-10" />
@@ -51,6 +63,13 @@ const PlaceOrder: React.FC = () => {
           <p className="text-sm">Reserve your coffee and plan your deliveries in advance.</p>
         </div>
       </div>
+      <AnimatePresence>
+        {showModal && (
+          <Modal show={showModal} onClose={handleCloseModal}>
+            <Contract/>
+          </Modal>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

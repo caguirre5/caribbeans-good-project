@@ -10,7 +10,7 @@ import { doc, getDoc } from 'firebase/firestore'; // Importa métodos necesarios
 
 interface DeliverySchedule {
   month: string;
-  quantity: string;
+  quantityBags: string; // Cambio: Se utiliza quantityBags en lugar de quantity
 }
 
 interface FormData {
@@ -23,7 +23,7 @@ interface FormData {
   purchaserPhone: string;
   coffeeVarietal: string;
   process: string;
-  totalQuantity: string;
+  totalQuantityBags: string; // Cambio: Se utiliza totalQuantityBags en lugar de totalQuantity
   numberOfMonths: string;
   deliverySchedule: DeliverySchedule[];
   pricePerKg: string;
@@ -53,9 +53,9 @@ const CoffeeSupplyAgreementForm: React.FC = () => {
     purchaserPhone: '',
     coffeeVarietal: '',
     process: '-',
-    totalQuantity: '',
+    totalQuantityBags: '', // Cambio: Se inicializa con totalQuantityBags
     numberOfMonths: '',
-    deliverySchedule: [{ month: '', quantity: '' }],
+    deliverySchedule: [{ month: '', quantityBags: '' }], // Cambio: Se inicializa con quantityBags
     pricePerKg: '-',
     paymentDays: '30',
     paymentMethod: '',
@@ -104,7 +104,7 @@ const CoffeeSupplyAgreementForm: React.FC = () => {
     field?: keyof DeliverySchedule
   ) => {
     const { name, value } = e.target;
-  
+
     if (field !== undefined && index !== undefined) {
       const updatedSchedule = [...formData.deliverySchedule];
       updatedSchedule[index] = {
@@ -115,23 +115,23 @@ const CoffeeSupplyAgreementForm: React.FC = () => {
     } else {
       setFormData({ ...formData, [name]: value });
     }
-  
-    // Actualiza el cronograma de entrega si cambian los valores de cantidad total o número de meses
-    if (name === 'totalQuantity' || name === 'numberOfMonths') {
+
+    // Actualiza el cronograma de entrega si cambian los valores de cantidad total de bolsas o número de meses
+    if (name === 'totalQuantityBags' || name === 'numberOfMonths') {
       updateDeliverySchedule(
-        name === 'totalQuantity' ? parseInt(value) : parseInt(formData.totalQuantity),
+        name === 'totalQuantityBags' ? parseInt(value) : parseInt(formData.totalQuantityBags),
         name === 'numberOfMonths' ? parseInt(value) : parseInt(formData.numberOfMonths)
       );
     }
-  };  
+  };
 
-  const updateDeliverySchedule = (totalQuantity: number, numberOfMonths: number) => {
-    if (totalQuantity && numberOfMonths && numberOfMonths <= totalQuantity) {
-      const baseQuantity = Math.floor(totalQuantity / numberOfMonths);
-      const remainder = totalQuantity % numberOfMonths;
+  const updateDeliverySchedule = (totalQuantityBags: number, numberOfMonths: number) => {
+    if (totalQuantityBags && numberOfMonths && numberOfMonths <= totalQuantityBags) {
+      const baseQuantityBags = Math.floor(totalQuantityBags / numberOfMonths);
+      const remainder = totalQuantityBags % numberOfMonths;
       const newSchedule = Array.from({ length: numberOfMonths }, (_, index) => ({
         month: `Month ${index + 1}`,
-        quantity: `${baseQuantity + (index < remainder ? 1 : 0)}`
+        quantityBags: `${baseQuantityBags + (index < remainder ? 1 : 0)}`
       }));
       setFormData({ ...formData, deliverySchedule: newSchedule });
     }
@@ -140,7 +140,7 @@ const CoffeeSupplyAgreementForm: React.FC = () => {
   const handleVarietyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedVariety = e.target.value;
     const selectedData = data.find(item => `${item.Variety} (${item.Farm})` === selectedVariety);
-  
+
     if (selectedData) {
       setFormData({
         ...formData,
@@ -159,7 +159,7 @@ const CoffeeSupplyAgreementForm: React.FC = () => {
   const handleGeneratePdf = async () => {
     let deliveryScheduleText = '';
     formData.deliverySchedule.forEach((schedule, index) => {
-      deliveryScheduleText += `- Month ${index + 1}: ${schedule.quantity} kg\n`;
+      deliveryScheduleText += `- Month ${index + 1}: ${schedule.quantityBags} bags\n`;
     });
 
     const content = [
@@ -190,7 +190,7 @@ const CoffeeSupplyAgreementForm: React.FC = () => {
       `The Supplier agrees to supply, and the Purchaser agrees to purchase, the following green coffee:`,
       `- ${formData.process} ${formData.coffeeVarietal}`,
       `### 2. **Quantity and Delivery Schedule**`,
-      `The Purchaser agrees to book and purchase a total quantity of ${formData.totalQuantity} kg over a period of ${formData.numberOfMonths} months, according to the following schedule:`,
+      `The Purchaser agrees to book and purchase a total quantity of ${formData.totalQuantityBags} kg over a period of ${formData.numberOfMonths} months, according to the following schedule:`,
       `${deliveryScheduleText}`,
       `### 3. **Price and Payment Terms**`,
       `3.1. **Price**: The price per kilogram of green coffee is £ ${formData.pricePerKg} GBP.`,
@@ -243,7 +243,7 @@ const CoffeeSupplyAgreementForm: React.FC = () => {
         />
       </div>
     );
-  };  
+  };
 
   const renderDropdown = (label: string, name: keyof FormData, options: string[]) => {
     return (
@@ -286,7 +286,7 @@ const CoffeeSupplyAgreementForm: React.FC = () => {
       </div>
     );
   };
-  
+
   const renderFixedText = (label: string, value: string) => {
     return (
       <div className={containerClass}>
@@ -297,10 +297,11 @@ const CoffeeSupplyAgreementForm: React.FC = () => {
   };
 
   const calculateTotalAmount = () => {
-    const totalQuantity = parseInt(formData.totalQuantity);
+    const totalQuantityBags = parseInt(formData.totalQuantityBags);
     const pricePerKg = parseFloat(formData.pricePerKg);
-    if (!isNaN(totalQuantity) && !isNaN(pricePerKg)) {
-      return (totalQuantity * pricePerKg).toFixed(2);
+    const totalQuantityKg = totalQuantityBags * 30; // Cambio: Calcular en kg
+    if (!isNaN(totalQuantityKg) && !isNaN(pricePerKg)) {
+      return (totalQuantityKg * pricePerKg).toFixed(2);
     }
     return '0.00';
   };
@@ -311,12 +312,12 @@ const CoffeeSupplyAgreementForm: React.FC = () => {
     <div className="max-w-4xl mx-auto p-8 bg-white shadow-md rounded">
       <form onSubmit={handleSubmit}>
         <h2 className="text-2xl font-bold mb-6">Coffee Supply Agreement</h2>
-  
+
         <div className="grid grid-cols-2 gap-4">
           {renderInput('Date', 'date', 'date')}
           {renderInput('Purchaser Company Name', 'purchaserCompanyName')}
         </div>
-        
+
         <h3 className="text-xl font-semibold mb-4">Purchaser</h3>
         <div className="grid grid-cols-2 gap-4">
           {renderInput('Company Address', 'purchaserCompanyAddress')}
@@ -325,34 +326,34 @@ const CoffeeSupplyAgreementForm: React.FC = () => {
           {renderInput('Email', 'purchaserEmail')}
           {renderInput('Phone', 'purchaserPhone')}
         </div>
-  
+
         <h3 className="text-xl font-semibold mb-4">Product Description and Quality</h3>
         {renderDropdown('Coffee Varietal (Farm)', 'coffeeVarietal', coffeeVarietyOptions)}
         <div className="grid grid-cols-2 gap-4">
           {renderFixedText('Process', formData.process)}
           {renderFixedText('Price per KG', formData.pricePerKg)}
         </div>
-  
+
         <h3 className="text-xl font-semibold mb-4">Quantity and Delivery Schedule</h3>
         <div className="grid grid-cols-2 gap-4">
-          {renderInput('Total Quantity (kg)', 'totalQuantity', 'number')}
+          {renderInput('Total Quantity (bags)', 'totalQuantityBags', 'number')}
           {renderInput('Number of Months', 'numberOfMonths', 'number')}
         </div>
         <h4 className="text-lg font-semibold mb-2">Calculated Monthly Deliveries</h4>
         {formData.deliverySchedule.map((schedule, index) => (
           <div key={index} className="mb-2">
-            <span>{schedule.month}: {schedule.quantity} kg</span>
+            <span>{schedule.month}: {schedule.quantityBags} bags</span>
           </div>
         ))}
-  
+
         <h3 className="text-xl font-semibold mb-4">Price and Payment Terms</h3>
         {renderFixedText('Total Amount', `£ ${calculateTotalAmount()} GBP`)}
         {renderPaymentDaysDropdown()}
         {renderInput('Payment Method', 'paymentMethod')}
-  
+
         <h3 className="text-xl font-semibold mb-4">Delivery Terms</h3>
         {renderInput('Delivery Address', 'deliveryAddress')}
-  
+
         <button
           type="button"
           onClick={handleGeneratePdf}
