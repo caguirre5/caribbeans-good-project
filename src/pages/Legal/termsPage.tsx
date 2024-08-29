@@ -20,7 +20,6 @@ const Terms: React.FC<TextDisplayProps> = (props) => {
     const loadText = async () => {
       const parsedContent = await parseTextFile(`/${filePath}.txt`);
       setContent(parsedContent);
-      console.log(parsedContent); // Para verificar la carga y parseo del contenido
     };
 
     loadText();

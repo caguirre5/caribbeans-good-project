@@ -2,13 +2,13 @@ import React from 'react';
 import { Route, Routes } from 'react-router-dom';
 import PortalHome from './pages/Portal/Home';
 import Profile from './components/Profile';
-import { useAuth0 } from '@auth0/auth0-react';
+import { useAuth } from './contexts/AuthContext'; // Importa el AuthContext
 import { DataProvider } from './contexts/Datacontent';
 
 const ProtectedRoutes: React.FC = () => {
-  const { isAuthenticated } = useAuth0();
+  const { currentUser } = useAuth(); // Usa useAuth para acceder al usuario autenticado
 
-  if (!isAuthenticated) {
+  if (!currentUser) { // Verifica si el usuario no está autenticado
     return <div>You need to be authenticated to view this content.</div>;
   }
 

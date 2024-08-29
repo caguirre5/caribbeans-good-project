@@ -6,6 +6,7 @@ import Files from './Files';
 import Header from '../../components/HeaderControls';
 import Footer from '../../components/Footer';
 import Portal from './Portal';
+import UserList from './Admin';
 
 const PortalHome: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('home');
@@ -20,6 +21,8 @@ const PortalHome: React.FC = () => {
         return <PlaceOrder />;
       case 'services':
         return <Files />;
+      case 'admin':
+        return <UserList />;
       default:
         return <Portal setActiveTab={setActiveTab} />;
     }
@@ -42,6 +45,7 @@ const PortalHome: React.FC = () => {
             <option value="coffee-charts">Coffee Charts</option>
             <option value="place-order">Place an Order</option>
             <option value="files">Services</option>
+            <option value="admin">Users</option>
           </select>
         </div>
 
@@ -76,6 +80,12 @@ const PortalHome: React.FC = () => {
             className={activeTab === 'services' ? 'text-[#044421] font-semibold border-t-2 border-[#044421]' : 'text-[#044421]'}
           >
             Services
+          </button>
+          <button
+            onClick={() => setActiveTab('admin')}
+            className={activeTab === 'admin' ? 'text-[#044421] font-semibold border-t-2 border-[#044421]' : 'text-[#044421]'}
+          >
+            Users
           </button>
         </nav>
 

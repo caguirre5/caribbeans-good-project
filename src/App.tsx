@@ -13,37 +13,41 @@ import Ethos from './pages/Main/Ethos'
 import Roasters from './pages/Main/Roasters'
 import Subscribe from './pages/Main/Subscribe'
 import Terms from './pages/Legal/termsPage'
-import ResourceLibraryCMS from './pages/CMS/ResourceLibraryCMS'
-import PdfViewer from './pages/Legal/PdfViewer'
+
+import Login from './pages/Auth/Login'; // Importa las páginas de autenticación
+import Signup from './pages/Auth/Signup';
 
 import ProtectedRoutes from './ProtectedRoutes';
+import { AuthProvider } from './contexts/AuthContext'; // Importa AuthProvider
 
 function App() {
 
   return (
-    <div className='app-container overflow-x-hidden'>
-      <Routes>
-        <Route path='/' element={<Home/>}/>
-        <Route path='/Contact' element={<Contact/>}/>
-        <Route path='/About' element={<About/>}/>
-        <Route path='/Ethos' element={<Ethos/>}/>
-        <Route path='/Roasters' element={<Roasters/>} />
-        <Route path='/Subscribe' element={<Subscribe/>} />
-        <Route path='/ICEHome' element={<Landing/>}/>
-        <Route path='/ICE' element={<ICE/>}/>
-        <Route path='/CoffeeProcess' element={<CoffeeProcess/>}/>
-        <Route path='/FAQs' element={<FAQs/>}/>
-        <Route path='/VRExperience' element={<VRExperience/>}/>
-        <Route path='/Join' element={<ClientsForm/>}/>
-        <Route path='/Legal/PrivacyPolicy' element={<Terms/>}/>
-        <Route path='/Legal/IPTerms' element={<Terms/>}/>
-        <Route path='/Legal/SalesTerms' element={<Terms/>}/>
-        <Route path='/*' element={<ProtectedRoutes />} />
-        <Route path='/CMS' element={<ResourceLibraryCMS/>}/>
-        <Route path="/pdf-viewer" element={<PdfViewer/>} />
-      </Routes>
-    </div>
-  )
+    <AuthProvider> {/* Envuelve todo en AuthProvider */}
+      <div className='app-container overflow-x-hidden'>
+        <Routes>
+          <Route path='/' element={<Home />} />
+          <Route path='/Contact' element={<Contact />} />
+          <Route path='/About' element={<About />} />
+          <Route path='/Ethos' element={<Ethos />} />
+          <Route path='/Roasters' element={<Roasters />} />
+          <Route path='/Subscribe' element={<Subscribe />} />
+          <Route path='/ICEHome' element={<Landing />} />
+          <Route path='/ICE' element={<ICE />} />
+          <Route path='/CoffeeProcess' element={<CoffeeProcess />} />
+          <Route path='/FAQs' element={<FAQs />} />
+          <Route path='/VRExperience' element={<VRExperience />} />
+          <Route path='/Join' element={<ClientsForm />} />
+          <Route path='/Legal/PrivacyPolicy' element={<Terms />} />
+          <Route path='/Legal/IPTerms' element={<Terms />} />
+          <Route path='/Legal/SalesTerms' element={<Terms />} />
+          <Route path='/*' element={<ProtectedRoutes />} />
+          <Route path='/login' element={<Login />} /> {/* Ruta de Login */}
+          <Route path='/signup' element={<Signup />} /> {/* Ruta de Signup */}
+        </Routes>
+      </div>
+    </AuthProvider>
+  );
 }
 
 export default App;

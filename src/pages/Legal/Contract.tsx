@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth0 } from "@auth0/auth0-react";
 import { useData } from '../../contexts/Datacontent';
 import { createPDF } from '../../components/utils/PDFGenerator';
-import watermark from '../../assets/green_logo_icon.png'
+import watermark from '../../assets/green_logo_icon.png';
+import { useAuth } from '../../contexts/AuthContext'; // Supongamos que tienes un contexto de autenticación
+import { db } from '../../firebase/firebase'; // Configuración de Firestore
+import { doc, getDoc } from 'firebase/firestore'; // Importa métodos necesarios de Firestore
+
 
 interface DeliverySchedule {
   month: string;
@@ -38,11 +41,11 @@ const getCurrentDate = () => {
 };
 
 const CoffeeSupplyAgreementForm: React.FC = () => {
+  const { currentUser } = useAuth();
   const { data } = useData();
-  const { user } = useAuth0();
   const [formData, setFormData] = useState<FormData>({
     date: getCurrentDate(),
-    purchaserCompanyName: user?.name,
+    purchaserCompanyName: "userName",
     purchaserCompanyAddress: '',
     purchaserCityPostalCountry: '',
     purchaserContactName: '',
@@ -58,6 +61,36 @@ const CoffeeSupplyAgreementForm: React.FC = () => {
     paymentMethod: '',
     deliveryAddress: '',
   });
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!currentUser) return;
+
+      try {
+        const userRef = doc(db, 'users', currentUser.uid); // Reference to the user's document
+        const userSnap = await getDoc(userRef); // Get the user's document
+        
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          
+          // Update form data with user data
+          setFormData((prevData) => ({
+            ...prevData,
+            purchaserCompanyName: userData.company || '',
+            purchaserCompanyAddress: userData.companyAddress || '',
+            purchaserCityPostalCountry: `${userData.postalCode || ''}, ${userData.companyCity || ''}, ${userData.companyCountry || ''}`, // Combinando los datos según sea necesario
+            purchaserContactName: `${userData.firstName || ''} ${userData.lastName || ''}`,
+            purchaserEmail: userData.email || '',
+            purchaserPhone: userData.phoneNumber || '',
+          }));
+        }
+      } catch (err) {
+        console.error('Error fetching user data:', err);
+      }
+    };
+
+    fetchUserData();
+  }, [currentUser]);
 
   const inputClass = "block w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 cursor-pointer focus:outline-none p-2.5";
   const labelClass = "block text-gray-700";
