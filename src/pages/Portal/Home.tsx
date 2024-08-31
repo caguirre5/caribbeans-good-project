@@ -5,8 +5,8 @@ import PlaceOrder from './PlaceOrder';
 import Header from '../../components/HeaderControls';
 import Footer from '../../components/Footer';
 import Portal from './Portal';
-import UserList from './Admin';
 import Files from './Files';
+import Dashboard from './AdminSection/Admin';
 
 const PortalHome: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('home');
@@ -22,7 +22,7 @@ const PortalHome: React.FC = () => {
       case 'services':
         return <Files />;
       case 'admin':
-        return <UserList />;
+        return <Dashboard />;
       default:
         return <Portal setActiveTab={setActiveTab} />;
     }
@@ -89,7 +89,7 @@ const PortalHome: React.FC = () => {
           </button>
         </nav>
 
-        <div className="mt-8 lg:mt-8 mb-[80px] flex justify-center">
+        <div className="w-full mt-8 lg:mt-8 mb-[80px] flex justify-center">
           {renderContent()}
         </div>
       </div>

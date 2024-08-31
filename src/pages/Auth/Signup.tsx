@@ -47,7 +47,7 @@ const Signup: React.FC = () => {
         lastName: lastName,
         email: email,
         createdAt: new Date(),
-        isActive: true,
+        isActive: false,
         profileCompleted: false,
         roles: ["user"],
       });

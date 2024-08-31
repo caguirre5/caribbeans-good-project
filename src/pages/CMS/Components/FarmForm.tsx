@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 interface CoffeeFarmFormState {
   title: string;
@@ -21,7 +21,7 @@ interface CoffeeFarmCMSPageProps {
   onClose: () => void;
 }
 
-const CoffeeFarmCMSPage: React.FC<CoffeeFarmCMSPageProps> = ({ onAddFarm, onClose }) => {
+const CoffeeFarmCMSPage: React.FC<CoffeeFarmCMSPageProps> = ({ onAddFarm }) => {
   const [formData, setFormData] = useState<CoffeeFarmFormState>({
     title: '',
     medal: undefined,
@@ -104,7 +104,7 @@ const CoffeeFarmCMSPage: React.FC<CoffeeFarmCMSPageProps> = ({ onAddFarm, onClos
 
       data.farms.push(newFarm);
 
-      const putResponse = await fetch('http://localhost:3000/upload', {
+      const putResponse = await fetch('http://localhost:3000/resourcelibray/upload', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

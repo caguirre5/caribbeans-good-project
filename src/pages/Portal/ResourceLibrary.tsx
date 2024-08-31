@@ -8,6 +8,10 @@ import { AnimatePresence } from 'framer-motion';
 import { faSquarePlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
+import { useAuth } from '../../contexts/AuthContext';  // Importa tu contexto de autenticación de Firebase
+import { doc, getDoc } from 'firebase/firestore'; // Importa Firestore
+import { db } from '../../firebase/firebase';
+
 interface Detail {
   [key: string]: string;
 }
@@ -71,7 +75,29 @@ const ResourceLibrary: React.FC<ResourceLibraryProps> = ({ setActiveTab }) => {
   const [selectedFarm, setSelectedFarm] = useState<FarmData | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const isAdmin = true; // Controla si el usuario es administrador
+  
+  const {currentUser} = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);; // Controla si el usuario es administrador
+
+  useEffect(() => {
+    const fetchUserRoles = async () => {
+      if (currentUser) {
+        try {
+          const userRef = doc(db, "users", currentUser.uid); // Referencia al documento del usuario
+          const userSnap = await getDoc(userRef);
+  
+          if (userSnap.exists()) {
+            const userData = userSnap.data();
+            setIsAdmin(userData.roles.includes('admin'));  // Verifica si el rol 'admin' está en los roles del usuario
+          }
+        } catch (error) {
+          console.error('Error fetching user roles:', error);
+        }
+      }
+    };
+  
+    fetchUserRoles();
+  }, [currentUser]);
 
   const handleOpenModal = () => {
     setShowModal(true);
@@ -91,7 +117,7 @@ const ResourceLibrary: React.FC<ResourceLibraryProps> = ({ setActiveTab }) => {
 
       dataJson.farms = updatedData;
 
-      const putResponse = await fetch('http://localhost:3000/upload', {
+      const putResponse = await fetch('http://localhost:3000/resourcelibray/upload', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
