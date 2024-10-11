@@ -16,7 +16,7 @@ const Requests: React.FC = () => {
 
     try {
       const token = await currentUser?.getIdToken();
-      const response = await fetch('http://localhost:3000/api/users', {
+      const response = await fetch(`http://${import.meta.env.VITE_ENDPOINT}:3000/api/users`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -27,8 +27,10 @@ const Requests: React.FC = () => {
       }
   
       const users = await response.json();
-      const inactiveUsers = users.filter((user: any) => user.isActive === false);
-      setUsers(inactiveUsers);
+
+      // Filtrar usuarios que tengan isActive = false y emailVerified = true
+      const inactiveVerifiedUsers = users.filter((user: any) => user.isActive === false && user.emailVerified === true);
+      setUsers(inactiveVerifiedUsers);
     } catch (err) {
       console.error("Error fetching users: ", err);
       setError("Failed to load users.");
@@ -46,7 +48,7 @@ const Requests: React.FC = () => {
     
     try {
       const token = await currentUser?.getIdToken();
-      const response = await fetch(`http://localhost:3000/api/users/${userUid}/activate`, {
+      const response = await fetch(`http://${import.meta.env.VITE_ENDPOINT}:3000/api/users/${userUid}/activate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -72,7 +74,7 @@ const Requests: React.FC = () => {
     
     try {
       const token = await currentUser?.getIdToken();
-      const response = await fetch(`http://localhost:3000/api/users/${userUid}/delete`, {
+      const response = await fetch(`http://${import.meta.env.VITE_ENDPOINT}:3000/api/users/${userUid}/delete`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

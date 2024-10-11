@@ -17,6 +17,7 @@ interface Detail {
 }
 
 interface FarmData {
+  id: string;
   title: string;
   region: string;
   altitude: string;
@@ -27,7 +28,8 @@ interface FarmData {
   buttonText: string;
   prefix:string;
   color: string;
-  coordinates: [number, number];
+  coordinates: [number, number][];
+  imageUrls?: string[];
 }
 
 const CardComponent: React.FC<{ title: string, color: string, prefix: string, onClick: () => void, onDelete: () => void, isAdmin: boolean }> = ({ title, color, prefix, onClick, onDelete, isAdmin }) => {
@@ -107,27 +109,37 @@ const ResourceLibrary: React.FC<ResourceLibraryProps> = ({ setActiveTab }) => {
     setShowModal(false);
   };
 
-  const handleDeleteFarm = async (farmTitle: string) => {
+  const handleDeleteFarm = async (farmTitle: string, farmId: string) => {
     try {
+      // Eliminar imágenes en S3
+      await fetch(`http://${import.meta.env.VITE_ENDPOINT}:${import.meta.env.VITE_PORT}/resourcelibray/deleteimages`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ farmId }),
+      });
+  
+      // Eliminar la granja del frontend y el archivo JSON
       const updatedData = data.filter(farm => farm.title !== farmTitle);
       setData(updatedData);
-
-      const response = await fetch('https://9r9f3lx5u4.execute-api.eu-west-2.amazonaws.com/dev/caribbeangoods-content-s3/file1.json');
+  
+      const response = await fetch(`https://9r9f3lx5u4.execute-api.eu-west-2.amazonaws.com/dev/caribbeangoods-content-s3/file1.json`);
       const dataJson = await response.json();
-
+  
       dataJson.farms = updatedData;
-
-      const putResponse = await fetch('http://localhost:3000/resourcelibray/upload', {
+  
+      const putResponse = await fetch(`http://${import.meta.env.VITE_ENDPOINT}:${import.meta.env.VITE_PORT}/resourcelibray/upload`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           fileName: 'file1.json',
-          fileContent: JSON.stringify(dataJson)
-        })
+          fileContent: JSON.stringify(dataJson),
+        }),
       });
-
+  
       if (putResponse.ok) {
         console.log('Farm deleted successfully!');
       } else {
@@ -137,6 +149,7 @@ const ResourceLibrary: React.FC<ResourceLibraryProps> = ({ setActiveTab }) => {
       console.error('Error deleting farm:', error);
     }
   };
+  
 
   const handleAddFarm = (newFarm: FarmData) => {
     setData([...data, newFarm]);
@@ -161,22 +174,10 @@ const ResourceLibrary: React.FC<ResourceLibraryProps> = ({ setActiveTab }) => {
     fetchFarmData();
   }, []);
 
-  // if (data.length === 0) {
-  //   return (
-  //     <div
-  //       className="min-h-screen"
-  //       style={{
-  //         fontFamily:"KingsThing"
-  //       }}
-  //     >
-  //       Loading...
-  //     </div>
-  //   );
-  // }
-
   if (selectedFarm) {
+    console.log('selected farm: ', selectedFarm)
     return (
-      <div className="flex flex-col items-center text-[#044421]">
+      <div className="w-[90%] lg:w-[70%] flex flex-col items-center text-[#044421]">
         <button onClick={() => setSelectedFarm(null)} className="self-start mb-4 text-[#044421] underline">Back to all farms</button>
         <FarmInfo data={selectedFarm} setActive={setActiveTab} />
       </div>
@@ -184,7 +185,7 @@ const ResourceLibrary: React.FC<ResourceLibraryProps> = ({ setActiveTab }) => {
   }
 
   return (
-    <div className='flex flex-col items-center text-[#044421]'>
+    <div className='flex flex-col items-center text-[#044421] min-h-[calc(100vh-8.5rem)]'>
       <h1 className="text-2xl font-bold mb-4 text-center" style={{ fontFamily: "KingsThing" }}>Resource Library</h1>
       <h2 className="text-6xl lg:text-7xl font-bold mb-4 text-center" style={{ fontFamily: "KingsThing" }}>Our Farms</h2>
       <p className='w-[80%] lg:w-[500px] text-sm'>Welcome to the Caribbean Goods Resource library, where you will find all the information, photos and videos about our farms. You can download these resources to use across your marketing, website etc.</p>
@@ -200,11 +201,11 @@ const ResourceLibrary: React.FC<ResourceLibraryProps> = ({ setActiveTab }) => {
             color={farm.color} 
             prefix={farm.prefix}
             onClick={() => setSelectedFarm(farm)}
-            onDelete={() => handleDeleteFarm(farm.title)}
+            onDelete={() => handleDeleteFarm(farm.title, farm.id)}
             isAdmin={isAdmin}
           />
         ))}
-        <motion.div 
+        {isAdmin && <motion.div 
           className={`p-4 shadow-md lg:rounded-md flex flex-col justify-center items-center text-center text-white cursor-pointer`} 
           style={{ 
             minHeight: '300px',
@@ -217,7 +218,7 @@ const ResourceLibrary: React.FC<ResourceLibraryProps> = ({ setActiveTab }) => {
           transition={{ type: 'tween' }}
         >
           <FontAwesomeIcon icon={faSquarePlus} className='text-[#e9e9e9] text-5xl'/>
-        </motion.div> 
+        </motion.div> }
         <AnimatePresence>
           {showModal && (
             <Modal show={showModal} onClose={handleCloseModal}>

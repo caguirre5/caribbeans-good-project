@@ -1,6 +1,15 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { v4 as uuidv4 } from 'uuid';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Configurar el icono de Leaflet
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
 interface CoffeeFarmFormState {
+  id: string;
   title: string;
   medal: string | undefined;
   region: string;
@@ -10,19 +19,43 @@ interface CoffeeFarmFormState {
   details: { key: string, value: string }[];
   buttonText: string;
   color: string;
-  coordinates: [number, number];
+  coordinates: [number, number][]; // Cambiar a un array de tuplas
   prefix: string;
+  images: File[];
+  videoUrl?: string;
 }
 
-interface FarmData extends CoffeeFarmFormState {}
+interface FarmData extends CoffeeFarmFormState {
+  imageUrls: string[]; // URLs de las imágenes subidas
+}
 
 interface CoffeeFarmCMSPageProps {
   onAddFarm: (newFarm: FarmData) => void;
   onClose: () => void;
 }
 
+let DefaultIcon = L.icon({
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
+  iconAnchor: [12, 41],
+});
+
+L.Marker.prototype.options.icon = DefaultIcon;
+
+// Componente para manejar los eventos del mapa
+const MapClickHandler: React.FC<{ onMapClick: (coordinates: [number, number]) => void }> = ({ onMapClick }) => {
+  useMapEvents({
+    click(e) {
+      const { lat, lng } = e.latlng;
+      onMapClick([lat, lng]);
+    },
+  });
+  return null;
+};
+
 const CoffeeFarmCMSPage: React.FC<CoffeeFarmCMSPageProps> = ({ onAddFarm }) => {
   const [formData, setFormData] = useState<CoffeeFarmFormState>({
+    id: uuidv4(),
     title: '',
     medal: undefined,
     region: '',
@@ -31,14 +64,39 @@ const CoffeeFarmCMSPage: React.FC<CoffeeFarmCMSPageProps> = ({ onAddFarm }) => {
     description: '',
     details: [{ key: '', value: '' }],
     buttonText: 'Price & Availability',
-    color: '',
-    coordinates: [0, 0],
+    color: '#df9a87',
+    coordinates: [], // Inicializar como un array vacío
     prefix: 'Finca',
+    images: [],
+    videoUrl: '',
   });
+  
 
   const [showMedalInput, setShowMedalInput] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number[]>([]); // Progreso de carga por imagen
+  const [showVideoUrlInput, setShowVideoUrlInput] = useState(false);
+  const [markerPositions, setMarkerPositions] = useState<[number, number][]>([]);
+
+
+  const maxImages = 20; // Variable para controlar el máximo de imágenes
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleMapClick = (coordinates: [number, number]) => {
+    const updatedPositions = [...markerPositions, coordinates];
+    setMarkerPositions(updatedPositions);
+    setFormData({ ...formData, coordinates: updatedPositions }); // Actualizar formData
+  };
+  
+  
+
+  const handleToggleVideoUrl = () => {
+    setShowVideoUrlInput(!showVideoUrlInput);
+    if (!showVideoUrlInput) {
+      setFormData({ ...formData, videoUrl: '' }); // Limpiar el campo videoUrl si se desactiva
+    }
+  };  
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, index?: number) => {
     const { name, value } = e.target;
@@ -58,6 +116,24 @@ const CoffeeFarmCMSPage: React.FC<CoffeeFarmCMSPageProps> = ({ onAddFarm }) => {
         ...formData,
         [name]: value,
       });
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const selectedFiles = Array.from(e.target.files);
+
+      // Verificar si se supera el límite de imágenes
+      if (selectedFiles.length + formData.images.length > maxImages) {
+        alert(`You can only upload a maximum of ${maxImages} images.`);
+        
+        // Limpiar el input de archivos usando la referencia
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      } else {
+        setFormData({ ...formData, images: [...formData.images, ...selectedFiles] });
+      }
     }
   };
 
@@ -94,17 +170,24 @@ const CoffeeFarmCMSPage: React.FC<CoffeeFarmCMSPageProps> = ({ onAddFarm }) => {
     setIsLoading(true); // Start the loading
     console.log('Form data submitted:', formData);
 
-    const newFarm: FarmData = {
-      ...formData,
-    };
-
     try {
+      // Subir imágenes a S3 antes de agregar la granja y obtener las URLs generadas
+      const imageUrls = await uploadImagesToS3(formData.images, formData.id);
+
+      const newFarm: FarmData = {
+        ...formData,
+        imageUrls, // Añadir las URLs de las imágenes al objeto de la granja
+      };
+
+      // Llamada a la API para obtener el JSON actual y agregar la nueva granja
       const response = await fetch('https://9r9f3lx5u4.execute-api.eu-west-2.amazonaws.com/dev/caribbeangoods-content-s3/file1.json');
       const data = await response.json();
 
+      // Agrega la nueva granja con las URLs de las imágenes
       data.farms.push(newFarm);
 
-      const putResponse = await fetch('http://localhost:3000/resourcelibray/upload', {
+      // Guardar el JSON actualizado en el servidor
+      const putResponse = await fetch(`http://${import.meta.env.VITE_ENDPOINT}:${import.meta.env.VITE_PORT}/resourcelibray/upload`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -129,6 +212,50 @@ const CoffeeFarmCMSPage: React.FC<CoffeeFarmCMSPageProps> = ({ onAddFarm }) => {
     }
   };
 
+  // Función para subir imágenes con progreso
+  const uploadImagesToS3 = async (images: File[], farmId: string): Promise<string[]> => {
+    const imageUrls: string[] = [];
+    const progressArray: number[] = new Array(images.length).fill(0);
+
+    const updateProgress = (index: number, value: number) => {
+      progressArray[index] = value;
+      setUploadProgress([...progressArray]);
+    };
+
+    const uploadPromises = images.map((image, index) => {
+      return new Promise<string>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `http://${import.meta.env.VITE_ENDPOINT}:${import.meta.env.VITE_PORT}/resourcelibray/uploadimages`);
+
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const percentComplete = Math.round((event.loaded * 100) / event.total);
+            updateProgress(index, percentComplete);
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status === 200) {
+            const imageUrl = `https://caribbeangoods-content-s3.s3.eu-west-2.amazonaws.com/resourcelibrarygallery/${farmId}/${image.name}`;
+            imageUrls.push(imageUrl);
+            resolve(imageUrl);
+          } else {
+            reject(new Error('Failed to upload'));
+          }
+        };
+
+        xhr.onerror = () => reject(new Error('Upload failed'));
+        const imgFormData = new FormData();
+        imgFormData.append('files', image);
+        imgFormData.append('farmId', farmId);
+        xhr.send(imgFormData);
+      });
+    });
+
+    await Promise.all(uploadPromises);
+    return imageUrls;
+  };
+
   const colorOptions = [
     "#df9a87", "#9ed1c4", "#eecc84", "#0084c1",
     "#f0af83", "#c9d3c0", "#8a341d",
@@ -138,10 +265,21 @@ const CoffeeFarmCMSPage: React.FC<CoffeeFarmCMSPageProps> = ({ onAddFarm }) => {
   return (
     <form onSubmit={handleSubmit} className="max-w-4xl mx-auto p-5">
       {isLoading ? (
-        <div className="flex justify-center items-center h-full">
-          <div
-            className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] text-primary motion-reduce:animate-[spin_1.5s_linear_infinite]"
-            role="status">
+        <div className="text-center">
+          <div className="text-lg font-bold mb-4">Creating farm. Please do not close the tab!</div>
+          <div className="mb-6">
+            <div className="text-sm font-medium mb-2">Uploading images...</div>
+            {formData.images.map((image, index) => (
+              <div key={index} className="mb-4">
+                <span>{image.name}</span>
+                <div className="w-full bg-gray-200 rounded h-2">
+                  <div className="bg-blue-500 h-full rounded" style={{ width: `${uploadProgress[index] || 0}%` }}></div>
+                </div>
+                <span className="text-sm">{uploadProgress[index] || 0}%</span>
+              </div>
+            ))}
+          </div>
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] text-primary motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status">
             <span className="sr-only">Loading...</span>
           </div>
         </div>
@@ -239,13 +377,103 @@ const CoffeeFarmCMSPage: React.FC<CoffeeFarmCMSPageProps> = ({ onAddFarm }) => {
               ))}
             </div>
           </div>
+          <div>
+
+            <MapContainer
+              center={[15.877539, -90.368891]}
+              zoom={7}
+              style={{ height: '60vh', width: '100%' }}
+              scrollWheelZoom = {false}
+            >
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url='https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+              />
+              <MapClickHandler onMapClick={handleMapClick} />
+              {markerPositions.map((position, index) => (
+                <Marker key={index} position={position}>
+                  <Popup>Marcador en esta posición</Popup>
+                </Marker>
+              ))}
+            </MapContainer>
+
+          </div>
           <div className="mb-6">
             <label htmlFor="coordinates" className="block mb-2 text-sm font-medium text-gray-900">Coordinates:</label>
-            <input type="text" id="coordinates" name="coordinates" value={formData.coordinates.join(',')} onChange={(e) => {
-              const coords = e.target.value.split(',').map(Number) as [number, number];
-              setFormData({ ...formData, coordinates: coords });
-            }} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" />
+            <textarea
+              id="coordinates"
+              name="coordinates"
+              value={formData.coordinates.map(coord => coord.join(',')).join(' | ')} // Mostrar las coordenadas separadas por " | "
+              onChange={(e) => {
+                // Convertir el valor del textarea en un array de coordenadas
+                const coordsArray = e.target.value.split(' | ').map(coord => {
+                  const [lat, lng] = coord.split(',').map(Number);
+                  return [lat, lng] as [number, number];
+                });
+                setFormData({ ...formData, coordinates: coordsArray }); // Actualizar formData
+              }}
+              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+              rows={3}
+            />
           </div>
+
+
+          <div className="mb-6">
+            <label className="inline-flex items-center cursor-pointer">
+              <input 
+                type="checkbox" 
+                className="sr-only peer" 
+                checked={showVideoUrlInput} 
+                onChange={handleToggleVideoUrl} 
+              />
+              <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#eecc84] rounded-full peer-checked:bg-[#e6a318]">
+                <span
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${
+                    showVideoUrlInput ? 'transform translate-x-5' : ''
+                  }`}
+                />
+              </div>
+              <span className="ml-3 text-sm font-medium text-gray-900">Do you want to add a video?</span>
+            </label>
+          </div>
+
+          {showVideoUrlInput && (
+            <div className="mb-6">
+              <label htmlFor="videoUrl" className="block mb-2 text-sm font-medium text-gray-900">Video URL:</label>
+              <input
+                type="text"
+                id="videoUrl"
+                name="videoUrl"
+                value={formData.videoUrl}
+                onChange={handleInputChange}
+                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+              />
+            </div>
+          )}
+
+
+          <div className="mb-6">
+            <label htmlFor="images" className="block mb-2 text-sm font-medium text-gray-900">
+              Upload Images (Max {maxImages}):
+            </label>
+            <input
+              ref={fileInputRef} // Asigna la referencia al input
+              type="file"
+              id="images"
+              name="images"
+              accept=".jpg, .jpeg, .png"
+              multiple
+              onChange={handleFileChange}
+              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5"
+              disabled={formData.images.length >= maxImages}
+            />
+            {formData.images.length >= maxImages && (
+              <p className="text-red-500 text-sm">
+                You have reached the maximum number of images allowed.
+              </p>
+            )}
+          </div>
+
           <button type="submit" className="text-white bg-[#e6a318] hover:bg-[#c98d15] focus:ring-4 focus:ring-white font-medium rounded-lg text-sm w-full sm:w-auto px-5 py-2.5 text-center">Submit</button>
         </>
       )}

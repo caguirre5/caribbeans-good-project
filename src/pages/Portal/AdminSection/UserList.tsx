@@ -17,7 +17,7 @@ const UserList: React.FC = () => {
 
     try {
       const token = await currentUser?.getIdToken();
-      const response = await fetch('http://localhost:3000/api/users', {
+      const response = await fetch(`http://${import.meta.env.VITE_ENDPOINT}:${import.meta.env.VITE_PORT}/api/users`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -52,7 +52,7 @@ const UserList: React.FC = () => {
       }));
   
       const token = await currentUser?.getIdToken();
-      const response = await fetch(`http://localhost:3000/api/users/${userUid}/role`, {
+      const response = await fetch(`http://${import.meta.env.VITE_ENDPOINT}:${import.meta.env.VITE_PORT}/api/users/${userUid}/role`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

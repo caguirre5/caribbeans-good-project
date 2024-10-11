@@ -1,15 +1,42 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import PortalHome from './pages/Portal/Home';
 import Profile from './components/Profile';
 import { useAuth } from './contexts/AuthContext'; // Importa el AuthContext
 import { DataProvider } from './contexts/Datacontent';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from './firebase/firebase'; // Importa tu configuración de Firebase
+import Forum from './pages/Portal/Forum';
+import MyOrders from './pages/Portal/Orders';
 
 const ProtectedRoutes: React.FC = () => {
   const { currentUser } = useAuth(); // Usa useAuth para acceder al usuario autenticado
+  const [isActive, setIsActive] = useState<boolean | null>(null); // Estado para guardar si el usuario está activo
 
-  if (!currentUser) { // Verifica si el usuario no está autenticado
-    return <div>You need to be authenticated to view this content.</div>;
+  useEffect(() => {
+    const checkUserIsActive = async () => {
+      if (currentUser) {
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setIsActive(userData?.isActive || false);
+        } else {
+          setIsActive(false); // Usuario no encontrado, tratar como inactivo
+        }
+      }
+    };
+
+    checkUserIsActive();
+  }, [currentUser]);
+
+  if (isActive === null) {
+    // Muestra un loading mientras se verifica si el usuario está activo
+    return <div>Loading...</div>;
+  }
+
+  if (!currentUser || !isActive) { 
+    // Verifica si el usuario no está autenticado o no está activo
+    return <div>You need to be an active user to view this content.</div>;
   }
 
   return (
@@ -17,6 +44,8 @@ const ProtectedRoutes: React.FC = () => {
       <Routes>
         <Route path='/Portal' element={<PortalHome />} />
         <Route path='/MyAccount' element={<Profile />} />
+        <Route path='/Forum' element={<Forum />} />
+        <Route path='/MyOrders' element={<MyOrders/>} />
       </Routes>
     </DataProvider>
   );

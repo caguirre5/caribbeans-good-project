@@ -104,8 +104,8 @@ const Header: React.FC<HeaderProp> = () => {
                                 <ul className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg py-1 z-50 text-[#044421]">
                                     <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/Portal")}>Portal Home</li>
                                     <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/Portal")}>Roasters Forum</li>
-                                    <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/Portal")}>My Orders</li>
-                                    <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/Portal")}>My Subscriptions</li>
+                                    <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/MyOrders")}>My Orders</li>
+                                    {/* <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/Portal")}>My Subscriptions</li> */}
                                     <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/MyAccount")}>My Account</li>
                                     <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer border-t border-gray-200" onClick={handleLogout}>Log Out</li>
                                 </ul>

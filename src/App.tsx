@@ -21,6 +21,8 @@ import ProtectedRoutes from './ProtectedRoutes';
 import { AuthProvider } from './contexts/AuthContext'; // Importa AuthProvider
 
 import CookieConsentBanner from './pages/Legal/CookieConsentBanner'
+import PdfViewer from './pages/Legal/PdfViewer'
+import LeafletMapWithMarker from './components/LeafletMapWithMarker'
 
 function App() {
 
@@ -46,6 +48,8 @@ function App() {
           <Route path='/*' element={<ProtectedRoutes />} />
           <Route path='/login' element={<Login />} /> {/* Ruta de Login */}
           <Route path='/signup' element={<Signup />} /> {/* Ruta de Signup */}
+          <Route path='/pdf-viewer' element={<PdfViewer />} />
+          <Route path='/testing-route' element={<LeafletMapWithMarker/>} />
         </Routes>
         
         <CookieConsentBanner />

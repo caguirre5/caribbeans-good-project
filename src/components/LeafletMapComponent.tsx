@@ -30,7 +30,7 @@ const LeafletMapComponent: React.FC<LeafletMapComponentProps> = ({ coordinates, 
     <MapContainer
       center={center}
       zoom={zoom}
-      style={{ height: '80vh', width: '100%' }}
+      style={{ height: '60vh', width: '100%' }}
       scrollWheelZoom={false}
       dragging={false}
       doubleClickZoom={false}
