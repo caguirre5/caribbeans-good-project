@@ -27,7 +27,7 @@ const Orders: React.FC = () => {
 
     try {
       const token = await currentUser?.getIdToken();
-      const response = await fetch(`http://${import.meta.env.VITE_ENDPOINT}:${import.meta.env.VITE_PORT}/api/contracts`, {
+      const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/api/contracts`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -75,7 +75,7 @@ const Orders: React.FC = () => {
     
     try {
       const token = await currentUser?.getIdToken();
-      const response = await fetch(`http://${import.meta.env.VITE_ENDPOINT}:${import.meta.env.VITE_PORT}/api/contracts/${contractId}/status`, {
+      const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/api/contracts/${contractId}/status`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

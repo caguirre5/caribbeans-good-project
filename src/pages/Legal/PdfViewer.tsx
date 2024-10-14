@@ -76,7 +76,7 @@ const PdfViewer: React.FC = () => {
 
     try {
       // Envía el archivo PDF firmado al backend para subirlo a S3
-      const response = await fetch(`http://${import.meta.env.VITE_ENDPOINT}:${import.meta.env.VITE_PORT}/resourcelibray/uploadcontract`, {
+      const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/resourcelibray/uploadcontract`, {
         method: 'POST',
         body: formData,
       });

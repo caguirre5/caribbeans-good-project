@@ -16,7 +16,7 @@ const Requests: React.FC = () => {
 
     try {
       const token = await currentUser?.getIdToken();
-      const response = await fetch(`http://${import.meta.env.VITE_ENDPOINT}:3000/api/users`, {
+      const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/api/users`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -48,7 +48,7 @@ const Requests: React.FC = () => {
     
     try {
       const token = await currentUser?.getIdToken();
-      const response = await fetch(`http://${import.meta.env.VITE_ENDPOINT}:3000/api/users/${userUid}/activate`, {
+      const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/api/users/${userUid}/activate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -74,7 +74,7 @@ const Requests: React.FC = () => {
     
     try {
       const token = await currentUser?.getIdToken();
-      const response = await fetch(`http://${import.meta.env.VITE_ENDPOINT}:3000/api/users/${userUid}/delete`, {
+      const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/api/users/${userUid}/delete`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

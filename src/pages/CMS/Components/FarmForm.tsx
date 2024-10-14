@@ -144,6 +144,13 @@ const CoffeeFarmCMSPage: React.FC<CoffeeFarmCMSPageProps> = ({ onAddFarm }) => {
     });
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+    }
+  };
+  
+
   const handleRemoveDetail = (index: number) => {
     const newDetails = formData.details.filter((_, i) => i !== index);
     setFormData({ ...formData, details: newDetails });
@@ -165,29 +172,92 @@ const CoffeeFarmCMSPage: React.FC<CoffeeFarmCMSPageProps> = ({ onAddFarm }) => {
     }
   };
 
+  const handleRemoveMarker = (index: number) => {
+    const updatedPositions = markerPositions.filter((_, i) => i !== index);
+    setMarkerPositions(updatedPositions);
+    setFormData({ ...formData, coordinates: updatedPositions }); // Actualizar formData
+  };  
+
+  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
+  };
+  
+  const handleAltitudeChange = (e: React.ChangeEvent<HTMLInputElement>, isRangeStart: boolean) => {
+    const { value } = e.target;
+  
+    // Actualizar la altitud en formData dependiendo de si es un valor único o un rango
+    if (isRangeStart) {
+      setFormData({
+        ...formData,
+        altitude: value + (formData.altitude.includes('-') ? formData.altitude.split('-')[1] : ''),
+      });
+    } else {
+      setFormData({
+        ...formData,
+        altitude: formData.altitude.split('-')[0] + (value ? ` - ${value}` : ''),
+      });
+    }
+  };
+  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+  
+    // Validar campos requeridos
+    if (!formData.title) {
+      alert('Name is required.');
+      return;
+    }
+  
+    if (!formData.region) {
+      alert('Region is required.');
+      return;
+    }
+  
+    const altitudeStart = parseFloat(
+      formData.altitude.includes('-') ? formData.altitude.split('-')[0].trim() : formData.altitude
+    );
+    const altitudeEnd = parseFloat(
+      formData.altitude.includes('-') ? formData.altitude.split('-')[1].trim() : ''
+    );
+  
+    if (!altitudeStart) {
+      alert('At least the minimum altitude is required.');
+      return;
+    }
+  
+    if (altitudeEnd && altitudeEnd <= altitudeStart) {
+      alert('The maximum altitude must be greater than the minimum altitude.');
+      return;
+    }
+  
     setIsLoading(true); // Start the loading
     console.log('Form data submitted:', formData);
-
+  
     try {
       // Subir imágenes a S3 antes de agregar la granja y obtener las URLs generadas
       const imageUrls = await uploadImagesToS3(formData.images, formData.id);
-
+  
       const newFarm: FarmData = {
         ...formData,
         imageUrls, // Añadir las URLs de las imágenes al objeto de la granja
       };
-
+  
       // Llamada a la API para obtener el JSON actual y agregar la nueva granja
-      const response = await fetch('https://9r9f3lx5u4.execute-api.eu-west-2.amazonaws.com/dev/caribbeangoods-content-s3/file1.json');
+      const response = await fetch(
+        'https://9r9f3lx5u4.execute-api.eu-west-2.amazonaws.com/dev/caribbeangoods-content-s3/file1.json'
+      );
       const data = await response.json();
-
+  
       // Agrega la nueva granja con las URLs de las imágenes
       data.farms.push(newFarm);
-
+  
       // Guardar el JSON actualizado en el servidor
-      const putResponse = await fetch(`http://${import.meta.env.VITE_ENDPOINT}:${import.meta.env.VITE_PORT}/resourcelibray/upload`, {
+      const putResponse = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/resourcelibray/upload`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -197,7 +267,7 @@ const CoffeeFarmCMSPage: React.FC<CoffeeFarmCMSPageProps> = ({ onAddFarm }) => {
           fileContent: JSON.stringify(data),
         }),
       });
-
+  
       if (putResponse.ok) {
         console.log('Farm added successfully!');
         onAddFarm(newFarm);
@@ -211,6 +281,7 @@ const CoffeeFarmCMSPage: React.FC<CoffeeFarmCMSPageProps> = ({ onAddFarm }) => {
       setIsLoading(false); // Stop the loading
     }
   };
+   
 
   // Función para subir imágenes con progreso
   const uploadImagesToS3 = async (images: File[], farmId: string): Promise<string[]> => {
@@ -225,7 +296,7 @@ const CoffeeFarmCMSPage: React.FC<CoffeeFarmCMSPageProps> = ({ onAddFarm }) => {
     const uploadPromises = images.map((image, index) => {
       return new Promise<string>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.open('POST', `http://${import.meta.env.VITE_ENDPOINT}:${import.meta.env.VITE_PORT}/resourcelibray/uploadimages`);
+        xhr.open('POST', `${import.meta.env.VITE_FULL_ENDPOINT}/resourcelibray/uploadimages`);
 
         xhr.upload.onprogress = (event) => {
           if (event.lengthComputable) {
@@ -263,7 +334,7 @@ const CoffeeFarmCMSPage: React.FC<CoffeeFarmCMSPageProps> = ({ onAddFarm }) => {
   ];
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-4xl mx-auto p-5">
+    <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="max-w-4xl mx-auto p-5">
       {isLoading ? (
         <div className="text-center">
           <div className="text-lg font-bold mb-4">Creating farm. Please do not close the tab!</div>
@@ -319,15 +390,65 @@ const CoffeeFarmCMSPage: React.FC<CoffeeFarmCMSPageProps> = ({ onAddFarm }) => {
             </div>
           )}
           <div className="mb-6">
-            <label htmlFor="region" className="block mb-2 text-sm font-medium text-gray-900">Region:</label>
-            <input type="text" id="region" name="region" value={formData.region} onChange={handleInputChange}
-                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" />
+            <label htmlFor="region" className="block mb-2 text-sm font-medium text-gray-900">Region (Department):</label>
+            <select
+              id="region"
+              name="region"
+              value={formData.region}
+              onChange={handleSelectChange}
+              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+            >
+              <option value="">Select a department</option>
+              <option value="Alta Verapaz">Alta Verapaz</option>
+              <option value="Baja Verapaz">Baja Verapaz</option>
+              <option value="Chimaltenango">Chimaltenango</option>
+              <option value="Chiquimula">Chiquimula</option>
+              <option value="El Progreso">El Progreso</option>
+              <option value="Escuintla">Escuintla</option>
+              <option value="Guatemala">Guatemala</option>
+              <option value="Huehuetenango">Huehuetenango</option>
+              <option value="Izabal">Izabal</option>
+              <option value="Jalapa">Jalapa</option>
+              <option value="Jutiapa">Jutiapa</option>
+              <option value="Petén">Petén</option>
+              <option value="Quetzaltenango">Quetzaltenango</option>
+              <option value="Quiché">Quiché</option>
+              <option value="Retalhuleu">Retalhuleu</option>
+              <option value="Sacatepéquez">Sacatepéquez</option>
+              <option value="San Marcos">San Marcos</option>
+              <option value="Santa Rosa">Santa Rosa</option>
+              <option value="Sololá">Sololá</option>
+              <option value="Suchitepéquez">Suchitepéquez</option>
+              <option value="Totonicapán">Totonicapán</option>
+              <option value="Zacapa">Zacapa</option>
+            </select>
           </div>
+
           <div className="mb-6">
             <label htmlFor="altitude" className="block mb-2 text-sm font-medium text-gray-900">Altitude:</label>
-            <input type="text" id="altitude" name="altitude" value={formData.altitude} onChange={handleInputChange}
-                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" />
+            <div className="flex gap-2">
+              <input
+                type="number"
+                id="altitude-start"
+                name="altitude-start"
+                placeholder="Min Altitude"
+                value={formData.altitude.includes('-') ? formData.altitude.split('-')[0].trim() : formData.altitude}
+                onChange={(e) => handleAltitudeChange(e, true)}
+                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+              />
+              <span className="self-center text-sm text-gray-900">to</span>
+              <input
+                type="number"
+                id="altitude-end"
+                name="altitude-end"
+                placeholder="Max Altitude"
+                value={formData.altitude.includes('-') ? formData.altitude.split('-')[1].trim() : ''}
+                onChange={(e) => handleAltitudeChange(e, false)}
+                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+              />
+            </div>
           </div>
+          
           <div className="mb-6">
             <label htmlFor="intro" className="block mb-2 text-sm font-medium text-gray-900">Intro:</label>
             <textarea id="intro" name="intro" value={formData.intro} onChange={handleInputChange}
@@ -377,13 +498,13 @@ const CoffeeFarmCMSPage: React.FC<CoffeeFarmCMSPageProps> = ({ onAddFarm }) => {
               ))}
             </div>
           </div>
-          <div>
 
+          <div>
             <MapContainer
               center={[15.877539, -90.368891]}
               zoom={7}
               style={{ height: '60vh', width: '100%' }}
-              scrollWheelZoom = {false}
+              scrollWheelZoom={false}
             >
               <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -392,33 +513,26 @@ const CoffeeFarmCMSPage: React.FC<CoffeeFarmCMSPageProps> = ({ onAddFarm }) => {
               <MapClickHandler onMapClick={handleMapClick} />
               {markerPositions.map((position, index) => (
                 <Marker key={index} position={position}>
-                  <Popup>Marcador en esta posición</Popup>
+                  <Popup>
+                    <div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation(); // Evita que el clic se propague al mapa
+                          handleRemoveMarker(index);
+                        }}
+                        className="bg-red-500 font-bold hover:bg-red-600 text-white py-1 px-3 rounded-lg"
+                      >
+                        Remove Marker
+                      </button>
+                    </div>
+                  </Popup>
                 </Marker>
               ))}
             </MapContainer>
-
           </div>
-          <div className="mb-6">
-            <label htmlFor="coordinates" className="block mb-2 text-sm font-medium text-gray-900">Coordinates:</label>
-            <textarea
-              id="coordinates"
-              name="coordinates"
-              value={formData.coordinates.map(coord => coord.join(',')).join(' | ')} // Mostrar las coordenadas separadas por " | "
-              onChange={(e) => {
-                // Convertir el valor del textarea en un array de coordenadas
-                const coordsArray = e.target.value.split(' | ').map(coord => {
-                  const [lat, lng] = coord.split(',').map(Number);
-                  return [lat, lng] as [number, number];
-                });
-                setFormData({ ...formData, coordinates: coordsArray }); // Actualizar formData
-              }}
-              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-              rows={3}
-            />
-          </div>
-
-
-          <div className="mb-6">
+          
+          <div className="my-6">
             <label className="inline-flex items-center cursor-pointer">
               <input 
                 type="checkbox" 

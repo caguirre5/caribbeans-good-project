@@ -112,7 +112,7 @@ const ResourceLibrary: React.FC<ResourceLibraryProps> = ({ setActiveTab }) => {
   const handleDeleteFarm = async (farmTitle: string, farmId: string) => {
     try {
       // Eliminar imágenes en S3
-      await fetch(`http://${import.meta.env.VITE_ENDPOINT}:${import.meta.env.VITE_PORT}/resourcelibray/deleteimages`, {
+      await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/resourcelibray/deleteimages`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -129,7 +129,7 @@ const ResourceLibrary: React.FC<ResourceLibraryProps> = ({ setActiveTab }) => {
   
       dataJson.farms = updatedData;
   
-      const putResponse = await fetch(`http://${import.meta.env.VITE_ENDPOINT}:${import.meta.env.VITE_PORT}/resourcelibray/upload`, {
+      const putResponse = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/resourcelibray/upload`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -209,12 +209,12 @@ const ResourceLibrary: React.FC<ResourceLibraryProps> = ({ setActiveTab }) => {
           className={`p-4 shadow-md lg:rounded-md flex flex-col justify-center items-center text-center text-white cursor-pointer`} 
           style={{ 
             minHeight: '300px',
-            backgroundColor: 'white',
+            backgroundColor: 'rgba(255, 255, 255, 1)',
             fontFamily: 'KingsThing',
             boxShadow: 'inset 0 4px 8px rgba(0, 0, 0, 0.1), inset 0 -4px 8px rgba(0, 0, 0, 0.1)'
           }}
           onClick={handleOpenModal}
-          whileHover={{ scale: 1.05, backgroundColor:"#f9f9f9"}}
+          whileHover={{ scale: 1.05, backgroundColor:"rgba(249, 249, 249, 1)"}}
           transition={{ type: 'tween' }}
         >
           <FontAwesomeIcon icon={faSquarePlus} className='text-[#e9e9e9] text-5xl'/>
