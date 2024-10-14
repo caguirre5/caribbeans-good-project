@@ -79,8 +79,23 @@ const Profile: React.FC = () => {
     }
   };
 
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p>{error}</p>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-[#c9d3c0]">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#044421]"></div>
+      </div>
+    );
+  } 
+    
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-[#c9d3c0]">
+        <div className="text-center text-[#044421] text-2xl font-semibold">
+          {error}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

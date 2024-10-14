@@ -30,14 +30,23 @@ const ProtectedRoutes: React.FC = () => {
   }, [currentUser]);
 
   if (isActive === null) {
-    // Muestra un loading mientras se verifica si el usuario está activo
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center h-screen bg-[#c9d3c0]">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#044421]"></div>
+      </div>
+    );
   }
+  
 
-  if (!currentUser || !isActive) { 
-    // Verifica si el usuario no está autenticado o no está activo
-    return <div>You need to be an active user to view this content.</div>;
-  }
+  if (!currentUser || !isActive) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-[#c9d3c0]">
+        <div className="text-center text-[#044421] text-2xl font-semibold">
+          You need to be an active user to view this content.
+        </div>
+      </div>
+    );
+  }  
 
   return (
     <DataProvider>
