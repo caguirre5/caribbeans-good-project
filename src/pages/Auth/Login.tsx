@@ -3,7 +3,10 @@ import { signInWithEmailAndPassword, sendPasswordResetEmail, signOut, GoogleAuth
 import { auth, db } from '../../firebase/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+
+import GoogleLogo from '../../assets/Google.png'
+import CaribbeanLogo from '../../assets/green_logo_icon.png'
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -43,13 +46,36 @@ const Login: React.FC = () => {
   const handleGoogleSignIn = async () => {
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+  
+      // Referencia al documento del usuario en Firestore
+      const userDocRef = doc(db, "users", user.uid);
+      const userDoc = await getDoc(userDocRef);
+  
+      if (!userDoc.exists()) {
+        // Si no existe el documento del usuario, crearlo
+        await setDoc(userDocRef, {
+          uid: user.uid,
+          firstName: user.displayName?.split(' ')[0] || '',
+          lastName: user.displayName?.split(' ')[1] || '',
+          email: user.email,
+          createdAt: new Date(),
+          photoURL: user.photoURL || "",
+          isActive: false, // Puedes definir la lógica de activación
+          emailVerified: true,
+          profileCompleted: false,
+          roles: ["user"],
+        });
+      }
+  
+      console.log("Google Sign-in successful and user saved to Firestore");
       navigate('/'); // Navega al dashboard o home después del login con Google
-      console.log("Google Sign-in successful");
     } catch (err: any) {
       setError(err.message);
     }
   };
+  
 
   const handlePasswordReset = async () => {
     if (!email) {
@@ -66,14 +92,18 @@ const Login: React.FC = () => {
   };
 
   if (currentUser) {
-    return <p className="text-center text-lg">Already logged in as {currentUser.email}</p>;
+    <div className="flex items-center justify-center h-screen bg-[#c9d3c0]">
+        <p className="text-center text-lg">Already logged in as {currentUser.email}</p>
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#044421]"></div>
+    </div>
   }
+  
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#c9d3c0]">
       <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-lg">
         <div className="flex justify-center">
-          <img src="/src/assets/green_logo_icon.png" alt="Logo" className="h-12 mb-6" /> {/* Cambia la ruta de la imagen al logo que uses */}
+          <img src={CaribbeanLogo} alt="Logo" className="h-12 mb-6" /> {/* Cambia la ruta de la imagen al logo que uses */}
         </div>
         <h2 className="text-2xl font-bold text-center text-[#174B3D]">Welcome Back</h2>
         <p className="text-center text-sm text-[#174B3D] mb-8">Log in to your account</p>
@@ -130,7 +160,7 @@ const Login: React.FC = () => {
           onClick={handleGoogleSignIn} // Lógica de Sign In con Google
           className="w-full py-3 border border-[#174B3D] text-[#174B3D] font-semibold rounded-md hover:bg-[#f0f2f1] focus:outline-none focus:ring-2 focus:ring-[#174B3D] flex items-center justify-center"
         >
-          <img src="/src/assets/Google.png" alt="Google" className="h-5 mr-3" /> {/* Cambia la ruta del icono de Google */}
+          <img src={GoogleLogo} alt="Google" className="h-5 mr-3" /> {/* Cambia la ruta del icono de Google */}
           Continue with Google
         </button>
       </div>

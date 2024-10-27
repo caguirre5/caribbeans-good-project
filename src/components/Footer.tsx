@@ -7,7 +7,7 @@ function Footer() {
             <div className='info-container'>
                 <div className=''>
                     <h3 className="mb-8 uppercase text-xl tracking-[.30em] text-[#9da793]">Scotland</h3>
-                    <p className='text-[0.95rem]'>Strathclyde Inspire <br/>50 Richmond Street <br/>Glasgow. G1 1XP</p>
+                    <p className='text-[0.95rem]'>128 Maryhill Road<br/>Glasgow. G20 7QS</p>
                 </div>
                 <div className='contact'>
                     <h3 className="mb-8 uppercase text-xl tracking-[.30em] text-[#9da793]">Contact</h3>

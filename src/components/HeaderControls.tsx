@@ -75,7 +75,7 @@ const Header: React.FC<HeaderProp> = () => {
                     <li className="my-5 lg:mr-8 last:mr-0"><a className="font-semibold hover:text-[#e99c18]" href="/Roasters" onClick={() => redirectTo("/Roasters")}>Roasters</a></li>
                     <li className="my-5 lg:mr-8 last:mr-0"><a className="font-semibold hover:text-[#e99c18]" href="/Contact" onClick={() => redirectTo("/Contact")}>Contact</a></li>
                     <li className="my-5 lg:mr-8 last:mr-0"><a className="font-semibold hover:text-[#e99c18]" href="/Subscribe" onClick={() => redirectTo("/Subscribe")}>Subscribe</a></li>
-                    <li className="my-5 lg:mr-8 last:mr-0"><a className="font-semibold hover:text-[#e99c18]" href="/ICEHome" onClick={() => redirectTo("/ICEHome")}>ICX</a></li>
+                    {/* <li className="my-5 lg:mr-8 last:mr-0"><a className="font-semibold hover:text-[#e99c18]" href="/ICEHome" onClick={() => redirectTo("/ICEHome")}>ICX</a></li> */}
 
                     {!currentUser ? (  // Si no hay usuario autenticado, muestra el botón de login
                         <button
@@ -95,9 +95,13 @@ const Header: React.FC<HeaderProp> = () => {
                                         src={currentUser.photoURL} 
                                         alt="Profile" 
                                         className="w-full h-full rounded-full object-cover"
+                                        onError={(e) => {
+                                            e.currentTarget.style.display = 'none'; // Esconde la imagen si no se carga
+                                            e.currentTarget.parentElement!.textContent = firstLetter; // Muestra la primera letra
+                                        }}
                                     />
                                 ) : (
-                                    firstLetter
+                                    <span>{firstLetter}</span> // Si no hay URL, muestra la primera letra
                                 )}
                             </li>
                             {dropdownOpen && (

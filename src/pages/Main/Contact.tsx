@@ -21,7 +21,7 @@ function Contact() {
                         <div className="flex flex-col justify-center items-center">
                             {/* icon    */}
                             <h3 className="text-xl font-bold">Address</h3>
-                            <p>Strathclyde Inspire<br/>50 Richmond Street.<br/>Glasgow. G1 1XQ</p>
+                            <p>128 Maryhill Road<br/>Glasgow. G20 7QS</p>
                         </div>
                         <div className="flex flex-col justify-center items-center">
                             <h3 className="text-xl font-bold">Phone</h3>
@@ -44,7 +44,7 @@ function Contact() {
                         <ContactForm/>
                     </div>
                 </div>
-                    <LeafletMapComponent coordinates={[55.860910, -4.241640]} center={[55.860910, -4.241640]} popupDescription="Caribbean Goods" zoom={15} type="marker"/>
+                    <LeafletMapComponent coordinates={[55.873112266544325, -4.269304354466244]} center={[55.873112266544325, -4.269304354466244]} popupDescription="Caribbean Goods" zoom={15} type="marker"/>
                 <div>
 
                 </div>

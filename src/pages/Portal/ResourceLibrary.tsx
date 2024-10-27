@@ -185,7 +185,10 @@ const ResourceLibrary: React.FC<ResourceLibraryProps> = ({ setActiveTab }) => {
   }
 
   return (
-    <div className='flex flex-col items-center text-[#044421] min-h-[calc(100vh-8.5rem)]'>
+    <div 
+      className='flex flex-col items-center text-[#044421]'
+      style={{ minHeight: 'calc(100vh - 15rem)' }}
+    >
       <h1 className="text-2xl font-bold mb-4 text-center" style={{ fontFamily: "KingsThing" }}>Resource Library</h1>
       <h2 className="text-6xl lg:text-7xl font-bold mb-4 text-center" style={{ fontFamily: "KingsThing" }}>Our Farms</h2>
       <p className='w-[80%] lg:w-[500px] text-sm'>Welcome to the Caribbean Goods Resource library, where you will find all the information, photos and videos about our farms. You can download these resources to use across your marketing, website etc.</p>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Route, Routes, Link } from 'react-router-dom';
 import PortalHome from './pages/Portal/Home';
 import Profile from './components/Profile';
 import { useAuth } from './contexts/AuthContext'; // Importa el AuthContext
@@ -36,17 +36,24 @@ const ProtectedRoutes: React.FC = () => {
       </div>
     );
   }
-  
 
   if (!currentUser || !isActive) {
     return (
-      <div className="flex items-center justify-center h-screen bg-[#c9d3c0]">
-        <div className="text-center text-[#044421] text-2xl font-semibold">
+      <div className="flex flex-col items-center justify-center h-screen bg-[#c9d3c0]">
+        <div className="text-center w-[90%] text-[#044421] text-2xl font-semibold">
           You need to be an active user to view this content.
         </div>
+        <p className="text-sm mt-4 text-center mb-6 w-[90%] lg:w-[28%]">
+          Your account has been successfully created, but it is still pending approval. Please wait for your account to be activated by our team.
+        </p>
+        <Link to="/" className="mt-6">
+          <button className="px-6 py-2 text-white bg-[#044421] hover:bg-[#033914] rounded-full">
+            Return to Home
+          </button>
+        </Link>
       </div>
     );
-  }  
+  }
 
   return (
     <DataProvider>

@@ -3,7 +3,7 @@ import './RoastersBusinesses.css';
 import vector1farmer from '../assets/Images/Vectors/vector1-farmers.png'
 
 // import roaster1 from '../assets/Images/Vectors/Logo/roasters-brew.jpg'
-import roaster2 from '../assets/Images/Vectors/Logo/roasters-podra.png'
+// import roaster2 from '../assets/Images/Vectors/Logo/roasters-podra.png'
 import roaster3 from '../assets/Images/Vectors/Logo/roasters-fower.png'
 import roaster4 from '../assets/Images/Vectors/Logo/roasters-thomsons.png'
 import roaster5 from '../assets/Images/Vectors/Logo/roasters-inverness.png'
@@ -22,7 +22,7 @@ function Roasters() {
             </div>
             <div className='roastersb-logos'>
                 {/* <img src={roaster1} alt="" /> */}
-                <img src={roaster2} alt="" />
+                {/* <img src={roaster2} alt="" /> */}
                 <img src={roaster3} alt="" />
                 <img src={roaster4} alt="" />
                 <img src={roaster5} alt="" />

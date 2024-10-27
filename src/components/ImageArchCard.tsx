@@ -19,7 +19,7 @@ const ImageCard: React.FC<ImageCardProps> = ({ title, description, imageUrl, log
         <img src={imageUrl} alt={title} className="w-full h-[460px] object-cover rounded-t-full" />
         <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
         <div className="absolute inset-0 flex items-center justify-center p-8 pt-[70px] rounded-t-full text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <p className="text-sm lg:block">{description}</p>
+          <p className="text-xs lg:block">{description}</p>
         </div>
         <div className="absolute inset-0 flex items-center justify-center p-4 pt-[70px] rounded-t-full text-white group-hover:opacity-0 transition-opacity duration-300">
           <p className="text-5xl text-center block px-10" style={{ fontFamily: "KingsThing" }}>{title}</p>

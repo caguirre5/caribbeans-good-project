@@ -167,9 +167,8 @@ const CoffeeSupplyAgreementForm: React.FC = () => {
       `**This Coffee Supply Agreement ("Agreement") is made and entered into as of ${formData.date}, by and between:**`,
       `**Supplier:**`,
       `Caribbean Goods Ltd`,
-      `Rooms 6.01-6.13. Strathclyde Inspire`,
-      `Graham Hills Building. 50 Richmond St.`,
-      `Glasgow. G1 1XN`,
+      `128 Maryhill Road`,
+      `Glasgow. G20 7QS`,
 
       `Contact Person: Javier Enrique Gutierrez Abril`,
       `Email: info@caribbeangoods.co.uk`,

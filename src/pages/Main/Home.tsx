@@ -20,6 +20,7 @@ import Roasters from "../../components/RoastersBusinesses";
 import roaster1 from '../../assets/Images/Vectors/Logo/roasters-fower.png'
 import roaster2 from '../../assets/Images/Vectors/Logo/roasters-thomsons.png'
 import roaster3 from '../../assets/Images/Vectors/Logo/roasters-brew.png'
+import roaster4 from '../../assets/Images/Vectors/Logo/HarmonyLogo.png'
 
 import image1Form from '../../assets/Images/Places/image-form1.jpg'
 import image2Form from '../../assets/Images/All/1.jpg'
@@ -27,6 +28,7 @@ import image2Form from '../../assets/Images/All/1.jpg'
 import image1 from "../../assets/Images/All/HAR07128.jpg"
 import image2 from "../../assets/Images/All/2A8A7136.jpg"
 import image3 from "../../assets/Images/All/Hunbatz-34.jpg"
+import image5 from "../../assets/Images/All/Harmony2.webp"
 
 
 import imageCarousel1 from "../../assets/Images/Carousels/EFR06209.jpg"
@@ -124,10 +126,16 @@ function Home() {
         },
         {
           title: 'Fower',
-          description: "'Great work, great story, great people and most importantly great coffee! We have worked with Caribbean Goods since opening our roastery and have managed to get some great coffees from them that our customers love. We have recommended Caribbean Goods to other roasters and will continue to do so. The passion and drive to work ethically and sustainably is clearly evident from Caribbean Goods. We would not get our Guatemalan coffee anywhere else!",
+          description: "Great work, great story, great people and most importantly great coffee! We have worked with Caribbean Goods since opening our roastery and have managed to get some great coffees from them that our customers love. We have recommended Caribbean Goods to other roasters and will continue to do so. The passion and drive to work ethically and sustainably is clearly evident from Caribbean Goods. We would not get our Guatemalan coffee anywhere else!",
           imageUrl: image3,
           logoUrl:roaster1,
         },
+        {
+            title: 'Harmony Coffee',
+            description: "Working with Javier and the Caribbean Goods team has really shone a light for me on what a healthy trade relationship looks like. No request is too big or too small, the quality of coffee is always excellent, the business support through marketing materials and storytelling is available and it's evident just by talking to Javier that his passion and enthusiasm for Guatemalan produce and community is unmatched. This is a relationship that we hope to maintain to its fullest for a long time - I wholeheartedly recommend Caribbean Goods for any and all Guatemalan coffee production.",
+            imageUrl: image5,
+            logoUrl:roaster4,
+          },
       ];
 
     useEffect(() => {
@@ -198,7 +206,7 @@ function Home() {
 
             <div className="hidden lg:flex flex-col items-center px-20 ">
                 <h2 className="text-6xl text-[#044421] mt-20" style={{fontFamily:'KingsThing'}}>Hear from the people we work with</h2>
-                <div className="flex justify-evenly w-full my-16">
+                <div className="flex justify-evenly w-[80%] my-16">
                     {imageProjects.map((image, index) => (
                         <ImageCard
                         key={index}

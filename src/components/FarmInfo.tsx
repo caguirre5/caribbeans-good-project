@@ -42,7 +42,14 @@ interface FarmInfoProps {
   setActive: (tab: string) => void;
 }
 
+const extractYouTubeVideoId = (url : string | undefined) => {
+  const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+  const match = url?.match(regex);
+  return match ? match[1] : null; // Retorna el ID del video o null si no coincide
+};
+
 const FarmInfo: React.FC<FarmInfoProps> = ({ data, setActive }) => {
+  const videoId = extractYouTubeVideoId(data.videoUrl);
   return (
     <div className="py-12 w-full justify-center items-center">
       <div className="mx-auto grid grid-cols-1 lg:grid-cols-3 items-start">
@@ -129,11 +136,11 @@ const FarmInfo: React.FC<FarmInfoProps> = ({ data, setActive }) => {
       {/* Mostrar la sección del video si videoUrl está disponible */}
       {data.videoUrl && data.videoUrl !== '' && (
         <>
-          <hr className='my-8'/>
+          <hr className="my-8" />
           <div className="w-full px-8 h-[640px] overflow-hidden relative pointer-events-none">
             <iframe
               className="w-full h-full object-cover"
-              src={`${data.videoUrl}?autoplay=1&mute=1&loop=1&playlist=${data.videoUrl.split('v=')[1]}`}
+              src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}`}
               allow="autoplay; encrypted-media"
               allowFullScreen
               title="YouTube video"

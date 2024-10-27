@@ -7,7 +7,10 @@ const Dashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'users' | 'requests' | 'orders'>('users'); // Agrega 'orders' como una opción
 
   return (
-    <div className="min-h-screen w-[80%] ">
+    <div 
+      className=" w-[80%] "
+      style={{ minHeight: 'calc(100vh - 15rem)' }}
+    >
       <div className="text-center text-4xl font-bold py-4" style={{ fontFamily: "KingsThing", color: "#044421" }}>
         DASHBOARD
       </div>
