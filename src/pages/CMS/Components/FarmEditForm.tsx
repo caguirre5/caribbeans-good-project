@@ -1,102 +1,54 @@
-import React, { useRef, useState } from 'react';
-import { v4 as uuidv4 } from 'uuid';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-
-// Configurar el icono de Leaflet
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-
+import React, { useState } from 'react';
+interface Detail {
+  [key: string]: string;
+}
 interface CoffeeFarmFormState {
   id: string;
   title: string;
-  medal: string | undefined;
+  medal?: string | undefined;
   region: string;
   altitude: string;
-  intro: string;
+  intro?: string;
   description: string;
-  details: { key: string, value: string }[];
+  details: Detail[];
   buttonText: string;
   color: string;
   coordinates: [number, number][]; // Cambiar a un array de tuplas
   prefix: string;
-  images: File[];
   videoUrl?: string;
-}
-
-interface FarmData extends CoffeeFarmFormState {
-  imageUrls: string[]; // URLs de las imágenes subidas
+  
+  imageUrls?: string[];
 }
 
 interface CoffeeFarmCMSPageProps {
-  onAddFarm: (newFarm: FarmData) => void;
+  initialData: CoffeeFarmFormState | null;
   onClose: () => void;
+  onUpdateFarm: (newFarm: CoffeeFarmFormState) => void;
 }
 
-let DefaultIcon = L.icon({
-  iconUrl: markerIcon,
-  shadowUrl: markerShadow,
-  iconAnchor: [12, 41],
-});
-
-L.Marker.prototype.options.icon = DefaultIcon;
-
-// Componente para manejar los eventos del mapa
-const MapClickHandler: React.FC<{ onMapClick: (coordinates: [number, number]) => void }> = ({ onMapClick }) => {
-  useMapEvents({
-    click(e) {
-      const { lat, lng } = e.latlng;
-      onMapClick([lat, lng]);
-    },
-  });
-  return null;
-};
-
-const CoffeeFarmCMSPage: React.FC<CoffeeFarmCMSPageProps> = ({ onAddFarm }) => {
+const CoffeeFarmCMSEditPage: React.FC<CoffeeFarmCMSPageProps> = ({ onClose, initialData, onUpdateFarm }) => {
   const [formData, setFormData] = useState<CoffeeFarmFormState>({
-    id: uuidv4(),
-    title: '',
-    medal: undefined,
-    region: '',
-    altitude: '',
-    intro: '',
-    description: '',
-    details: [{ key: '', value: '' }],
-    buttonText: 'Price & Availability',
-    color: '#df9a87',
-    coordinates: [], // Inicializar como un array vacío
-    prefix: 'Finca',
-    images: [],
-    videoUrl: '',
+    id: initialData?.id||'',
+    title: initialData?.title || '',
+    medal: initialData?.medal || undefined,
+    region: initialData?.region || '',
+    altitude: initialData?.altitude || '',
+    intro: initialData?.intro || '',
+    description: initialData?.description || '',
+    details: initialData?.details || [{ key: '', value: '' }],
+    buttonText: initialData?.buttonText || 'Price & Availability',
+    color: initialData?.color || '#df9a87',
+    coordinates: initialData?.coordinates || [],
+    prefix: initialData?.prefix || 'Finca',
+    videoUrl: initialData?.videoUrl || '',
+    imageUrls: initialData?.imageUrls || []
   });
+
   
 
   const [showMedalInput, setShowMedalInput] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<number[]>([]); // Progreso de carga por imagen
-  const [showVideoUrlInput, setShowVideoUrlInput] = useState(false);
-  const [markerPositions, setMarkerPositions] = useState<[number, number][]>([]);
-
-
-  const maxImages = 20; // Variable para controlar el máximo de imágenes
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  const handleMapClick = (coordinates: [number, number]) => {
-    const updatedPositions = [...markerPositions, coordinates];
-    setMarkerPositions(updatedPositions);
-    setFormData({ ...formData, coordinates: updatedPositions }); // Actualizar formData
-  };
-  
-  
-
-  const handleToggleVideoUrl = () => {
-    setShowVideoUrlInput(!showVideoUrlInput);
-    if (!showVideoUrlInput) {
-      setFormData({ ...formData, videoUrl: '' }); // Limpiar el campo videoUrl si se desactiva
-    }
-  };  
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, index?: number) => {
     const { name, value } = e.target;
@@ -119,24 +71,6 @@ const CoffeeFarmCMSPage: React.FC<CoffeeFarmCMSPageProps> = ({ onAddFarm }) => {
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const selectedFiles = Array.from(e.target.files);
-
-      // Verificar si se supera el límite de imágenes
-      if (selectedFiles.length + formData.images.length > maxImages) {
-        alert(`You can only upload a maximum of ${maxImages} images.`);
-        
-        // Limpiar el input de archivos usando la referencia
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-        }
-      } else {
-        setFormData({ ...formData, images: [...formData.images, ...selectedFiles] });
-      }
-    }
-  };
-
   const handleAddDetail = () => {
     setFormData({
       ...formData,
@@ -145,8 +79,7 @@ const CoffeeFarmCMSPage: React.FC<CoffeeFarmCMSPageProps> = ({ onAddFarm }) => {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
-    const target = e.target as HTMLElement;
-    if (e.key === 'Enter' && target.tagName !== 'TEXTAREA') {
+    if (e.key === 'Enter') {
       e.preventDefault();
     }
   };
@@ -172,12 +105,6 @@ const CoffeeFarmCMSPage: React.FC<CoffeeFarmCMSPageProps> = ({ onAddFarm }) => {
       setFormData({ ...formData, medal: undefined });
     }
   };
-
-  const handleRemoveMarker = (index: number) => {
-    const updatedPositions = markerPositions.filter((_, i) => i !== index);
-    setMarkerPositions(updatedPositions);
-    setFormData({ ...formData, coordinates: updatedPositions }); // Actualizar formData
-  };  
 
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -218,44 +145,25 @@ const CoffeeFarmCMSPage: React.FC<CoffeeFarmCMSPageProps> = ({ onAddFarm }) => {
       alert('Region is required.');
       return;
     }
-  
-    const altitudeStart = parseFloat(
-      formData.altitude.includes('-') ? formData.altitude.split('-')[0].trim() : formData.altitude
-    );
-    const altitudeEnd = parseFloat(
-      formData.altitude.includes('-') ? formData.altitude.split('-')[1].trim() : ''
-    );
-  
-    if (!altitudeStart) {
-      alert('At least the minimum altitude is required.');
-      return;
-    }
-  
-    if (altitudeEnd && altitudeEnd <= altitudeStart) {
-      alert('The maximum altitude must be greater than the minimum altitude.');
-      return;
-    }
-  
-    setIsLoading(true); // Start the loading
-    console.log('Form data submitted:', formData);
+
+    setIsLoading(true);
   
     try {
-      // Subir imágenes a S3 antes de agregar la granja y obtener las URLs generadas
-      const imageUrls = await uploadImagesToS3(formData.images, formData.id);
-  
-      const newFarm: FarmData = {
-        ...formData,
-        imageUrls, // Añadir las URLs de las imágenes al objeto de la granja
-      };
-  
-      // Llamada a la API para obtener el JSON actual y agregar la nueva granja
+      // Llamada a la API para obtener el JSON actual
       const response = await fetch(
         'https://9r9f3lx5u4.execute-api.eu-west-2.amazonaws.com/dev/caribbeangoods-content-s3/file1.json'
       );
       const data = await response.json();
   
-      // Agrega la nueva granja con las URLs de las imágenes
-      data.farms.push(newFarm);
+      // Encontrar y actualizar la granja existente
+      const farmIndex = data.farms.findIndex((farm: CoffeeFarmFormState) => farm.id === formData.id);
+      if (farmIndex !== -1) {
+        data.farms[farmIndex] = { ...formData }; // Actualizar con los nuevos datos
+        console.log("match", data.farms[farmIndex])
+      } else {
+        console.error('Farm not found');
+        return;
+      }
   
       // Guardar el JSON actualizado en el servidor
       const putResponse = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/resourcelibray/upload`, {
@@ -270,63 +178,20 @@ const CoffeeFarmCMSPage: React.FC<CoffeeFarmCMSPageProps> = ({ onAddFarm }) => {
       });
   
       if (putResponse.ok) {
-        console.log('Farm added successfully!');
-        onAddFarm(newFarm);
-        setSuccessMessage('Farm added successfully!');
+        console.log('Farm updated successfully!');
+        onUpdateFarm(formData);
+        setSuccessMessage('Farm updated successfully!');
+        onClose();
       } else {
-        console.error('Failed to add the farm.');
+        console.error('Failed to update the farm.');
       }
     } catch (error) {
-      console.error('Error adding farm:', error);
+      console.error('Error updating farm:', error);
     } finally {
-      setIsLoading(false); // Stop the loading
+      setIsLoading(false); // Detener la carga
     }
   };
-   
-
-  // Función para subir imágenes con progreso
-  const uploadImagesToS3 = async (images: File[], farmId: string): Promise<string[]> => {
-    const imageUrls: string[] = [];
-    const progressArray: number[] = new Array(images.length).fill(0);
-
-    const updateProgress = (index: number, value: number) => {
-      progressArray[index] = value;
-      setUploadProgress([...progressArray]);
-    };
-
-    const uploadPromises = images.map((image, index) => {
-      return new Promise<string>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', `${import.meta.env.VITE_FULL_ENDPOINT}/resourcelibray/uploadimages`);
-
-        xhr.upload.onprogress = (event) => {
-          if (event.lengthComputable) {
-            const percentComplete = Math.round((event.loaded * 100) / event.total);
-            updateProgress(index, percentComplete);
-          }
-        };
-
-        xhr.onload = () => {
-          if (xhr.status === 200) {
-            const imageUrl = `https://caribbeangoods-content-s3.s3.eu-west-2.amazonaws.com/resourcelibrarygallery/${farmId}/${image.name}`;
-            imageUrls.push(imageUrl);
-            resolve(imageUrl);
-          } else {
-            reject(new Error('Failed to upload'));
-          }
-        };
-
-        xhr.onerror = () => reject(new Error('Upload failed'));
-        const imgFormData = new FormData();
-        imgFormData.append('files', image);
-        imgFormData.append('farmId', farmId);
-        xhr.send(imgFormData);
-      });
-    });
-
-    await Promise.all(uploadPromises);
-    return imageUrls;
-  };
+  
 
   const colorOptions = [
     "#df9a87", "#9ed1c4", "#eecc84", "#0084c1",
@@ -338,19 +203,7 @@ const CoffeeFarmCMSPage: React.FC<CoffeeFarmCMSPageProps> = ({ onAddFarm }) => {
     <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="max-w-4xl mx-auto p-5">
       {isLoading ? (
         <div className="text-center">
-          <div className="text-lg font-bold mb-4">Creating farm. Please do not close the tab!</div>
-          <div className="mb-6">
-            <div className="text-sm font-medium mb-2">Uploading images...</div>
-            {formData.images.map((image, index) => (
-              <div key={index} className="mb-4">
-                <span>{image.name}</span>
-                <div className="w-full bg-gray-200 rounded h-2">
-                  <div className="bg-blue-500 h-full rounded" style={{ width: `${uploadProgress[index] || 0}%` }}></div>
-                </div>
-                <span className="text-sm">{uploadProgress[index] || 0}%</span>
-              </div>
-            ))}
-          </div>
+          <div className="text-lg font-bold mb-4">Updating farm. Please do not close the tab!</div>
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] text-primary motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status">
             <span className="sr-only">Loading...</span>
           </div>
@@ -500,100 +353,11 @@ const CoffeeFarmCMSPage: React.FC<CoffeeFarmCMSPageProps> = ({ onAddFarm }) => {
             </div>
           </div>
 
-          <div>
-            <MapContainer
-              center={[15.877539, -90.368891]}
-              zoom={7}
-              style={{ height: '60vh', width: '100%' }}
-              scrollWheelZoom={false}
-            >
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                url='https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
-              />
-              <MapClickHandler onMapClick={handleMapClick} />
-              {markerPositions.map((position, index) => (
-                <Marker key={index} position={position}>
-                  <Popup>
-                    <div>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation(); // Evita que el clic se propague al mapa
-                          handleRemoveMarker(index);
-                        }}
-                        className="bg-red-500 font-bold hover:bg-red-600 text-white py-1 px-3 rounded-lg"
-                      >
-                        Remove Marker
-                      </button>
-                    </div>
-                  </Popup>
-                </Marker>
-              ))}
-            </MapContainer>
-          </div>
-          
-          <div className="my-6">
-            <label className="inline-flex items-center cursor-pointer">
-              <input 
-                type="checkbox" 
-                className="sr-only peer" 
-                checked={showVideoUrlInput} 
-                onChange={handleToggleVideoUrl} 
-              />
-              <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#eecc84] rounded-full peer-checked:bg-[#e6a318]">
-                <span
-                  className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${
-                    showVideoUrlInput ? 'transform translate-x-5' : ''
-                  }`}
-                />
-              </div>
-              <span className="ml-3 text-sm font-medium text-gray-900">Do you want to add a video?</span>
-            </label>
-          </div>
-
-          {showVideoUrlInput && (
-            <div className="mb-6">
-              <label htmlFor="videoUrl" className="block mb-2 text-sm font-medium text-gray-900">Video URL:</label>
-              <input
-                type="text"
-                id="videoUrl"
-                name="videoUrl"
-                value={formData.videoUrl}
-                onChange={handleInputChange}
-                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-              />
-            </div>
-          )}
-
-
-          <div className="mb-6">
-            <label htmlFor="images" className="block mb-2 text-sm font-medium text-gray-900">
-              Upload Images (Max {maxImages}):
-            </label>
-            <input
-              ref={fileInputRef} // Asigna la referencia al input
-              type="file"
-              id="images"
-              name="images"
-              accept=".jpg, .jpeg, .png"
-              multiple
-              onChange={handleFileChange}
-              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5"
-              disabled={formData.images.length >= maxImages}
-            />
-            {formData.images.length >= maxImages && (
-              <p className="text-red-500 text-sm">
-                You have reached the maximum number of images allowed.
-              </p>
-            )}
-          </div>
-
-          <button type="submit" className="text-white bg-[#e6a318] hover:bg-[#c98d15] focus:ring-4 focus:ring-white font-medium rounded-lg text-sm w-full sm:w-auto px-5 py-2.5 text-center">Submit</button>
+          <button type="submit" className="text-white bg-[#e6a318] hover:bg-[#c98d15] focus:ring-4 focus:ring-white font-medium rounded-lg text-sm w-full sm:w-auto px-5 py-2.5 text-center">Save</button>
         </>
       )}
     </form>
   );
 };
 
-export default CoffeeFarmCMSPage;
+export default CoffeeFarmCMSEditPage;

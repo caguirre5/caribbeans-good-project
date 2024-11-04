@@ -113,12 +113,17 @@ const FarmInfo: React.FC<FarmInfoProps> = ({ data, setActive }) => {
 
           {data.intro && (
             <div className="mt-6">
-              <p className="text-[#044421] mt-2 font-bold">{data.intro}</p>
+              <p className="text-[#044421] mt-2 font-bold" style={{ whiteSpace: 'pre-wrap' }}>
+                {data.intro}
+              </p>
             </div>
           )}
           <div className="mt-6">
-            <p className="text-[#044421] mt-2">{data.description}</p>
+            <p className="text-[#044421] mt-2" style={{ whiteSpace: 'pre-wrap' }}>
+              {data.description}
+            </p>
           </div>
+
 
           <button
             className="bg-[#044421] p-4 flex justify-center items-center w-full lg:w-64 rounded-full cursor-pointer mt-8 main-home-texticonbutton"

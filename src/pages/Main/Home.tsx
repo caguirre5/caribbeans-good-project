@@ -28,7 +28,7 @@ import image2Form from '../../assets/Images/All/1.jpg'
 import image1 from "../../assets/Images/All/HAR07128.jpg"
 import image2 from "../../assets/Images/All/2A8A7136.jpg"
 import image3 from "../../assets/Images/All/Hunbatz-34.jpg"
-import image5 from "../../assets/Images/All/Harmony2.webp"
+import image5 from '../../assets/Images/All/EFR06137.jpg'
 
 
 import imageCarousel1 from "../../assets/Images/Carousels/EFR06209.jpg"

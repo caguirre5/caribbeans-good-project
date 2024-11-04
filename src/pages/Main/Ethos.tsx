@@ -1,6 +1,8 @@
 import Header from "../../components/HeaderControls"
 import Footer from "../../components/Footer"
 
+import { getFirestore, doc, getDoc } from "firebase/firestore";
+
 import { motion } from "framer-motion"
 
 import image1 from "../../assets/Images/All/HAR07128.jpg"
@@ -15,16 +17,17 @@ import videoSrc from "../../assets/Videos/2A8A6990.mp4"
 // import project1 from "../../assets/Images/All/2A8A7011.jpg"
 import project2 from "../../assets/Images/All/plantingtree.jpg"
 // import project3 from "../../assets/Images/All/WAER TREATMENT FROM MILLING PROCESS.jpg"
-import project4 from "../../assets/Images/All/2de2d8186972333cb53304a542184cb5-cover-large.jpg"
+// import project4 from "../../assets/Images/All/2de2d8186972333cb53304a542184cb5-cover-large.jpg"
 
 //Logos
 import logo1 from "../../assets/Images/Vectors/Logo/Treesforlifeuk.png"
-import logo2 from "../../assets/Images/Vectors/Logo/social bite.png"
+// import logo2 from "../../assets/Images/Vectors/Logo/social bite.png"
 
 //Components
 import SimpleContentSection from "../../components/SimpleContentSection"
 import { generateRandomBorderRadius } from "../../components/utilsFunctions"
 import { TextIconButton } from "../../components/Buttons"
+import { useEffect, useState } from "react"
 
 
 const fadeInAnimationLeftVariants = {
@@ -42,7 +45,37 @@ const fadeInAnimationLeftVariants = {
     },
 }
 
+interface TreeData {
+    trees: number;
+    money: number;
+}
+
 function Ethos(){
+    const defaultTreeData: TreeData = { trees: 0, money: 0 };
+
+    const [treeData, setTreeData] = useState<TreeData>(defaultTreeData);
+
+    useEffect(() => {
+        const fetchTreeData = async () => {
+            const db = getFirestore();
+            const docRef = doc(db, "projects", "planting-trees");
+            const docSnap = await getDoc(docRef);
+
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                // Asegura que los datos son del tipo correcto
+                const newData: TreeData = {
+                    trees: Number(data.trees) || 0,  // Convierte a número y usa 0 si la conversión falla
+                    money: Number(data.money) || 0
+                };
+                setTreeData(newData);
+            } else {
+                console.log("No such document!");
+            }
+        };
+
+        fetchTreeData();
+    }, []);
 
     return (
         <div className="bg-[#c9d3c0]">
@@ -146,11 +179,22 @@ function Ethos(){
                     <div className="lg:w-[30%] lg:mr-10 order-1">
                         <a href="https://treesforlife.org.uk/groves/474546/" target="_blank"><img src={logo1} alt="" className=""/></a>
                         <h3 className="text-xl font-bold text-[#044421] py-8">Planting Trees in Scotland</h3>
+
+                        <div className="my-4 text-[#044421]">
+                            <h4 className="text-2xl font-normal">
+                                <span className="font-semibold">{treeData.trees}</span> Trees in this grove
+                            </h4>
+                            {/* <h4 className="text-xl font-normal">
+                                £<span className="font-semibold">{treeData.money.toFixed(2)}</span> In donations
+                            </h4> */}
+                        </div>
+
                         <p className="text-[#044421] mb-8">Pilgrims Coffee is a Coffee house and Roastery based on Holy Island, a small tidal island off the coast of Northumbria. We donated 350 kg of green coffee to them with one ask to do something great for the planet. They returned and told us our donation helped them plant 200 trees in the Scottish highland through the fantastic charity, Trees for Life! You can check out the change already made and even get involved and donate your tree! Trees For Life UK is a charity committed to rewilding the Scottish highlands.</p>
                         <TextIconButton text="See the grove" blank="https://treesforlife.org.uk/groves/474546/"/>
                     </div>
                     <img src={project2} alt="" className="w-11/12 lg:w-[30%] rounded-lg shadow-lg max-w-full h-auto object-cover mt-8 lg:ml-10 order-0 lg:order-2" style={{ borderRadius: generateRandomBorderRadius() }} />
                 </div>
+
                 {/* <div className="flex flex-col lg:flex-row justify-center items-center py-12">
                     <div className="lg:w-[30%] lg:ml-10 order-1">
                         <h3 className="text-xl font-bold text-[#044421] py-8">Small steps, Big Differences </h3>
@@ -158,7 +202,7 @@ function Ethos(){
                     </div>
                     <img src={project3} alt="" className="w-11/12 lg:w-[30%] rounded-lg shadow-lg max-w-full h-auto object-cover mt-8 lg:mr-10 order-0" style={{ borderRadius: generateRandomBorderRadius() }}/>
                 </div> */}
-                <div className="flex flex-col lg:flex-row justify-center items-center py-12">
+                {/* <div className="flex flex-col lg:flex-row justify-center items-center py-12">
                     <div className="lg:w-[30%] lg:mr-10 order-1">
                         <img src={logo2} alt="" className="h-[50px] mt-8 lg:mt-0"/>
                         <h3 className="text-xl font-bold text-[#044421] py-8">Helping Where We Can</h3>
@@ -166,7 +210,7 @@ function Ethos(){
                         <a href="">Read more about their fantastic work here</a>
                     </div>
                     <img src={project4} alt="" className="w-11/12 lg:w-[30%] rounded-lg shadow-lg max-w-full h-auto object-cover mt-8 lg:ml-10 order-0 lg:order-2" style={{ borderRadius: generateRandomBorderRadius() }}/>
-                </div>
+                </div> */}
             </div>
             <div className="w-full h-[75vh] overflow-hidden relative pointer-events-none">
                 <video className="w-full h-full object-cover " src={videoSrc} autoPlay muted loop playsInline/>

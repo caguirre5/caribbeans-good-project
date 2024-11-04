@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import UserList from './UserList';
 import Requests from './Requests';
 import Orders from './Orders'; // Importa el nuevo componente Orders
+import ProjectsList from './ProjectsList';
 
 const Dashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'users' | 'requests' | 'orders'>('users'); // Agrega 'orders' como una opción
+  const [activeTab, setActiveTab] = useState<'users' | 'requests' | 'orders' | 'projects'>('users'); // Agrega 'orders' como una opción
 
   return (
     <div 
@@ -35,6 +36,12 @@ const Dashboard: React.FC = () => {
           >
             Orders
           </button>
+          <button
+            className={`block w-full text-left px-4 py-2 ${activeTab === 'projects' ? 'bg-gray-300' : ''}`} // Nueva pestaña
+            onClick={() => setActiveTab('projects')}
+          >
+            Projects
+          </button>
         </div>
 
         {/* Contenido principal que cambia según la pestaña seleccionada */}
@@ -42,6 +49,7 @@ const Dashboard: React.FC = () => {
           {activeTab === 'users' && <UserList />}
           {activeTab === 'requests' && <Requests />}
           {activeTab === 'orders' && <Orders />} {/* Muestra el componente Orders */}
+          {activeTab === 'projects' && <ProjectsList />} 
         </div>
       </div>
     </div>

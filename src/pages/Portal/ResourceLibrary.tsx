@@ -5,18 +5,19 @@ import Modal from '../../components/ModalPopUp';
 import CoffeeFarmCMSPage from '../CMS/Components/FarmForm';
 import { AnimatePresence } from 'framer-motion';
 
-import { faSquarePlus, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faEdit, faSquarePlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 import { useAuth } from '../../contexts/AuthContext';  // Importa tu contexto de autenticación de Firebase
 import { doc, getDoc } from 'firebase/firestore'; // Importa Firestore
 import { db } from '../../firebase/firebase';
+import CoffeeFarmCMSEditPage from '../CMS/Components/FarmEditForm';
 
 interface Detail {
   [key: string]: string;
 }
 
-interface FarmData {
+interface DataFarm {
   id: string;
   title: string;
   region: string;
@@ -32,35 +33,41 @@ interface FarmData {
   imageUrls?: string[];
 }
 
-const CardComponent: React.FC<{ title: string, color: string, prefix: string, onClick: () => void, onDelete: () => void, isAdmin: boolean }> = ({ title, color, prefix, onClick, onDelete, isAdmin }) => {
-  const handleClick = () => {
-    onClick();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+const CardComponent: React.FC<{ title: string, color: string, prefix: string, onClick: () => void, onDelete: () => void, onEdit: () => void, isAdmin: boolean }> = ({ title, color, prefix, onClick, onDelete, onEdit, isAdmin }) => {
 
   return (
     <motion.div 
-      className={`relative p-4 shadow-md lg:rounded-md flex flex-col justify-center items-center text-center text-white cursor-pointer group`} 
+      className="relative p-4 shadow-md lg:rounded-md flex flex-col justify-center items-center text-center text-white cursor-pointer group" 
       style={{ 
         minHeight: '300px',
         backgroundColor: color,
         fontFamily: 'KingsThing'
       }}
-      onClick={handleClick}
+      onClick={onClick}
       whileHover={{ scale: 1.05, skewX: '-5deg' }}
       transition={{ type: 'tween' }}
     >
       {isAdmin && (
-        <FontAwesomeIcon 
-          icon={faTrash} 
-          className="absolute top-2 right-2 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 hover:bg-red-400 transition-opacity duration-300"
-          onClick={(e) => { 
-            e.stopPropagation();
-            onDelete();
-          }} 
-        />
+        <>
+          <FontAwesomeIcon 
+            icon={faTrash} 
+            className="absolute top-2 right-2 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 hover:bg-red-400 transition-opacity duration-300"
+            onClick={(e) => { 
+              e.stopPropagation();
+              onDelete();
+            }} 
+          />
+          <FontAwesomeIcon 
+            icon={faEdit} 
+            className="absolute top-2 left-2 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 hover:bg-green-400 transition-opacity duration-300"
+            onClick={(e) => { 
+              e.stopPropagation();
+              onEdit();
+            }} 
+          />
+        </>
       )}
-      {prefix != '' && (
+      {prefix && (
         <h3 className='text-2xl lg:text-4xl font-bold'>{prefix}</h3>
       )}
       <h1 className="text-4xl lg:text-6xl underline font-semibold">{title}</h1>
@@ -73,9 +80,13 @@ interface ResourceLibraryProps {
 }
 
 const ResourceLibrary: React.FC<ResourceLibraryProps> = ({ setActiveTab }) => {
-  const [data, setData] = useState<FarmData[]>([]);
-  const [selectedFarm, setSelectedFarm] = useState<FarmData | null>(null);
+  const [data, setData] = useState<DataFarm[]>([]);
+  const [selectedFarm, setSelectedFarm] = useState<DataFarm | null>(null);
+  const [selectedEditFarm, setSelectedEditFarm] = useState<DataFarm | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+
   const [showModal, setShowModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   
   const {currentUser} = useAuth();
@@ -100,14 +111,46 @@ const ResourceLibrary: React.FC<ResourceLibraryProps> = ({ setActiveTab }) => {
   
     fetchUserRoles();
   }, [currentUser]);
+  
 
   const handleOpenModal = () => {
+    if (!isEditing) {
+      setSelectedFarm(null); // Asegura que el formulario esté vacío si no es una edición
+    }
     setShowModal(true);
   };
-
+  
   const handleCloseModal = () => {
     setShowModal(false);
+    setIsEditing(false); // Restablece el modo de edición
   };
+
+  const handleOpenEditModal = () => {
+    if (!isEditing) {
+      setSelectedFarm(null); // Asegura que el formulario esté vacío si no es una edición
+    }
+    setShowEditModal(true);
+  };
+  
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+    setIsEditing(false); // Restablece el modo de edición
+  };
+  
+
+  const handleEditFarm = (farm: DataFarm) => {
+    setSelectedEditFarm(farm);
+    setIsEditing(true);
+    handleOpenEditModal();
+  };
+
+  const handleUpdateFarm = (updatedFarm: DataFarm) => {
+    setData(prevData =>
+      prevData.map(farm => (farm.id === updatedFarm.id ? updatedFarm : farm))
+    );
+    setSuccessMessage("Farm updated successfully!");
+    setTimeout(() => setSuccessMessage(null), 3000); // Limpia el mensaje después de 3 segundos
+  };  
 
   const handleDeleteFarm = async (farmTitle: string, farmId: string) => {
     try {
@@ -151,7 +194,7 @@ const ResourceLibrary: React.FC<ResourceLibraryProps> = ({ setActiveTab }) => {
   };
   
 
-  const handleAddFarm = (newFarm: FarmData) => {
+  const handleAddFarm = (newFarm: DataFarm) => {
     setData([...data, newFarm]);
     setSuccessMessage("Farm added successfully!");
     setTimeout(() => setSuccessMessage(null), 3000); // Clear the message after 3 seconds
@@ -165,7 +208,7 @@ const ResourceLibrary: React.FC<ResourceLibraryProps> = ({ setActiveTab }) => {
           throw new Error('Network response was not ok');
         }
         const data = await response.json();
-        setData(data.farms as FarmData[]);
+        setData(data.farms as DataFarm[]);
       } catch (error) {
         console.error('Failed to fetch farm data:', error);
       }
@@ -205,8 +248,10 @@ const ResourceLibrary: React.FC<ResourceLibraryProps> = ({ setActiveTab }) => {
             prefix={farm.prefix}
             onClick={() => setSelectedFarm(farm)}
             onDelete={() => handleDeleteFarm(farm.title, farm.id)}
+            onEdit={() => handleEditFarm(farm)} // Añade esto
             isAdmin={isAdmin}
           />
+        
         ))}
         {isAdmin && <motion.div 
           className={`p-4 shadow-md lg:rounded-md flex flex-col justify-center items-center text-center text-white cursor-pointer`} 
@@ -226,6 +271,13 @@ const ResourceLibrary: React.FC<ResourceLibraryProps> = ({ setActiveTab }) => {
           {showModal && (
             <Modal show={showModal} onClose={handleCloseModal}>
               <CoffeeFarmCMSPage onAddFarm={handleAddFarm} onClose={handleCloseModal} />
+            </Modal>
+          )}
+        </AnimatePresence>
+        <AnimatePresence>
+          {showEditModal && (
+            <Modal show={showEditModal} onClose={handleCloseEditModal}>
+              <CoffeeFarmCMSEditPage initialData={selectedEditFarm} onClose={handleCloseEditModal} onUpdateFarm={handleUpdateFarm}/>
             </Modal>
           )}
         </AnimatePresence>
