@@ -14,14 +14,14 @@ import image4 from "../../assets/Images/All/EFR06884.jpg"
 import videoSrc from "../../assets/Videos/2A8A6990.mp4"
 
 //Projects
-// import project1 from "../../assets/Images/All/2A8A7011.jpg"
+import project1 from "../../assets/Images/All/MAIA_2023-73.jpg"
 import project2 from "../../assets/Images/All/plantingtree.jpg"
 // import project3 from "../../assets/Images/All/WAER TREATMENT FROM MILLING PROCESS.jpg"
 // import project4 from "../../assets/Images/All/2de2d8186972333cb53304a542184cb5-cover-large.jpg"
 
 //Logos
 import logo1 from "../../assets/Images/Vectors/Logo/Treesforlifeuk.png"
-// import logo2 from "../../assets/Images/Vectors/Logo/social bite.png"
+import logo2 from "../../assets/Images/Vectors/Logo/MAIA_LOGO.png"
 
 //Components
 import SimpleContentSection from "../../components/SimpleContentSection"
@@ -163,18 +163,25 @@ function Ethos(){
             />
             <div className="bg-[#fffaf5] lg:bg-[#c9d3c0] px-8 py-20 flex flex-col justify-center items-center">
                 <h1 className="text-5xl lg:text-8xl text-[#044421]" style={{fontFamily:'KingsThing'}}>Social Impact</h1>
-                {/* <div className="flex flex-col lg:flex-row justify-center items-center py-12">
-                    <div className="lg:w-[30%] lg:ml-10 order-1"
-                    
-                    >
-                        <h3 className="text-xl font-bold text-[#044421] py-8">A Greener World</h3>
-                        <p className="text-[#044421]">
-                            We plant a tree for every 30kg bag of Hunbatz purchased. We have planted hundreds of trees in the Scottish highlands. 
-                            <br/><br/>
-                            Also, we work with sustainable farms that have come up with ingenious solutions to generate a more sustainable supply chain. Some of the actions the farmers have incurred are using vermicompost rather than traditional fertilizers, keeping the endemic trees of the region rather than removing them, and planting specific trees to create a shadow for coffee. Using water treatment plants to lower the PH of water after washing the coffee and many more actions take us towards a greener and more sustainable world.</p>
+                <div className="flex flex-col lg:flex-row justify-center items-center py-12">
+                    <div className="lg:w-[30%] lg:mr-10 order-1">
+                        <a href="https://treesforlife.org.uk/groves/474546/" target="_blank"><img src={logo2} alt="" className=""/></a>
+                        {/* <h3 className="text-xl font-bold text-[#044421] py-8">Planting Trees in Scotland</h3> */}
+
+                        <div className="my-4 text-[#044421]">
+                            {/* <h4 className="text-2xl font-normal">
+                                <span className="font-semibold">{treeData.trees}</span> Trees in this grove
+                            </h4> */}
+                            <h4 className="text-2xl font-bold">
+                                We have donated £<span className="font-semibold">{treeData.money.toFixed(2)}</span> to this entity.
+                            </h4>
+                        </div>
+
+                        <p className="text-[#044421] mb-8">We believe that with quality education as a tool against adversity, these bold trailblazers will reshape their futures, uplift their communities, and create a better world for all of us. We do it through our flagship program, the MAIA Impact School, which is changing the game for education in Guatemala. We call our students Girl Pioneers because many are the first in their families to continue their education and begin to break cycles of generational poverty. </p>
+                        {/* <TextIconButton text="See the grove" blank="https://treesforlife.org.uk/groves/474546/"/> */}
                     </div>
                     <img src={project1} alt="" className="w-11/12 lg:w-[30%] rounded-lg shadow-lg max-w-full h-auto object-cover mt-8 lg:mr-10 order-0 " style={{ borderRadius: generateRandomBorderRadius() }}/>
-                </div> */}
+                </div>
                 <div className="flex flex-col lg:flex-row justify-center items-center py-12">
                     <div className="lg:w-[30%] lg:mr-10 order-1">
                         <a href="https://treesforlife.org.uk/groves/474546/" target="_blank"><img src={logo1} alt="" className=""/></a>

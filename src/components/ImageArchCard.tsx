@@ -25,7 +25,9 @@ const ImageCard: React.FC<ImageCardProps> = ({ title, description, imageUrl, log
           <p className="text-5xl text-center block px-10" style={{ fontFamily: "KingsThing" }}>{title}</p>
         </div>
       </motion.div>
-      <img src={logoUrl} alt="" className="w-[200px] mt-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      <div className='h-[100px] w-[200px] mt-4 flex justify-center items-center'>
+        <img src={logoUrl} alt="" className=" opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      </div>
     </div>
 
   );
