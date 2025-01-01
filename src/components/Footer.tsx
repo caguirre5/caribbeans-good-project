@@ -13,10 +13,6 @@ function Footer() {
                     <h3 className="mb-8 uppercase text-xl tracking-[.30em] text-[#9da793]">Contact</h3>
                     <p className='text-[0.95rem]'>
                         info@caribbeangoiods.co.uk
-                        <br/>
-                        GT: (+502) 41756946
-                        <br/>
-                        UK (+44) 7413981290
                         </p>
                 </div>
                 <div className='subscribe'>

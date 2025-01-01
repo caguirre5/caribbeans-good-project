@@ -38,9 +38,13 @@
     margin-bottom: 40px;
 }
 
-.roastersb-logos > img{
+.roastersb-logos > a{
     width: 120px;
     margin: 20px;
+}
+
+.roastersb-logos > img{
+    width: 120px;
 }
 
 @media (min-width: 992px)  {

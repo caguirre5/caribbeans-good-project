@@ -6,9 +6,10 @@ interface ImageCardProps {
   description: string;
   imageUrl: string;
   logoUrl:string;
+  url:string;
 }
 
-const ImageCard: React.FC<ImageCardProps> = ({ title, description, imageUrl, logoUrl }) => {
+const ImageCard: React.FC<ImageCardProps> = ({ title, description, imageUrl, logoUrl, url }) => {
   return (
     <div className="relative group w-[320px] m-4 flex flex-col items-center">
       <motion.div 
@@ -25,9 +26,11 @@ const ImageCard: React.FC<ImageCardProps> = ({ title, description, imageUrl, log
           <p className="text-5xl text-center block px-10" style={{ fontFamily: "KingsThing" }}>{title}</p>
         </div>
       </motion.div>
-      <div className='h-[100px] w-[200px] mt-4 flex justify-center items-center'>
-        <img src={logoUrl} alt="" className=" opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-      </div>
+      <a href={url} target='_blank'>
+        <div className='h-[100px] w-[200px] mt-4 flex justify-center items-center'>
+          <img src={logoUrl} alt="" className=" opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        </div>
+      </a>
     </div>
 
   );

@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faLongArrowRight } from '@fortawesome/free-solid-svg-icons';
+import { faLongArrowRight, faDownload } from '@fortawesome/free-solid-svg-icons';
 
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -139,38 +139,44 @@ const FarmInfo: React.FC<FarmInfoProps> = ({ data, setActive }) => {
       </div>
 
       {/* Mostrar la sección del video si videoUrl está disponible */}
-      {data.videoUrl && data.videoUrl !== '' && (
-        <>
-          <hr className="my-8" />
-          <div className="w-full px-8 h-[640px] overflow-hidden relative pointer-events-none">
-            <iframe
-              className="w-full h-full object-cover"
-              src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}`}
-              allow="autoplay; encrypted-media"
-              allowFullScreen
-              title="YouTube video"
-            />
-          </div>
-        </>
-      )}
-
-      {/* Mostrar la galería de imágenes si hay imágenes */}
       {data.imageUrls && data.imageUrls.length > 0 && (
-        <div className="max-w-7xl mx-auto mt-6">
-          <hr className='my-8'/>
-          <div className="grid grid-cols-2 lg:flex lg:flex-wrap gap-4 mt-4">
-            {data.imageUrls.map((url, index) => (
-              <div key={index} className="overflow-hidden rounded-lg shadow-lg" style={{ flex: '1 0 auto', height: '250px' }}>
-                <img
-                  src={url}
-                  alt={`Farm image ${index + 1}`}
-                  className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
-                />
-              </div>
-            ))}
-          </div>
+  <div className="max-w-7xl mx-auto mt-6">
+    <hr className='my-8'/>
+    <div className="grid grid-cols-2 lg:flex lg:flex-wrap gap-4 mt-4">
+    {data.imageUrls && data.imageUrls.length > 0 && (
+  <div className="max-w-7xl mx-auto mt-6">
+    <hr className='my-8'/>
+    <div className="grid grid-cols-2 lg:flex lg:flex-wrap gap-4 mt-4">
+      {data.imageUrls.map((url, index) => (
+        <div 
+          key={index} 
+          className="overflow-hidden rounded-lg shadow-lg relative" 
+          style={{ flex: '1 0 auto', height: '250px' }}
+        >
+          {/* Imagen */}
+          <img
+            src={url}
+            alt={`Farm image ${index + 1}`}
+            className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
+          />
+          <a 
+  href={url} 
+  download={`image-${index + 1}.jpg`}
+  target='_blank'
+  className="absolute bottom-2 right-2 bg-[#044421] text-white p-2 rounded-lg text-xs shadow-lg hover:bg-[#e6a318] transition-colors"
+>
+  <FontAwesomeIcon icon={faDownload} />
+</a>
+
         </div>
-      )}
+      ))}
+    </div>
+  </div>
+)}
+    </div>
+  </div>
+)}
+
     </div>
   );
 };

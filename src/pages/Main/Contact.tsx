@@ -17,15 +17,11 @@ function Contact() {
                 </div>
                 {/* Form */}
                 <div className="bg-[#c9d3c0] flex flex-col lg:flex-row h-auto lg:h-[70vh]" style={{}}>
-                    <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-2 py-10 text-[#044421]">
+                    <div className="flex-1 flex flex-col justify-evenly items-center gap-2 py-10 text-[#044421]">
                         <div className="flex flex-col justify-center items-center">
                             {/* icon    */}
                             <h3 className="text-xl font-bold">Address</h3>
                             <p>128 Maryhill Road<br/>Glasgow. G20 7QS</p>
-                        </div>
-                        <div className="flex flex-col justify-center items-center">
-                            <h3 className="text-xl font-bold">Phone</h3>
-                            <p>GT: (+502) 41756946<br/>UK (+44) 7413981290</p>
                         </div>
                         <div className="flex flex-col justify-center items-center">
                             <h3 className="text-xl font-bold">Email</h3>
@@ -37,6 +33,7 @@ function Contact() {
                                 instagramLink="https://www.instagram.com/caribbeangoods/" 
                                 facebookLink="https://www.facebook.com/caribbeangoodsuk/posts/2171011849881565/"
                                 linkedinLink="https://www.linkedin.com/company/caribbean-goods-ltd/?originalSubdomain=uk"
+                                youtubeLink="https://www.youtube.com/@caribbeangoods8639"
                             />
                         </div>
                     </div>

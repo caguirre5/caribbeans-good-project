@@ -58,7 +58,7 @@ const CoffeeSupplyAgreementForm: React.FC = () => {
     deliverySchedule: [{ month: '', quantityBags: '' }], // Cambio: Se inicializa con quantityBags
     pricePerKg: '-',
     paymentDays: '30',
-    paymentMethod: '',
+    paymentMethod: 'Bank Transfer',
     deliveryAddress: '',
   });
 
@@ -266,7 +266,7 @@ const CoffeeSupplyAgreementForm: React.FC = () => {
   };
 
   const renderPaymentDaysDropdown = () => {
-    const options = ['30 days', 'Cash on Delivery'];
+    const options = ['Cash Payment Before Delivery'];
     return (
       <div className="mb-4">
         <label className="block text-gray-700">Payment Terms</label>
@@ -348,7 +348,16 @@ const CoffeeSupplyAgreementForm: React.FC = () => {
         <h3 className="text-xl font-semibold mb-4">Price and Payment Terms</h3>
         {renderFixedText('Total Amount', `£ ${calculateTotalAmount()} GBP`)}
         {renderPaymentDaysDropdown()}
-        {renderInput('Payment Method', 'paymentMethod')}
+        {/* {renderInput('Payment Method', 'paymentMethod')} */}
+        <div className={containerClass}>
+        <label className={labelClass}>Payment Method</label>
+        <input
+          type={'text'}
+          name={'paymentmethod'}
+          value={"Bank transfer"}
+          className={inputClass}
+        />
+      </div>
 
         <h3 className="text-xl font-semibold mb-4">Delivery Terms</h3>
         {renderInput('Delivery Address', 'deliveryAddress')}

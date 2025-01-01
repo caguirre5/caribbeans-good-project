@@ -164,11 +164,11 @@ function Ethos(){
             <div className="bg-[#fffaf5] lg:bg-[#c9d3c0] px-8 py-20 flex flex-col justify-center items-center">
                 <h1 className="text-5xl lg:text-8xl text-[#044421]" style={{fontFamily:'KingsThing'}}>Social Impact</h1>
                 <div className="flex flex-col lg:flex-row justify-center items-center py-12">
-                    <div className="lg:w-[30%] lg:mr-10 order-1">
-                        <a href="https://treesforlife.org.uk/groves/474546/" target="_blank"><img src={logo2} alt="" className=""/></a>
+                    <div className="lg:w-[30%] flex flex-col justify-center items-center lg:mr-10 order-1">
+                        <a  target="_blank"><img src={logo2} alt="" className="w-[80%]"/></a>
                         {/* <h3 className="text-xl font-bold text-[#044421] py-8">Planting Trees in Scotland</h3> */}
 
-                        <div className="my-4 text-[#044421]">
+                        <div className="my-4 text-[#044421] ">
                             {/* <h4 className="text-2xl font-normal">
                                 <span className="font-semibold">{treeData.trees}</span> Trees in this grove
                             </h4> */}
@@ -177,7 +177,7 @@ function Ethos(){
                             </h4>
                         </div>
 
-                        <p className="text-[#044421] mb-8">We believe that with quality education as a tool against adversity, these bold trailblazers will reshape their futures, uplift their communities, and create a better world for all of us. We do it through our flagship program, the MAIA Impact School, which is changing the game for education in Guatemala. We call our students Girl Pioneers because many are the first in their families to continue their education and begin to break cycles of generational poverty. </p>
+                        <p className="text-[#044421] mb-8 ">We believe that with quality education as a tool against adversity, these bold trailblazers will reshape their futures, uplift their communities, and create a better world for all of us. We do it through our flagship program, the MAIA Impact School, which is changing the game for education in Guatemala. We call our students Girl Pioneers because many are the first in their families to continue their education and begin to break cycles of generational poverty. </p>
                         {/* <TextIconButton text="See the grove" blank="https://treesforlife.org.uk/groves/474546/"/> */}
                     </div>
                     <img src={project1} alt="" className="w-11/12 lg:w-[30%] rounded-lg shadow-lg max-w-full h-auto object-cover mt-8 lg:mr-10 order-0 " style={{ borderRadius: generateRandomBorderRadius() }}/>
