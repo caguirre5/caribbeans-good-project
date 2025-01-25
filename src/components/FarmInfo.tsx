@@ -42,14 +42,14 @@ interface FarmInfoProps {
   setActive: (tab: string) => void;
 }
 
-const extractYouTubeVideoId = (url : string | undefined) => {
-  const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
-  const match = url?.match(regex);
-  return match ? match[1] : null; // Retorna el ID del video o null si no coincide
-};
+// const extractYouTubeVideoId = (url : string | undefined) => {
+//   const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+//   const match = url?.match(regex);
+//   return match ? match[1] : null; // Retorna el ID del video o null si no coincide
+// };
 
 const FarmInfo: React.FC<FarmInfoProps> = ({ data, setActive }) => {
-  const videoId = extractYouTubeVideoId(data.videoUrl);
+  // const videoId = extractYouTubeVideoId(data.videoUrl);
   return (
     <div className="py-12 w-full justify-center items-center">
       <div className="mx-auto grid grid-cols-1 lg:grid-cols-3 items-start">

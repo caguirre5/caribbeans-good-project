@@ -288,13 +288,28 @@ function Home() {
 
                     {/* Form Section */}
                     <div className="w-full lg:w-1/2 bg-[#e6a318] text-[#044421] flex flex-col justify-center items-center">
-                        <div className="w-[80%] lg:w-[50%] py-20">
-                            <h2 className="text-3xl font-bold mb-2" style={{fontFamily:"KingsThing"}}>Join our Mailing List</h2>
-                            <p className="mb-4">Sign-up below to get a monthly update</p>
+                        <div className="h-auto w-[100%] lg:py-20">
+                            {/* <h2 className="text-3xl font-bold mb-2" style={{fontFamily:"KingsThing"}}>Join our Mailing List</h2> */}
+                            <div className=" lg:w-[50vw]  lg:h-[80vh] flex justify-center items-center">
+                                <iframe
+                                    src="https://7da3f3b2.sibforms.com/serve/MUIFAIm4d6X-yOQg_yk1vzUfko1R0VK8sHILXehHnm1xYy4xFmNuYhQtsfNhjUudDbbAsiydw6oJM2FhyIWwNBq4GS1hgxg3YcEwk9a_fYBlnb-f29Ys_yNvcJYk-fv9MvxxeGAHV5yyUFbU8hYHzPC1oLbChsaMR1pnvD5Z7caX600GctvygVh3s9qCYlNqDJ6h-WFHfuYcf4jY"
+                                    allowFullScreen
+                                    style={{
+                                        display: 'block',
+                                        margin: '0 auto',
+                                        maxWidth: '100%',
+                                        border: 'none',
+                                        backgroundColor:"red"
+                                    }}
+                                    title="Brevo Form"
+                                    className="w-[600px] h-[780px] lg:h-[600px] rounded-none lg:rounded-xl"
+                                ></iframe>
+                            </div>
+                            {/* <p className="mb-4">Sign-up below to get a monthly update</p>
                             <h3 className="text-xl font-bold mb-2 mt-8">Get Updates</h3>
                             <p className="mb-4 text-xs">Subscribe to our newsletter, and be the first to get the latest news & updates.</p>
                         
-                            {/* Form */}
+                            
                             <div className="flex flex-col lg:flex-row gap-4">
                                 <input 
                                     type="email" 
@@ -302,25 +317,25 @@ function Home() {
                                     className="text-xs py-4 px-8 rounded-full w-full lg:w-auto flex-grow bg-yellow-500 text-white placeholder-white focus:outline-none focus:ring-0"
                                 />
                                 <button className="text-xs py-4 px-8 rounded-full bg-[#eecc84] hover:bg-yellow-400 text-white w-auto">Subscribe</button>
-                            </div>
+                            </div> */}
 
-                            <div className=" flex items-start mt-8">
+                            {/* <div className=" flex items-start ">
                                 <SocialMedia 
                                     instagramLink="https://www.instagram.com/caribbeangoods/" 
                                     facebookLink="https://www.facebook.com/caribbeangoodsuk/posts/2171011849881565/"
                                     linkedinLink="https://www.linkedin.com/company/caribbean-goods-ltd/?originalSubdomain=uk"
                                     youtubeLink="https://www.youtube.com/@caribbeangoods8639"
                                 />
-                            </div>
+                            </div> */}
                         </div>
                     </div>
                 </div>
                 <div className="flex flex-col lg:flex-row w-full h-full lg:h-[80vh]">
-                    <div className="w-full lg:w-1/2 bg-[#628f76] flex justify-center items-center">
+                    <div className="order-2 lg:order-1 w-full py-16 lg:py-0 lg:w-1/2 bg-[#628f76] flex justify-center items-center">
                         <ContactForm/>
                     </div>
                     {/* Image Section */}
-                    <div className="w-full lg:w-1/2">
+                    <div className="order-1 lg:order-2 w-full lg:w-1/2">
                         <img src={image2Form} className="h-full w-full object-cover" alt="" />
                     </div>
                 </div>
