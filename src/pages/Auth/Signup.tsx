@@ -4,6 +4,9 @@ import { auth, db } from '../../firebase/firebase';
 import { useNavigate } from 'react-router-dom';
 import { doc, setDoc } from 'firebase/firestore'; 
 
+import GoogleLogo from '../../assets/Google.png'
+import CaribbeanLogo from '../../assets/green_logo_icon.png'
+
 const Signup: React.FC = () => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -119,7 +122,7 @@ const Signup: React.FC = () => {
       </div>
       <div className="w-full lg:w-1/2 max-w-md p-8 space-y-6 bg-white rounded-lg shadow-lg">
         <div className="flex justify-center">
-          <img src="/src/assets/green_logo_icon.png" alt="Logo" className="h-12 mb-6" /> {/* Cambia la ruta de la imagen al logo que uses */}
+          <img src={CaribbeanLogo} alt="Logo" className="h-12 mb-6" /> {/* Cambia la ruta de la imagen al logo que uses */}
         </div>
         <h2 className="text-2xl font-bold text-center text-[#174B3D]">Welcome</h2>
         <p className="text-center text-sm text-[#174B3D] mb-8">Create an account</p>
@@ -196,7 +199,7 @@ const Signup: React.FC = () => {
             onClick={handleGoogleSignIn}
             className="w-full py-3 border border-[#174B3D] text-[#174B3D] font-semibold rounded-md hover:bg-[#f0f2f1] focus:outline-none focus:ring-2 focus:ring-[#174B3D] flex items-center justify-center"
           >
-            <img src="/src/assets/Google.png" alt="Google" className="h-5 mr-3" /> {/* Cambia la ruta del icono de Google */}
+            <img src={GoogleLogo} alt="Google" className="h-5 mr-3" /> {/* Cambia la ruta del icono de Google */}
             Google
           </button>
         </div>

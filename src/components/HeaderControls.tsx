@@ -53,6 +53,17 @@ const Header: React.FC<HeaderProp> = () => {
         };
     }, []);
 
+    useEffect(() => {
+        if (menuOpen) {
+            document.body.classList.add('overflow-hidden');
+        } else {
+            document.body.classList.remove('overflow-hidden');
+        }
+        return () => {
+            document.body.classList.remove('overflow-hidden');
+        };
+    }, [menuOpen]);
+
     return (
         <div className="absolute w-full flex justify-between items-center px-4 lg:px-12">
             <div className="flex lg:flex-1 items-center lg:justify-start h-20">

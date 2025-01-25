@@ -53,7 +53,10 @@ interface TreeData {
 function Ethos(){
     const defaultTreeData: TreeData = { trees: 0, money: 0 };
 
+    const defaultMaiaData: number = 1050
+
     const [treeData, setTreeData] = useState<TreeData>(defaultTreeData);
+    const [maiaData, setMaiaData] = useState<number>(defaultMaiaData);
 
     useEffect(() => {
         const fetchTreeData = async () => {
@@ -72,7 +75,18 @@ function Ethos(){
             } else {
                 console.log("No such document!");
             }
+
+            const maiaDocRef = doc(db, "projects", "maia");
+            const maiaDocSnap = await getDoc(maiaDocRef);
+
+            if (maiaDocSnap.exists()) {
+                const maiaDataValue = Number(maiaDocSnap.data().donations) || 0;
+                setMaiaData(maiaDataValue);
+            } else {
+                console.log("No such document in maia!");
+            }
         };
+        
 
         fetchTreeData();
     }, []);
@@ -173,7 +187,7 @@ function Ethos(){
                                 <span className="font-semibold">{treeData.trees}</span> Trees in this grove
                             </h4> */}
                             <h4 className="text-2xl font-bold">
-                                We have donated £<span className="font-semibold">{treeData.money.toFixed(2)}</span> to this entity.
+                                We have donated $<span className="font-semibold">{maiaData.toFixed(2)}</span> to this entity.
                             </h4>
                         </div>
 
