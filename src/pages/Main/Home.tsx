@@ -319,20 +319,21 @@ function Home() {
                                 <button className="text-xs py-4 px-8 rounded-full bg-[#eecc84] hover:bg-yellow-400 text-white w-auto">Subscribe</button>
                             </div> */}
 
-                            {/* <div className=" flex items-start ">
+                            
+                        </div>
+                    </div>
+                </div>
+                <div className="flex flex-col lg:flex-row w-full h-full lg:h-[80vh]">
+                    <div className="order-2 lg:order-1 w-full py-16 lg:py-0 lg:w-1/2 bg-[#628f76] flex flex-col justify-center items-center">
+                        <ContactForm/>
+                        <div className="mt-8 flex items-start">
                                 <SocialMedia 
                                     instagramLink="https://www.instagram.com/caribbeangoods/" 
                                     facebookLink="https://www.facebook.com/caribbeangoodsuk/posts/2171011849881565/"
                                     linkedinLink="https://www.linkedin.com/company/caribbean-goods-ltd/?originalSubdomain=uk"
                                     youtubeLink="https://www.youtube.com/@caribbeangoods8639"
                                 />
-                            </div> */}
-                        </div>
-                    </div>
-                </div>
-                <div className="flex flex-col lg:flex-row w-full h-full lg:h-[80vh]">
-                    <div className="order-2 lg:order-1 w-full py-16 lg:py-0 lg:w-1/2 bg-[#628f76] flex justify-center items-center">
-                        <ContactForm/>
+                            </div>
                     </div>
                     {/* Image Section */}
                     <div className="order-1 lg:order-2 w-full lg:w-1/2">

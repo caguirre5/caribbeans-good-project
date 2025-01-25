@@ -13,7 +13,7 @@ function SocialMedia(props: SocialMediaProps) {
   const { instagramLink, facebookLink, linkedinLink, youtubeLink } = props;
 
   return (
-    <div className='w-auto flex justify-center items-center'>
+    <div className='w-auto flex justify-center items-center text-white'>
       {facebookLink && (
         <a href={facebookLink} target='a_blank' className='mx-2 w-auto text-current no-underline'>
           <FontAwesomeIcon icon={faFacebookF} className='w-6 h-6 m-1 cursor-pointer' />
