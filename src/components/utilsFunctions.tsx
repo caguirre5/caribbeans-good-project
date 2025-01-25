@@ -113,7 +113,8 @@ export const parseTextFile = async (file: string): Promise<React.ReactNode[]> =>
             );
         } else if (line.startsWith('#')) {
             return (
-                <h1 key={index} className="text-4xl font-bold mb-4 mt-8 text-center">
+                <h1 key={index} className="text-4xl font-bold mb-4 mt-8 text-center" 
+                style={{ fontFamily: 'KingsThing' }}>
                     {line.substring(1).trim()}
                 </h1>
             );
