@@ -8,11 +8,23 @@ import { faLongArrowRight, faDownload } from '@fortawesome/free-solid-svg-icons'
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
+import SatelliteMaps from './SatellitalMaps';
+
 let DefaultIcon = L.icon({
   iconUrl: markerIcon,
   shadowUrl: markerShadow,
   iconAnchor: [12, 41],
 });
+
+const customIcon = new L.DivIcon({
+  className: "",
+  html: `
+    <div class="w-[8px] h-[8px] bg-[#044421] border-[1px] border-white rounded-full shadow-md"></div>
+  `,
+  iconSize: [12, 12], // Tamaño del icono
+  iconAnchor: [6, 6], // Anclaje en el centro del círculo
+});
+
 
 L.Marker.prototype.options.icon = DefaultIcon;
 
@@ -42,14 +54,14 @@ interface FarmInfoProps {
   setActive: (tab: string) => void;
 }
 
-// const extractYouTubeVideoId = (url : string | undefined) => {
-//   const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
-//   const match = url?.match(regex);
-//   return match ? match[1] : null; // Retorna el ID del video o null si no coincide
-// };
+const extractYouTubeVideoId = (url : string | undefined) => {
+  const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+  const match = url?.match(regex);
+  return match ? match[1] : null; // Retorna el ID del video o null si no coincide
+};
 
 const FarmInfo: React.FC<FarmInfoProps> = ({ data, setActive }) => {
-  // const videoId = extractYouTubeVideoId(data.videoUrl);
+  const videoId = extractYouTubeVideoId(data.videoUrl);
   return (
     <div className="py-12 w-full justify-center items-center">
       <div className="mx-auto grid grid-cols-1 lg:grid-cols-3 items-start">
@@ -76,12 +88,11 @@ const FarmInfo: React.FC<FarmInfoProps> = ({ data, setActive }) => {
                 url='https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
               />
               {data.coordinates.map((coord, index) => (
-                <Marker key={index} position={coord}>
-                  <Popup>
-                    {data.title}
-                  </Popup>
+                <Marker key={index} position={coord} icon={customIcon}>
+                  <Popup>{data.title}</Popup>
                 </Marker>
               ))}
+
             </MapContainer>
           </div>
           <div className="mt-6">
@@ -138,35 +149,57 @@ const FarmInfo: React.FC<FarmInfoProps> = ({ data, setActive }) => {
         </div>
       </div>
 
+      <hr className='my-8'/>
+
+      <div className=" my-6">
+        <SatelliteMaps coordinates={data.coordinates[0]} />
+
+      </div>
+
+      <hr className='my-8'/>
+
+      {videoId && (
+          <div className="mt-28 w-full h-[500px] "> 
+            <iframe
+              className=" w-full h-full rounded-lg shadow-lg"
+              src={`https://www.youtube.com/embed/${videoId}`}
+              title="YouTube video player"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+      )}
+
       {/* Mostrar la sección del video si videoUrl está disponible */}
+
       {data.imageUrls && data.imageUrls.length > 0 && (
-  <div className="max-w-7xl mx-auto mt-6">
-    <hr className='my-8'/>
-    <div className="grid grid-cols-2 lg:flex lg:flex-wrap gap-4 mt-4">
-    {data.imageUrls && data.imageUrls.length > 0 && (
-  <div className="max-w-7xl mx-auto mt-6">
-    <hr className='my-8'/>
-    <div className="grid grid-cols-2 lg:flex lg:flex-wrap gap-4 mt-4">
-      {data.imageUrls.map((url, index) => (
-        <div 
-          key={index} 
-          className="overflow-hidden rounded-lg shadow-lg relative" 
-          style={{ flex: '1 0 auto', height: '250px' }}
-        >
-          {/* Imagen */}
-          <img
-            src={url}
-            alt={`Farm image ${index + 1}`}
-            className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
-          />
-          <a 
-  href={url} 
-  download={`image-${index + 1}.jpg`}
-  target='_blank'
-  className="absolute bottom-2 right-2 bg-[#044421] text-white p-2 rounded-lg text-xs shadow-lg hover:bg-[#e6a318] transition-colors"
->
-  <FontAwesomeIcon icon={faDownload} />
-</a>
+        <div className="max-w-7xl mx-auto mt-6">
+          {/* <hr className='my-8'/> */}
+          <div className="grid grid-cols-2 lg:flex lg:flex-wrap gap-4 mt-4">
+          {data.imageUrls && data.imageUrls.length > 0 && (
+        <div className="max-w-7xl mx-auto mt-6">
+          <hr className='my-8'/>
+          <div className="grid grid-cols-2 lg:flex lg:flex-wrap gap-4 mt-4">
+            {data.imageUrls.map((url, index) => (
+              <div 
+                key={index} 
+                className="overflow-hidden rounded-lg shadow-lg relative" 
+                style={{ flex: '1 0 auto', height: '250px' }}
+              >
+                {/* Imagen */}
+                <img
+                  src={url}
+                  alt={`Farm image ${index + 1}`}
+                  className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
+                />
+                <a 
+            href={url} 
+            download={`image-${index + 1}.jpg`}
+            target='_blank'
+            className="absolute bottom-2 right-2 bg-[#044421] text-white p-2 rounded-lg text-xs shadow-lg hover:bg-[#e6a318] transition-colors"
+          >
+            <FontAwesomeIcon icon={faDownload} />
+          </a>
 
         </div>
       ))}

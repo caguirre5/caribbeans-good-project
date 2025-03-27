@@ -65,6 +65,35 @@ const PdfViewer: React.FC = () => {
 
       // Llama a la función para subir el PDF firmado a S3 y crear el documento en Firebase
       await uploadSignedPdfToS3(pdfBlob);
+
+
+      await sendEmailWithPdf(pdfBlob);
+    }
+  };
+
+  const sendEmailWithPdf = async (pdfBlob: Blob) => {
+    const formData = new FormData();
+    formData.append('file', new File([pdfBlob], 'signed_contract.pdf', { type: 'application/pdf' }));
+    formData.append('recipientEmail', currentUser?.email || ''); // Usar el email del usuario autenticado
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/resourcelibray/sendemail`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const result = await response.text();
+        console.log(`Correo enviado exitosamente: ${result}`);
+        console.log('PDF enviado por correo:', result);
+      } else {
+        const error = await response.text();
+        console.log(`Error al enviar el correo: ${error}`);
+        console.error('Error al enviar el PDF:', error);
+      }
+    } catch (err) {
+      console.log('Error al realizar la solicitud.');
+      console.error('Error al realizar la solicitud:', err);
     }
   };
 

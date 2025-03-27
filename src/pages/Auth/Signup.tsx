@@ -53,7 +53,45 @@ const Signup: React.FC = () => {
         profileCompleted: false,
         roles: ["user"],
       });
+
       await signOut(auth);
+
+      // try {
+      //   const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/resourcelibray/sendalert`, {
+      //     method: 'POST',
+      //     headers: {
+      //       'Content-Type': 'application/json',
+      //     },
+      //     body: JSON.stringify({
+      //       recipientEmail: email,
+      //       alertMessage: 'Welcome to caribbean goods',
+      //     }),
+      //   });
+    
+      //   const result = await response.text();
+      //   console.log(result)
+      // } catch (err) {
+      //   console.error('Error:', err);
+      // }
+
+      try {
+        const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/resourcelibray/sendalert`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            recipientEmail: 'info@caribbeangoods.co.uk',
+            alertMessage: 'An user has signed up to the portal',
+          }),
+        });
+    
+        const result = await response.text();
+        console.log(result)
+      } catch (err) {
+        console.error('Error:', err);
+      }
+
       setVerificationEmailSent(true);
     } catch (err: any) {
       setError(err.message);
@@ -80,7 +118,44 @@ const Signup: React.FC = () => {
         roles: ["user"],
       });
 
-      console.log("Google Sign-in successful");
+      // console.log("Google Sign-in successful");
+
+      // try {
+      //   const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/resourcelibray/sendalert`, {
+      //     method: 'POST',
+      //     headers: {
+      //       'Content-Type': 'application/json',
+      //     },
+      //     body: JSON.stringify({
+      //       recipientEmail: email,
+      //       alertMessage: 'Welcome to caribbean goods',
+      //     }),
+      //   });
+    
+      //   const result = await response.text();
+      //   console.log(result)
+      // } catch (err) {
+      //   console.error('Error:', err);
+      // }
+
+      try {
+        const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/resourcelibray/sendalert`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            recipientEmail: 'info@caribbeangoods.co.uk',
+            alertMessage: 'An user has signed up to the portal',
+          }),
+        });
+    
+        const result = await response.text();
+        console.log(result)
+      } catch (err) {
+        console.error('Error:', err);
+      }
+
       navigate('/'); 
     } catch (err: any) {
       setError(err.message);

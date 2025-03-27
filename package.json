@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@auth0/auth0-react": "^2.2.4",
+    "@aws-sdk/client-ses": "^3.743.0",
+    "@cyntler/react-doc-viewer": "^1.17.0",
     "@fortawesome/fontawesome-svg-core": "^6.6.0",
     "@material-tailwind/react": "^2.1.9",
     "@react-pdf-viewer/core": "^3.12.0",

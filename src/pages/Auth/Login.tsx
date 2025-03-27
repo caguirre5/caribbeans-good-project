@@ -19,25 +19,40 @@ const Login: React.FC = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    setLoading(true);
+  
     try {
-      setLoading(true);
+      // console.log(email)
+      // const signInMethods = await fetchSignInMethodsForEmail(auth, email);
+
+      // console.log(signInMethods)
+  
+      // if (signInMethods.includes("google.com")) {
+      //   setError("This email is registered with Google. Please use Google Sign-In.");
+      //   setLoading(false);
+      //   return;
+      // }
+  
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-
+  
       if (user.emailVerified) {
-        const userRef = doc(db, 'users', user.uid);
-        await updateDoc(userRef, {
-          emailVerified: true
-        });
-        console.log("User is active and logged in.");
-        navigate('/');
+        const userRef = doc(db, "users", user.uid);
+        await updateDoc(userRef, { emailVerified: true });
+        navigate("/");
       } else {
-        console.log("Please verify your email before logging in.");
         setError("Please verify your email before logging in.");
         await signOut(auth);
       }
     } catch (err: any) {
-      setError(err.message);
+      if (err.code === "auth/invalid-credential") {
+        setError("Invalid email or password. If you created your account with Google, please use continue with Google.");
+      } else if (err.code === "auth/user-not-found") {
+        setError("No account found with this email.");
+      } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -67,9 +82,27 @@ const Login: React.FC = () => {
           profileCompleted: false,
           roles: ["user"],
         });
+
+        try {
+          const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/resourcelibray/sendalert`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              recipientEmail: 'info@caribbeangoods.co.uk',
+              alertMessage: 'An user has signed up to the portal',
+            }),
+          });
+      
+          const result = await response.text();
+          console.log(result)
+        } catch (err) {
+          console.error('Error:', err);
+        }
       }
   
-      console.log("Google Sign-in successful and user saved to Firestore");
+      // console.log("Google Sign-in successful and user saved to Firestore");
       navigate('/'); // Navega al dashboard o home después del login con Google
     } catch (err: any) {
       setError(err.message);
@@ -107,7 +140,13 @@ const Login: React.FC = () => {
         </div>
         <h2 className="text-2xl font-bold text-center text-[#174B3D]">Welcome Back</h2>
         <p className="text-center text-sm text-[#174B3D] mb-8">Log in to your account</p>
-        {error && <p className="text-red-500 text-center mb-4">{error}</p>}
+        {error && (
+  <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+    <strong className="font-bold">Login Error: </strong>
+    <span className="block sm:inline">{error}</span>
+  </div>
+)}
+
         <form className="space-y-4" onSubmit={handleLogin}>
           <div>
             <label className="block text-[#174B3D] font-semibold">Email address*</label>
@@ -117,7 +156,7 @@ const Login: React.FC = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-[#174B3D] rounded-md focus:outline-none focus:ring-2 focus:ring-[#174B3D]"
+              className="w-full px-4 py-2 border border-[#174B3D] rounded-md focus:outline-none focus:ring-2 focus:ring-[#174B3D] bg-white text-black autofill:bg-white autofill:text-black"
             />
           </div>
           <div>

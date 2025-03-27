@@ -47,6 +47,7 @@ const CoffeeFarmCMSEditPage: React.FC<CoffeeFarmCMSPageProps> = ({ onClose, init
   
 
   const [showMedalInput, setShowMedalInput] = useState(false);
+  const [showVideoUrlInput, setShowVideoUrlInput] = useState(Boolean(initialData?.videoUrl));
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -81,6 +82,13 @@ const CoffeeFarmCMSEditPage: React.FC<CoffeeFarmCMSPageProps> = ({ onClose, init
   const handleKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
+    }
+  };
+  
+  const handleToggleVideoUrl = () => {
+    setShowVideoUrlInput(!showVideoUrlInput);
+    if (!showVideoUrlInput) {
+      setFormData({ ...formData, videoUrl: '' }); // Limpiar el campo si se desactiva
     }
   };
   
@@ -352,6 +360,40 @@ const CoffeeFarmCMSEditPage: React.FC<CoffeeFarmCMSPageProps> = ({ onClose, init
               ))}
             </div>
           </div>
+
+          <div className="my-6">
+            <label className="inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={showVideoUrlInput}
+                onChange={handleToggleVideoUrl}
+              />
+              <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#eecc84] rounded-full peer-checked:bg-[#e6a318]">
+                <span
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${
+                    showVideoUrlInput ? 'transform translate-x-5' : ''
+                  }`}
+                />
+              </div>
+              <span className="ml-3 text-sm font-medium text-gray-900">Do you want to add a video?</span>
+            </label>
+          </div>
+
+          {showVideoUrlInput && (
+            <div className="mb-6">
+              <label htmlFor="videoUrl" className="block mb-2 text-sm font-medium text-gray-900">Video URL:</label>
+              <input
+                type="text"
+                id="videoUrl"
+                name="videoUrl"
+                value={formData.videoUrl}
+                onChange={handleInputChange}
+                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+              />
+            </div>
+          )}
+
 
           <button type="submit" className="text-white bg-[#e6a318] hover:bg-[#c98d15] focus:ring-4 focus:ring-white font-medium rounded-lg text-sm w-full sm:w-auto px-5 py-2.5 text-center">Save</button>
         </>
