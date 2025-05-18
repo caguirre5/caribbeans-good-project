@@ -22,7 +22,7 @@ interface CoffeeFarmFormState {
   coordinates: [number, number][]; // Cambiar a un array de tuplas
   prefix: string;
   images: File[];
-  videoUrl?: string;
+  videoUrls: string[];
 }
 
 interface FarmData extends CoffeeFarmFormState {
@@ -68,7 +68,7 @@ const CoffeeFarmCMSPage: React.FC<CoffeeFarmCMSPageProps> = ({ onAddFarm }) => {
     coordinates: [], // Inicializar como un array vacío
     prefix: 'Finca',
     images: [],
-    videoUrl: '',
+    videoUrls: [],
   });
   
 
@@ -83,6 +83,22 @@ const CoffeeFarmCMSPage: React.FC<CoffeeFarmCMSPageProps> = ({ onAddFarm }) => {
   const maxImages = 20; // Variable para controlar el máximo de imágenes
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const handleVideoUrlChange = (index: number, value: string) => {
+    const updatedUrls = [...formData.videoUrls];
+    updatedUrls[index] = value;
+    setFormData({ ...formData, videoUrls: updatedUrls });
+  };
+  
+  const handleAddVideoUrl = () => {
+    setFormData({ ...formData, videoUrls: [...formData.videoUrls, ''] });
+  };
+  
+  const handleRemoveVideoUrl = (index: number) => {
+    const updatedUrls = formData.videoUrls.filter((_, i) => i !== index);
+    setFormData({ ...formData, videoUrls: updatedUrls });
+  };
+  
+
   const handleMapClick = (coordinates: [number, number]) => {
     const updatedPositions = [...markerPositions, coordinates];
     setMarkerPositions(updatedPositions);
@@ -92,11 +108,15 @@ const CoffeeFarmCMSPage: React.FC<CoffeeFarmCMSPageProps> = ({ onAddFarm }) => {
   
 
   const handleToggleVideoUrl = () => {
-    setShowVideoUrlInput(!showVideoUrlInput);
-    if (!showVideoUrlInput) {
-      setFormData({ ...formData, videoUrl: '' }); // Limpiar el campo videoUrl si se desactiva
+    const newState = !showVideoUrlInput;
+    setShowVideoUrlInput(newState);
+  
+    // Si se desactiva el toggle, limpia el array
+    if (!newState) {
+      setFormData((prev) => ({ ...prev, videoUrls: [] }));
     }
-  };  
+  };
+  
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, index?: number) => {
     const { name, value } = e.target;
@@ -235,6 +255,12 @@ const CoffeeFarmCMSPage: React.FC<CoffeeFarmCMSPageProps> = ({ onAddFarm }) => {
       alert('The maximum altitude must be greater than the minimum altitude.');
       return;
     }
+
+    if (showVideoUrlInput && formData.videoUrls.some(url => url.trim() === '')) {
+      alert('All video URLs must be filled or removed.');
+      return;
+    }
+    
   
     setIsLoading(true); // Start the loading
     console.log('Form data submitted:', formData);
@@ -422,6 +448,10 @@ const CoffeeFarmCMSPage: React.FC<CoffeeFarmCMSPageProps> = ({ onAddFarm }) => {
               <option value="Suchitepéquez">Suchitepéquez</option>
               <option value="Totonicapán">Totonicapán</option>
               <option value="Zacapa">Zacapa</option>
+              <option value="Acatenango">Acatenango</option>
+              <option value="Palencia">Palencia</option>
+              <option value="Antigua Guatemala">Antigua Guatemala</option>
+              <option value="San Juan Sacatepequez">San Juan Sacatepequez</option>
             </select>
           </div>
 
@@ -554,17 +584,35 @@ const CoffeeFarmCMSPage: React.FC<CoffeeFarmCMSPageProps> = ({ onAddFarm }) => {
 
           {showVideoUrlInput && (
             <div className="mb-6">
-              <label htmlFor="videoUrl" className="block mb-2 text-sm font-medium text-gray-900">Video URL:</label>
-              <input
-                type="text"
-                id="videoUrl"
-                name="videoUrl"
-                value={formData.videoUrl}
-                onChange={handleInputChange}
-                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-              />
+              <label className="block mb-2 text-sm font-medium text-gray-900">Video URLs:</label>
+              {formData.videoUrls.map((url, index) => (
+                <div key={index} className="flex items-center gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={url}
+                    onChange={(e) => handleVideoUrlChange(index, e.target.value)}
+                    placeholder="https://youtube.com/..."
+                    className="flex-1 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg p-2.5"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveVideoUrl(index)}
+                    className="text-red-500 text-sm font-semibold"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={handleAddVideoUrl}
+                className="text-blue-500 text-sm font-semibold"
+              >
+                + Add another video
+              </button>
             </div>
           )}
+
 
 
           <div className="mb-6">

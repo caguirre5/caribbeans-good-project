@@ -15,8 +15,7 @@ interface CoffeeFarmFormState {
   color: string;
   coordinates: [number, number][]; // Cambiar a un array de tuplas
   prefix: string;
-  videoUrl?: string;
-  
+  videoUrls?: string[];
   imageUrls?: string[];
 }
 
@@ -40,14 +39,16 @@ const CoffeeFarmCMSEditPage: React.FC<CoffeeFarmCMSPageProps> = ({ onClose, init
     color: initialData?.color || '#df9a87',
     coordinates: initialData?.coordinates || [],
     prefix: initialData?.prefix || 'Finca',
-    videoUrl: initialData?.videoUrl || '',
+    videoUrls: initialData?.videoUrls || [''],
     imageUrls: initialData?.imageUrls || []
   });
 
   
 
   const [showMedalInput, setShowMedalInput] = useState(false);
-  const [showVideoUrlInput, setShowVideoUrlInput] = useState(Boolean(initialData?.videoUrl));
+  const [showVideoUrlInput, setShowVideoUrlInput] = useState(
+    Boolean(initialData?.videoUrls && initialData.videoUrls.length > 0)
+  );  
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -87,11 +88,12 @@ const CoffeeFarmCMSEditPage: React.FC<CoffeeFarmCMSPageProps> = ({ onClose, init
   
   const handleToggleVideoUrl = () => {
     setShowVideoUrlInput(!showVideoUrlInput);
-    if (!showVideoUrlInput) {
-      setFormData({ ...formData, videoUrl: '' }); // Limpiar el campo si se desactiva
+    if (showVideoUrlInput) {
+      setFormData({ ...formData, videoUrls: [] });
+    } else {
+      setFormData({ ...formData, videoUrls: [''] });
     }
   };
-  
 
   const handleRemoveDetail = (index: number) => {
     const newDetails = formData.details.filter((_, i) => i !== index);
@@ -138,7 +140,21 @@ const CoffeeFarmCMSEditPage: React.FC<CoffeeFarmCMSPageProps> = ({ onClose, init
       });
     }
   };
+
+  const handleVideoUrlChange = (index: number, value: string) => {
+    const updatedUrls = [...(formData.videoUrls || [])];
+    updatedUrls[index] = value;
+    setFormData({ ...formData, videoUrls: updatedUrls });
+  };
   
+  const handleAddVideoUrl = () => {
+    setFormData({ ...formData, videoUrls: [...(formData.videoUrls || []), ''] });
+  };
+  
+  const handleRemoveVideoUrl = (index: number) => {
+    const updatedUrls = formData.videoUrls?.filter((_, i) => i !== index) || [];
+    setFormData({ ...formData, videoUrls: updatedUrls });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -153,6 +169,11 @@ const CoffeeFarmCMSEditPage: React.FC<CoffeeFarmCMSPageProps> = ({ onClose, init
       alert('Region is required.');
       return;
     }
+
+    if (showVideoUrlInput && formData.videoUrls?.some(url => url.trim() === '')) {
+      alert('Please fill in all video URL fields or remove the empty ones.');
+      return;
+    }    
 
     setIsLoading(true);
   
@@ -283,10 +304,10 @@ const CoffeeFarmCMSEditPage: React.FC<CoffeeFarmCMSPageProps> = ({ onClose, init
               <option value="Suchitepéquez">Suchitepéquez</option>
               <option value="Totonicapán">Totonicapán</option>
               <option value="Zacapa">Zacapa</option>
-              <option value="Acatenango">Zacapa</option>
-              <option value="Palencia">Zacapa</option>
-              <option value="Antigua Guatemala">Zacapa</option>
-              <option value="San Juan Sacatepequez">Zacapa</option>
+              <option value="Acatenango">Acatenango</option>
+              <option value="Palencia">Palencia</option>
+              <option value="Antigua Guatemala">Antigua Guatemala</option>
+              <option value="San Juan Sacatepequez">San Juan Sacatepequez</option>
             </select>
           </div>
 
@@ -386,17 +407,32 @@ const CoffeeFarmCMSEditPage: React.FC<CoffeeFarmCMSPageProps> = ({ onClose, init
 
           {showVideoUrlInput && (
             <div className="mb-6">
-              <label htmlFor="videoUrl" className="block mb-2 text-sm font-medium text-gray-900">Video URL:</label>
-              <input
-                type="text"
-                id="videoUrl"
-                name="videoUrl"
-                value={formData.videoUrl}
-                onChange={handleInputChange}
-                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-              />
+              <label className="block mb-2 text-sm font-medium text-gray-900">Video URLs:</label>
+              {formData.videoUrls?.map((url, index) => (
+                <div key={index} className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={url}
+                    onChange={(e) => handleVideoUrlChange(index, e.target.value)}
+                    className="bg-gray-50 border border-gray-300 text-sm rounded-lg p-2.5 w-full"
+                    placeholder={`Video URL ${index + 1}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveVideoUrl(index)}
+                    className="text-red-500"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <button type="button" onClick={handleAddVideoUrl} className="text-blue-500 mt-2">
+                Add another video
+              </button>
             </div>
           )}
+
+
 
 
           <button type="submit" className="text-white bg-[#e6a318] hover:bg-[#c98d15] focus:ring-4 focus:ring-white font-medium rounded-lg text-sm w-full sm:w-auto px-5 py-2.5 text-center">Save</button>

@@ -46,7 +46,7 @@ interface FarmData {
   color: string;
   coordinates: [number, number][]; // Cambiado a un array de coordenadas
   imageUrls?: string[];
-  videoUrl?: string;
+  videoUrls?: string[];
 }
 
 interface FarmInfoProps {
@@ -54,29 +54,35 @@ interface FarmInfoProps {
   setActive: (tab: string) => void;
 }
 
-const extractYouTubeVideoId = (url : string | undefined) => {
+const extractYouTubeVideoIds = (urls: string[] | undefined): string[] => {
+  if (!urls) return [];
   const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
-  const match = url?.match(regex);
-  return match ? match[1] : null; // Retorna el ID del video o null si no coincide
+  return urls
+    .map((url) => {
+      const match = url.match(regex);
+      return match ? match[1] : null;
+    })
+    .filter((id): id is string => id !== null); // Solo IDs válidos
 };
+
 
 const FarmInfo: React.FC<FarmInfoProps> = ({ data, setActive }) => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const videoId = extractYouTubeVideoId(data.videoUrl);
+  const videoIds = extractYouTubeVideoIds(data.videoUrls);
 
-  const downloadImage = async (url: string, name: string) => {
-    const response = await fetch(url);
-    const blob = await response.blob();
-    const blobUrl = window.URL.createObjectURL(blob);
+  // const downloadImage = async (url: string, name: string) => {
+  //   const response = await fetch(url);
+  //   const blob = await response.blob();
+  //   const blobUrl = window.URL.createObjectURL(blob);
   
-    const link = document.createElement("a");
-    link.href = blobUrl;
-    link.download = name;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(blobUrl);
-  };
+  //   const link = document.createElement("a");
+  //   link.href = blobUrl;
+  //   link.download = name;
+  //   document.body.appendChild(link);
+  //   link.click();
+  //   link.remove();
+  //   window.URL.revokeObjectURL(blobUrl);
+  // };
 
   useEffect(() => {
     if (selectedImage) {
@@ -185,19 +191,21 @@ const FarmInfo: React.FC<FarmInfoProps> = ({ data, setActive }) => {
 
       <hr className='my-8'/>
 
-      {videoId && (
-          <div className="mt-28 w-full h-[500px] "> 
-            <iframe
-              className=" w-full h-full rounded-lg shadow-lg"
-              src={`https://www.youtube.com/embed/${videoId}`}
-              title="YouTube video player"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          </div>
+      {videoIds.length > 0 && (
+        <div className="mt-28 w-full grid grid-cols-1 md:grid-cols-2 gap-8">
+          {videoIds.map((id, index) => (
+            <div key={index} className="w-full h-[300px] lg:h-[400px]">
+              <iframe
+                className="w-full h-full rounded-lg shadow-lg"
+                src={`https://www.youtube.com/embed/${id}`}
+                title={`YouTube video ${index + 1}`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          ))}
+        </div>
       )}
-
-
 
       {selectedImage && (
         <div

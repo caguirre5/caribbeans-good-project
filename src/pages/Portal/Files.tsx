@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Contract from '../Legal/Contract';
+// import Contract from '../Legal/Contract';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFileContract } from '@fortawesome/free-solid-svg-icons';
 import { AnimatePresence } from 'framer-motion';
@@ -33,7 +33,8 @@ const Files: React.FC = () => {
       <AnimatePresence>
           {showModal && (
             <Modal show={showModal} onClose={handleCloseModal}>
-              <Contract/>
+              {/* <Contract/> */}
+              <div/>
             </Modal>
           )}
         </AnimatePresence>
