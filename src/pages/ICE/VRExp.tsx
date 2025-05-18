@@ -39,7 +39,7 @@ function VRExperience() {
                 </div>
                 <div className="grid-cards">
                     <VideoCard url='' src={Farm1} text=""/>
-                    <VideoCard url='https://caribbeangoodsmedia.online/' src={Farm2} text=""/>
+                    <VideoCard url='https://caribbeangoodsvr.xyz/' src={Farm2} text=""/>
                     <VideoCard url='' src={Farm3} text=""/>
                     <VideoCard url='' src={Farm4} text=""/>
                 </div>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -61,7 +61,35 @@ const extractYouTubeVideoId = (url : string | undefined) => {
 };
 
 const FarmInfo: React.FC<FarmInfoProps> = ({ data, setActive }) => {
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const videoId = extractYouTubeVideoId(data.videoUrl);
+
+  const downloadImage = async (url: string, name: string) => {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+  
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = name;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(blobUrl);
+  };
+
+  useEffect(() => {
+    if (selectedImage) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
+    }
+  
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, [selectedImage]);
+
   return (
     <div className="py-12 w-full justify-center items-center">
       <div className="mx-auto grid grid-cols-1 lg:grid-cols-3 items-start">
@@ -151,9 +179,8 @@ const FarmInfo: React.FC<FarmInfoProps> = ({ data, setActive }) => {
 
       <hr className='my-8'/>
 
-      <div className=" my-6">
+      <div className="my-6">
         <SatelliteMaps coordinates={data.coordinates[0]} />
-
       </div>
 
       <hr className='my-8'/>
@@ -170,45 +197,75 @@ const FarmInfo: React.FC<FarmInfoProps> = ({ data, setActive }) => {
           </div>
       )}
 
+
+
+      {selectedImage && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-70 z-[9999] flex items-center justify-center"
+          onClick={() => setSelectedImage(null)}
+        >
+
+          <div
+            className="max-w-4xl max-h-[90vh] relative"
+            onClick={(e) => e.stopPropagation()} // evita cerrar al hacer clic sobre la imagen
+          >
+            <img
+              src={selectedImage}
+              alt="Full image"
+              className="w-full h-auto object-contain rounded-lg"
+            />
+            <button
+              onClick={() => {
+                setSelectedImage(null);
+                document.body.style.overflow = 'auto'; // restaura scroll
+              }}
+              className="absolute top-2 right-2 bg-white text-black rounded-full px-3 py-1 text-sm shadow-md"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
+
       {/* Mostrar la sección del video si videoUrl está disponible */}
 
       {data.imageUrls && data.imageUrls.length > 0 && (
-        <div className="max-w-7xl mx-auto mt-6">
-          {/* <hr className='my-8'/> */}
-          <div className="grid grid-cols-2 lg:flex lg:flex-wrap gap-4 mt-4">
-          {data.imageUrls && data.imageUrls.length > 0 && (
-        <div className="max-w-7xl mx-auto mt-6">
-          <hr className='my-8'/>
-          <div className="grid grid-cols-2 lg:flex lg:flex-wrap gap-4 mt-4">
+        <div className="w-full mt-10 px-4">
+          <hr className="my-8 border-gray-600" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {data.imageUrls.map((url, index) => (
-              <div 
-                key={index} 
-                className="overflow-hidden rounded-lg shadow-lg relative" 
-                style={{ flex: '1 0 auto', height: '250px' }}
+              <div
+                key={index}
+                className="overflow-hidden rounded-lg shadow-lg relative h-[250px]"
               >
                 {/* Imagen */}
                 <img
                   src={url}
                   alt={`Farm image ${index + 1}`}
-                  className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
+                  onClick={() => {
+                    setSelectedImage(url);
+                    document.body.style.overflow = 'hidden'; // bloquea scroll
+                  }}                  
+                  className="w-full h-full object-cover transition-transform duration-300 hover:scale-110 cursor-pointer"
                 />
-                <a 
-            href={url} 
-            download={`image-${index + 1}.jpg`}
-            target='_blank'
-            className="absolute bottom-2 right-2 bg-[#044421] text-white p-2 rounded-lg text-xs shadow-lg hover:bg-[#e6a318] transition-colors"
-          >
-            <FontAwesomeIcon icon={faDownload} />
-          </a>
 
+                {/* Botón de descarga */}
+                <a
+                  href={url}
+                  download={`image-${index + 1}.jpg`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="absolute bottom-2 right-2 bg-[#044421] text-white p-2 rounded-lg text-xs shadow-lg hover:bg-[#e6a318] transition-colors"
+                >
+                  <FontAwesomeIcon icon={faDownload} />
+                </a>
+              </div>
+            ))}
+          </div>
         </div>
-      ))}
-    </div>
-  </div>
-)}
-    </div>
-  </div>
-)}
+      )}
+
 
     </div>
   );

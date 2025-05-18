@@ -51,3 +51,15 @@
         width: 100%;
     }
 }
+
+@media screen and (min-width: 577px) and (max-width: 1024px) {
+    .info-container {
+        width: 90%;
+        grid-template-columns: repeat(2, 1fr); /* Dos columnas para tablet */
+        gap: 20px;
+    }
+
+    .info-container > div {
+        padding: 15px;
+    }
+}

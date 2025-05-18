@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import Modal from '../../components/ModalPopUp'; // Modal grande existente para el contrato
-
+import { useAuth } from '../../contexts/AuthContext';
 import OrderIcon from '../../assets/Icons/order2.svg';
 import ReserveIcon from '../../assets/Icons/reserve1.svg';
 import Contract from '../Legal/Contract'; // Componente Contract
@@ -13,6 +13,8 @@ const PlaceOrder: React.FC = () => {
   // Funciones para cerrar los modales
   const handleCloseLargeModal = () => setShowLargeModal(false);
   const handleCloseSmallModal = () => setShowSmallModal(false);
+
+  const { currentUser } = useAuth();
 
   return (
     <div 
@@ -77,7 +79,7 @@ const PlaceOrder: React.FC = () => {
         {showLargeModal && (
           <Modal show={showLargeModal} onClose={handleCloseLargeModal}>
             <div className="p-6">
-              <Contract />
+              <Contract currentUser={currentUser}/>
             </div>
           </Modal>
         )}

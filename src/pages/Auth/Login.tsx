@@ -83,22 +83,26 @@ const Login: React.FC = () => {
           roles: ["user"],
         });
 
-        try {
-          const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/resourcelibray/sendalert`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              recipientEmail: 'info@caribbeangoods.co.uk',
-              alertMessage: 'An user has signed up to the portal',
-            }),
-          });
-      
-          const result = await response.text();
-          console.log(result)
-        } catch (err) {
-          console.error('Error:', err);
+        const recipients = ['caguirre.dt@gmail.com', 'info@caribbeangoods.co.uk'];
+
+        for (const email of recipients) {
+          try {
+            const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/resourcelibray/sendalert`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                recipientEmail: email,
+                alertMessage: 'An user has signed up to the portal',
+              }),
+            });
+
+            const result = await response.text();
+            console.log(`Alert sent to ${email}:`, result);
+          } catch (err) {
+            console.error(`Error sending alert to ${email}:`, err);
+          }
         }
       }
   

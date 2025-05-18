@@ -46,7 +46,7 @@ function Footer() {
                         linkedinLink="https://www.linkedin.com/company/caribbean-goods-ltd/?originalSubdomain=uk"
                         youtubeLink='https://youtube.com/@caribbeangoods8639?si=WLCgWVMCgnGvsFZq'
                     />
-                    <p className='mt-4 text-[0.95rem]'>©2023CaribbeanGoodsLtd</p>
+                    <p className='mt-4 text-[0.95rem]'>©{new Date().getFullYear()}CaribbeanGoodsLtd</p>
                 </div>
                 <div className='flex flex-col p-0 w-full text-[0.95rem]'>
                     <a href='/Legal/PrivacyPolicy' className='my-2 underline'>Privacy Policy</a>

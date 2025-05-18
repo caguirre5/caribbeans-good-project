@@ -46,13 +46,13 @@ const GoogleSheetTable: React.FC = () => {
       <table className="min-w-full bg-white border border-gray-300">
         <thead className="text-xs">
           <tr>
-            <th className="py-2 px-4 border-b bg-[#9da793] text-left">Farm</th>
-            <th className="py-2 px-4 border-b bg-[#9da793] text-left">Variety</th>
-            <th className="py-2 px-4 border-b bg-[#9da793] text-left">Process</th>
-            <th className="py-2 px-4 border-b bg-[#9da793] text-left">Our Tasting Notes</th>
-            <th className="py-2 px-4 border-b bg-[#9da793] text-left">30 KG Sacks</th>
-            <th className="py-2 px-8 border-b bg-[#9da793] text-left">Price</th>
-            <th className="py-2 px-4 border-b bg-[#9da793] text-left">12 bags Bundle + 1 Free</th>
+            <th className="py-2 px-4 border-b bg-[#9da793] text-center">Farm</th>
+            <th className="py-2 px-4 border-b bg-[#9da793] text-center">Variety</th>
+            <th className="py-2 px-4 border-b bg-[#9da793] text-center">Process</th>
+            <th className="py-2 px-4 border-b bg-[#9da793] text-center">Our Tasting Notes</th>
+            <th className="py-2 px-4 border-b bg-[#9da793] text-center">24 KG Sacks</th>
+            <th className="py-2 px-8 border-b bg-[#9da793] text-center">Price / kg</th>
+            <th className="py-2 px-4 border-b bg-[#9da793] text-center">12 bags Bundle + 1 Free</th>
           </tr>
         </thead>
         <tbody>

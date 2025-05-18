@@ -1,87 +1,132 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useData } from '../../contexts/Datacontent';
-import { createPDF } from '../../components/utils/PDFGenerator';
-import watermark from '../../assets/green_logo_icon.png';
-import { useAuth } from '../../contexts/AuthContext'; // Supongamos que tienes un contexto de autenticación
-import { db } from '../../firebase/firebase'; // Configuración de Firestore
-import { doc, getDoc } from 'firebase/firestore'; // Importa métodos necesarios de Firestore
+import React, { useState, useEffect } from 'react';
+import { User } from 'firebase/auth';
+import { db } from '../../firebase/firebase'; // Asegúrate de importar tu instancia de Firestore
+import { doc, getDoc } from 'firebase/firestore';
+import axios from 'axios';
 
-
-interface DeliverySchedule {
-  month: string;
-  quantityBags: string; // Cambio: Se utiliza quantityBags en lugar de quantity
+interface Replacements {
+  ENTITY: string;
+  CITY: string;
+  COMPNUMBER: string;
+  REGISTEREDOFFICE: string;
+  CUSTOMERCOMPANYNAME: string;
+  NAME: string;
+  NUMBER: string;
+  EMAIL: string;
+  AMOUNT: string;
+  VARIETY: string;
+  PRICE: string;
+  MONTHS: string;
+  MONTH1: string;
+  YEAR1: string;
+  MONTH2: string;
+  YEAR2: string;
+  FREQUENCY: string;
 }
 
-interface FormData {
-  date: string;
-  purchaserCompanyName: string | undefined;
-  purchaserCompanyAddress: string | undefined;
-  purchaserCityPostalCountry: string | undefined;
-  purchaserContactName: string | undefined;
-  purchaserEmail: string;
-  purchaserPhone: string;
-  coffeeVarietal: string;
-  process: string;
-  totalQuantityBags: string; // Cambio: Se utiliza totalQuantityBags en lugar de totalQuantity
-  numberOfMonths: string;
-  deliverySchedule: DeliverySchedule[];
-  pricePerKg: string;
-  paymentDays: string;
-  paymentMethod: string;
-  deliveryAddress: string;
+interface Props {
+  currentUser: User | null;
 }
 
-const getCurrentDate = () => {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  const day = String(today.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+interface SheetData {
+  Farm: string;
+  Variety: string;
+  Process: string;
+  'Our Tasting Notes': string;
+  '30 KG Sacks': string;
+  Price: string;
+  '12 bags Bundle + 1 Free': string;
+}
+
+
+const initialFormState: Replacements = {
+  ENTITY: '',
+  CITY: '',
+  COMPNUMBER: '',
+  REGISTEREDOFFICE: '',
+  CUSTOMERCOMPANYNAME: '',
+  NAME: '',
+  NUMBER: '',
+  EMAIL: '',
+  AMOUNT: '',
+  VARIETY: '',
+  PRICE: '',
+  MONTHS: '',
+  MONTH1: '',
+  YEAR1: '',
+  MONTH2: '',
+  YEAR2: '',
+  FREQUENCY: ''
 };
 
-const CoffeeSupplyAgreementForm: React.FC = () => {
-  const { currentUser } = useAuth();
-  const { data } = useData();
-  const [formData, setFormData] = useState<FormData>({
-    date: getCurrentDate(),
-    purchaserCompanyName: "userName",
-    purchaserCompanyAddress: '',
-    purchaserCityPostalCountry: '',
-    purchaserContactName: '',
-    purchaserEmail: '',
-    purchaserPhone: '',
-    coffeeVarietal: '',
-    process: '-',
-    totalQuantityBags: '', // Cambio: Se inicializa con totalQuantityBags
-    numberOfMonths: '',
-    deliverySchedule: [{ month: '', quantityBags: '' }], // Cambio: Se inicializa con quantityBags
-    pricePerKg: '-',
-    paymentDays: '30',
-    paymentMethod: 'Bank Transfer',
-    deliveryAddress: '',
-  });
+const ContractForm: React.FC<Props> = ({ currentUser }) => {
+  const [formData, setFormData] = useState<Replacements>(initialFormState);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  const [sheetData, setSheetData] = useState<SheetData[]>([]);
+  const [stockAvailable, setStockAvailable] = useState<number | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  const [errors, setErrors] = useState<{ [K in keyof Replacements]?: boolean }>({});
+
+  useEffect(() => {
+    const SHEET_ID = '1ee9mykWz7RPDuerdYphfTqNRmDaJQ6sNomhyppCt2mE'; // Reemplaza con el ID de tu hoja de cálculo
+    const API_KEY = 'AIzaSyCFEBX2kLtYtyCBFrcCY4YN_uutqqQPC-k'; // Reemplaza con tu clave de API
+    const RANGE = 'Sheet1!A:G'; // Asegúrate de que el rango cubra todas las columnas
+  
+    const fetchSheetData = async () => {
+      try {
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`;
+        const response = await axios.get(url);
+        const rows = response.data.values;
+  
+        const formatted = rows.slice(1).map((row: string[]) => ({
+          Farm: row[0],
+          Variety: row[1],
+          Process: row[2],
+          'Our Tasting Notes': row[3],
+          '30 KG Sacks': row[4],
+          Price: row[5],
+          '12 bags Bundle + 1 Free': row[6],
+        }));
+  
+        setSheetData(formatted);
+      } catch (error) {
+        console.error('Error loading sheet data:', error);
+      }
+    };
+  
+    fetchSheetData();
+  }, []);
+  
+  
 
   useEffect(() => {
     const fetchUserData = async () => {
-      if (!currentUser) return;
-
+      if (!currentUser) {
+        return;
+      }
       try {
-        const userRef = doc(db, 'users', currentUser.uid); // Reference to the user's document
-        const userSnap = await getDoc(userRef); // Get the user's document
-        
+        const userRef = doc(db, 'users', currentUser.uid);
+        const userSnap = await getDoc(userRef);
         if (userSnap.exists()) {
           const userData = userSnap.data();
-          
-          // Update form data with user data
-          setFormData((prevData) => ({
-            ...prevData,
-            purchaserCompanyName: userData.company || '',
-            purchaserCompanyAddress: userData.companyAddress || '',
-            purchaserCityPostalCountry: `${userData.postalCode || ''}, ${userData.companyCity || ''}, ${userData.companyCountry || ''}`, // Combinando los datos según sea necesario
-            purchaserContactName: `${userData.firstName || ''} ${userData.lastName || ''}`,
-            purchaserEmail: userData.email || '',
-            purchaserPhone: userData.phoneNumber || '',
+          // console.log("📥 Datos del usuario:", userData);
+
+          setFormData((prev) => ({
+            ...prev,
+            ENTITY: userData.company || '',
+            CITY: userData.companyCity || '',
+            REGISTEREDOFFICE: userData.companyAddress || '',
+            CUSTOMERCOMPANYNAME: userData.company || '',
+            NAME: `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
+            EMAIL: userData.email || '',
+            NUMBER: userData.phoneNumber || '',
+            SIGNATORYNAME: `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
           }));
         }
       } catch (err) {
@@ -92,286 +137,433 @@ const CoffeeSupplyAgreementForm: React.FC = () => {
     fetchUserData();
   }, [currentUser]);
 
-  const inputClass = "block w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 cursor-pointer focus:outline-none p-2.5";
-  const labelClass = "block text-gray-700";
-  const containerClass = "mb-4";
-
-  const navigate = useNavigate();
-
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
-    index?: number,
-    field?: keyof DeliverySchedule
-  ) => {
-    const { name, value } = e.target;
-
-    if (field !== undefined && index !== undefined) {
-      const updatedSchedule = [...formData.deliverySchedule];
-      updatedSchedule[index] = {
-        ...updatedSchedule[index],
-        [field]: value,
-      };
-      setFormData({ ...formData, deliverySchedule: updatedSchedule });
-    } else {
-      setFormData({ ...formData, [name]: value });
-    }
-
-    // Actualiza el cronograma de entrega si cambian los valores de cantidad total de bolsas o número de meses
-    if (name === 'totalQuantityBags' || name === 'numberOfMonths') {
-      updateDeliverySchedule(
-        name === 'totalQuantityBags' ? parseInt(value) : parseInt(formData.totalQuantityBags),
-        name === 'numberOfMonths' ? parseInt(value) : parseInt(formData.numberOfMonths)
-      );
-    }
-  };
-
-  const updateDeliverySchedule = (totalQuantityBags: number, numberOfMonths: number) => {
-    if (totalQuantityBags && numberOfMonths && numberOfMonths <= totalQuantityBags) {
-      const baseQuantityBags = Math.floor(totalQuantityBags / numberOfMonths);
-      const remainder = totalQuantityBags % numberOfMonths;
-      const newSchedule = Array.from({ length: numberOfMonths }, (_, index) => ({
-        month: `Month ${index + 1}`,
-        quantityBags: `${baseQuantityBags + (index < remainder ? 1 : 0)}`
+  const handleVarietySelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selected = sheetData.find(item => `${item.Variety} (${item.Farm})` === e.target.value);
+    if (selected) {
+      const pricePerKg = parseFloat(selected.Price.replace('£', '').trim());
+      const availableSacks = parseInt(selected['30 KG Sacks']);
+  
+      setStockAvailable(availableSacks);
+  
+      setFormData((prev) => ({
+        ...prev,
+        VARIETY: e.target.value,
+        PRICE: pricePerKg.toString(),
       }));
-      setFormData({ ...formData, deliverySchedule: newSchedule });
     }
   };
-
-  const handleVarietyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedVariety = e.target.value;
-    const selectedData = data.find(item => `${item.Variety} (${item.Farm})` === selectedVariety);
-
-    if (selectedData) {
-      setFormData({
-        ...formData,
-        coffeeVarietal: selectedVariety,
-        process: selectedData.Process,
-        pricePerKg: selectedData.Price.replace('£ ', '')
-      });
+  
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const amount = parseInt(e.target.value);
+    if (stockAvailable !== null && amount > stockAvailable) {
+      alert(`Only ${stockAvailable} bags available.`);
+      return;
     }
+  
+    setFormData((prev) => ({
+      ...prev,
+      AMOUNT: e.target.value,
+    }));
+  };
+  
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log(formData);
-  };
+    setLoading(true);
+    setMessage('');
 
-  const handleGeneratePdf = async () => {
-    let deliveryScheduleText = '';
-    formData.deliverySchedule.forEach((schedule, index) => {
-      deliveryScheduleText += `- Month ${index + 1}: ${schedule.quantityBags} bags\n`;
-    });
-
-    const content = [
-      `### Coffee Supply Agreement`,
-      `**This Coffee Supply Agreement ("Agreement") is made and entered into as of ${formData.date}, by and between:**`,
-      `**Supplier:**`,
-      `Caribbean Goods Ltd`,
-      `128 Maryhill Road`,
-      `Glasgow. G20 7QS`,
-
-      `Contact Person: Javier Enrique Gutierrez Abril`,
-      `Email: info@caribbeangoods.co.uk`,
-      `Telephone: +447413981290`,
-      `**Purchaser:**`,
-      `${formData.purchaserCompanyName}`,
-      `${formData.purchaserCompanyAddress}`,
-      `${formData.purchaserCityPostalCountry}`,
-      `Contact Person: ${formData.purchaserContactName}`,
-      `Email: ${formData.purchaserEmail}`,
-      `Telephone: ${formData.purchaserPhone}`,
-      `**Recitals**`,
-      `WHEREAS, the Supplier is engaged in the business of importing and selling green coffee;`,
-      `WHEREAS, the Purchaser is engaged in the business of roasting and selling coffee;`,
-      `WHEREAS, the Purchaser wishes to book certain quantities of green coffee from the Supplier over a specified period;`,
-      `NOW, THEREFORE, in consideration of the mutual covenants and agreements herein contained, the parties hereto agree as follows:`,
-      `### 1. **Product Description and Quality**`,
-      `The Supplier agrees to supply, and the Purchaser agrees to purchase, the following green coffee:`,
-      `- ${formData.process} ${formData.coffeeVarietal}`,
-      `### 2. **Quantity and Delivery Schedule**`,
-      `The Purchaser agrees to book and purchase a total quantity of ${formData.totalQuantityBags} kg over a period of ${formData.numberOfMonths} months, according to the following schedule:`,
-      `${deliveryScheduleText}`,
-      `### 3. **Price and Payment Terms**`,
-      `3.1. **Price**: The price per kilogram of green coffee is £ ${formData.pricePerKg} GBP.`,
-      `3.2. **Payment Terms**: Payment for each shipment shall be made within ${formData.paymentDays} days of the delivery date. Payments shall be made via ${formData.paymentMethod}.`,
-      `3.3. **Late Payments**: Any payments not made within the specified period shall incur a late fee of 1% per late week.`,
-      `### 4. **Delivery Terms**`,
-      `4.1. **Delivery Location**: The green coffee shall be delivered to ${formData.deliveryAddress}.`,
-      `4.2. **Delivery Schedule**: Deliveries shall be made according to the schedule specified in Section 2.`,
-      `4.3. **Risk of Loss**: Risk of loss and title to the green coffee shall pass to the Purchaser upon delivery at the specified location.`,
-      `### 5. **Acceptance and Inspection**`,
-      `5.1. The Purchaser shall inspect the delivered coffee within 5 business days of receipt. If the coffee does not meet the agreed specifications, the Purchaser shall notify the Supplier in writing within 7-10 days of inspection.`,
-      `5.2. The Supplier shall replace any non-conforming coffee at no additional cost to the Purchaser.`,
-      `### 6. **Force Majeure**`,
-      `Neither party shall be liable for any delay or failure in performance due to events beyond their reasonable control, including but not limited to acts of God, war, strikes, or government regulations.`,
-      `### 7. **Termination**`,
-      `This Agreement may be terminated by either party with 30 days' written notice if the other party breaches any material term of this Agreement and fails to cure such breach within 30 days of receiving notice of the breach.`,
-      `### 8. **Governing Law**`,
-      `This Agreement shall be governed by and construed in accordance with the laws of England and Wales.`,
-      `### 9. **Dispute Resolution**`,
-      `Any disputes arising out of or in connection with this Agreement shall be resolved through negotiation in good faith. If the dispute cannot be resolved through negotiation, it shall be submitted to mediation or arbitration as agreed by the parties.`,
-      `### 10. **Entire Agreement**`,
-      `This Agreement constitutes the entire agreement between the parties and supersedes all prior agreements and understandings, whether written or oral, relating to the subject matter hereof.`,
-      `**IN WITNESS WHEREOF, the parties hereto have executed this Agreement as of the day and year first above written.**`,
-      `<break>`,
-      `**Supplier:**`,
-      `Caribbean Goods Ltd`,
-      `\n\n\n_______________________________`,
-      `Javier Enrique Gutierrez Abril\n`,
-      `**Purchaser:**`,
-      `${formData.purchaserCompanyName}`,
-      `\n\n\n_______________________________`,
-      `${formData.purchaserContactName}`
-    ];
-
-    const pdfBlob = await createPDF(content, watermark);
-    const pdfUrl = URL.createObjectURL(pdfBlob);
-    navigate('/pdf-viewer', { state: { pdfUrl } });
-  };
-
-  const renderInput = (label: string, name: keyof FormData, type: string = 'text') => {
-    return (
-      <div className={containerClass}>
-        <label className={labelClass}>{label}</label>
-        <input
-          type={type}
-          name={name}
-          value={String(formData[name])}
-          onChange={handleChange}
-          className={inputClass}
-        />
-      </div>
-    );
-  };
-
-  const renderDropdown = (label: string, name: keyof FormData, options: string[]) => {
-    return (
-      <div className={containerClass}>
-        <label className={labelClass}>{label}</label>
-        <select
-          name={name}
-          value={formData[name] as string}
-          onChange={handleVarietyChange}
-          className={inputClass}
-        >
-          <option value="">Select an option</option>
-          {options.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-      </div>
-    );
-  };
-
-  const renderPaymentDaysDropdown = () => {
-    const options = ['Cash Payment Before Delivery'];
-    return (
-      <div className="mb-4">
-        <label className="block text-gray-700">Payment Terms</label>
-        <select
-          name="paymentDays"
-          value={formData.paymentDays}
-          onChange={handleChange}
-          className={inputClass}
-        >
-          {options.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-      </div>
-    );
-  };
-
-  const renderFixedText = (label: string, value: string) => {
-    return (
-      <div className={containerClass}>
-        <label className={labelClass}>{label}</label>
-        <p className={`${inputClass} bg-gray-100`}>{value}</p>
-      </div>
-    );
-  };
-
-  const calculateTotalAmount = () => {
-    const totalQuantityBags = parseInt(formData.totalQuantityBags);
-    const pricePerKg = parseFloat(formData.pricePerKg);
-    const totalQuantityKg = totalQuantityBags * 30; // Cambio: Calcular en kg
-    if (!isNaN(totalQuantityKg) && !isNaN(pricePerKg)) {
-      return (totalQuantityKg * pricePerKg).toFixed(2);
+    const isValid = validateForm();
+    if (!isValid) {
+      setLoading(false);
+      setMessage('Please fill out all required fields.');
+      return;
     }
-    return '0.00';
+
+    const amount = parseInt(formData.AMOUNT);
+    const bagLabel = amount === 1 ? 'bag' : 'bags';
+
+    const todayUK = new Date().toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+    
+
+    const replacementsToSend = {
+      ...formData,
+      ENTITY: formData.CUSTOMERCOMPANYNAME,
+      SIGNATORYNAME: formData.NAME,
+      TOTALAMOUNT: formData.AMOUNT ? (parseInt(formData.AMOUNT) * 24).toString() : '0',
+      BAGS:bagLabel,
+      PREFIX: formData.FREQUENCY === 'annually' ? 'an' : 'a',
+      DATE: todayUK,
+    };
+
+    try {
+      const token = await currentUser?.getIdToken();
+      const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/docx/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        
+
+        body: JSON.stringify({ replacements: replacementsToSend }),
+
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Error al generar el contrato');
+
+      setMessage(result.message || 'Contrato generado y enviado correctamente');
+      setSuccess(true);
+
+    } catch (error: any) {
+      console.error("❌ Error al enviar:", error);
+      setMessage(error.message || 'Error inesperado');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const coffeeVarietyOptions = data.map(item => `${item.Variety} (${item.Farm})`);
+  const calculateReservationPeriod = (start: string, end: string) => {
+    if (!start || !end) return;
+  
+    const [startYear, startMonth] = start.split('-').map(Number);
+    const [endYear, endMonth] = end.split('-').map(Number);
+  
+    const months = (endYear - startYear) * 12 + (endMonth - startMonth) + 1;
+  
+    const monthNames = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+  
+    const startFormatted = `${monthNames[startMonth - 1]}`.toLowerCase();
+    const endFormatted = `${monthNames[endMonth - 1]}`.toLowerCase();
+
+    const updatedFields = {
+      MONTHS: months.toString(),
+      MONTH1: startFormatted,
+      YEAR1: String(startYear),
+      MONTH2: endFormatted,
+      YEAR2: String(endYear),
+    };
+  
+    setFormData((prev) => ({ ...prev, ...updatedFields }));
+  };
+
+const validateForm = () => {
+  const newErrors: { [K in keyof Replacements]?: boolean } = {};
+
+  // Campos que NO deben validarse porque se llenan automáticamente
+  const excludedKeys: (keyof Replacements)[] = [
+    'PRICE',
+    'ENTITY',
+    'MONTHS',
+    'MONTH1',
+    'YEAR1',
+    'MONTH2',
+    'YEAR2'
+  ];
+
+  for (const key in formData) {
+    if (
+      !excludedKeys.includes(key as keyof Replacements) &&
+      formData[key as keyof Replacements].trim() === ''
+    ) {
+      newErrors[key as keyof Replacements] = true;
+    }
+  }
+
+  setErrors(newErrors);
+  return Object.keys(newErrors).length === 0;
+};
+
+  
+  
+  
 
   return (
-    <div className="max-w-4xl mx-auto p-8 bg-white shadow-md rounded">
-      <form onSubmit={handleSubmit}>
-        <h2 className="text-2xl font-bold mb-6">Coffee Supply Agreement</h2>
+    <div className="space-y-4 max-w-xl mx-auto p-4 bg-white shadow-md rounded">
+      {success ? (
+        <div className="text-center">
+          <h2 className="text-xl font-bold text-green-700">Contract Sent!</h2>
+          <p className="mt-2 text-gray-700">
+            The contract has been successfully generated and sent to your email. Please review it, sign it,
+            and send it back to <strong>info@caribbeangoods.co.uk</strong>.
+          </p>
+        </div>
+      ) : (
+      <form onSubmit={handleSubmit} className="space-y-4 max-w-xl mx-auto p-4 bg-white shadow-md rounded">
+        <h2 className="text-xl font-bold mb-4 text-center">Legal agreement</h2>
+
+  {/* ----------------------------------------------------------------------------------- */}
+
+        <h3 className="text-lg font-semibold mt-6">Customer Details</h3>
 
         <div className="grid grid-cols-2 gap-4">
-          {renderInput('Date', 'date', 'date')}
-          {renderInput('Purchaser Company Name', 'purchaserCompanyName')}
-        </div>
-
-        <h3 className="text-xl font-semibold mb-4">Purchaser</h3>
-        <div className="grid grid-cols-2 gap-4">
-          {renderInput('Company Address', 'purchaserCompanyAddress')}
-          {renderInput('City, Postal Code, Country', 'purchaserCityPostalCountry')}
-          {renderInput('Contact Name', 'purchaserContactName')}
-          {renderInput('Email', 'purchaserEmail')}
-          {renderInput('Phone', 'purchaserPhone')}
-        </div>
-
-        <h3 className="text-xl font-semibold mb-4">Product Description and Quality</h3>
-        {renderDropdown('Coffee Varietal (Farm)', 'coffeeVarietal', coffeeVarietyOptions)}
-        <div className="grid grid-cols-2 gap-4">
-          {renderFixedText('Process', formData.process)}
-          {renderFixedText('Price per KG', formData.pricePerKg)}
-        </div>
-
-        <h3 className="text-xl font-semibold mb-4">Quantity and Delivery Schedule</h3>
-        <div className="grid grid-cols-2 gap-4">
-          {renderInput('Total Quantity (bags)', 'totalQuantityBags', 'number')}
-          {renderInput('Number of Months', 'numberOfMonths', 'number')}
-        </div>
-        <h4 className="text-lg font-semibold mb-2">Calculated Monthly Deliveries</h4>
-        {formData.deliverySchedule.map((schedule, index) => (
-          <div key={index} className="mb-2">
-            <span>{schedule.month}: {schedule.quantityBags} bags</span>
+          <div className="col-span-2">
+            <label className="block font-medium mb-1">Full Name</label>
+            <input
+              type="text"
+              name="NAME"
+              value={formData.NAME}
+              onChange={handleChange}
+              required
+              className={`w-full rounded px-3 py-2 border ${
+                errors['NAME'] ? 'border-red-500' : 'border-gray-300'
+              }`}
+              
+            />
           </div>
-        ))}
 
-        <h3 className="text-xl font-semibold mb-4">Price and Payment Terms</h3>
-        {renderFixedText('Total Amount', `£ ${calculateTotalAmount()} GBP`)}
-        {renderPaymentDaysDropdown()}
-        {/* {renderInput('Payment Method', 'paymentMethod')} */}
-        <div className={containerClass}>
-        <label className={labelClass}>Payment Method</label>
-        <input
-          type={'text'}
-          name={'paymentmethod'}
-          value={"Bank transfer"}
-          className={inputClass}
-        />
-      </div>
+          <div>
+            <label className="block font-medium mb-1">City</label>
+            <input
+              type="text"
+              name="CITY"
+              value={formData.CITY}
+              onChange={handleChange}
+              required
+              className={`w-full rounded px-3 py-2 border ${
+                errors['CITY'] ? 'border-red-500' : 'border-gray-300'
+              }`}          />
+          </div>
 
-        <h3 className="text-xl font-semibold mb-4">Delivery Terms</h3>
-        {renderInput('Delivery Address', 'deliveryAddress')}
+          <div>
+            <label className="block font-medium mb-1">Company Number</label>
+            <input
+              type="text"
+              name="COMPNUMBER"
+              value={formData.COMPNUMBER}
+              onChange={handleChange}
+              required
+              className={`w-full rounded px-3 py-2 border ${
+                errors['COMPNUMBER'] ? 'border-red-500' : 'border-gray-300'
+              }`}           />
+          </div>
+
+          <div className="col-span-2">
+            <label className="block font-medium mb-1">Office Address</label>
+            <input
+              type="text"
+              name="REGISTEREDOFFICE"
+              value={formData.REGISTEREDOFFICE}
+              onChange={handleChange}
+              required
+              className={`w-full rounded px-3 py-2 border ${
+                errors['REGISTEREDOFFICE'] ? 'border-red-500' : 'border-gray-300'
+              }`}           />
+          </div>
+
+          <div className="col-span-2">
+            <label className="block font-medium mb-1">Customer Company Name</label>
+            <input
+              type="text"
+              name="CUSTOMERCOMPANYNAME"
+              value={formData.CUSTOMERCOMPANYNAME}
+              onChange={handleChange}
+              required
+              className="w-full border border-gray-300 rounded px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label className="block font-medium mb-1">Phone</label>
+            <input
+              type="text"
+              name="NUMBER"
+              value={formData.NUMBER}
+              onChange={handleChange}
+              required
+              className="w-full border border-gray-300 rounded px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label className="block font-medium mb-1">Email</label>
+            <input
+              type="email"
+              name="EMAIL"
+              value={formData.EMAIL}
+              onChange={handleChange}
+              required
+              className="w-full border border-gray-300 rounded px-3 py-2"
+            />
+          </div>
+        </div>
+
+  {/* ----------------------------------------------------------------------------------- */}
+        
+        <hr />
+
+        <h3 className="text-lg font-semibold mt-6">Order Details</h3>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block font-medium mb-1">Select Variety</label>
+            <select
+              name="VARIETY"
+              value={formData.VARIETY}
+              onChange={handleVarietySelect}
+              className="w-full border border-gray-300 rounded px-3 py-2"
+            >
+              <option value="">-- Select a coffee --</option>
+              {sheetData.map((item, i) => (
+                <option key={i} value={`${item.Variety} (${item.Farm})`}>
+                  {item.Variety} ({item.Farm})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block font-medium mb-1">Bags (24kg each)</label>
+            <input
+              type="number"
+              name="AMOUNT"
+              value={formData.AMOUNT}
+              onChange={handleAmountChange}
+              className="w-full border border-gray-300 rounded px-3 py-2"
+              min={1}
+            />
+            {stockAvailable !== null && (
+              <p className="text-sm text-gray-500 mt-1">
+                Available: {stockAvailable} bags
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="block font-medium mb-1">Unit Price (£/kg)</label>
+            <input
+              type="text"
+              name="PRICE"
+              value={formData.PRICE}
+              disabled
+              className="w-full border border-gray-300 bg-gray-100 rounded px-3 py-2 text-gray-700"
+            />
+          </div>
+
+          <div>
+            <label className="block font-medium mb-1">Estimated Total Price (£)</label>
+            <input
+              type="text"
+              value={
+                formData.AMOUNT && formData.PRICE
+                  ? (parseInt(formData.AMOUNT) * 30 * parseFloat(formData.PRICE)).toFixed(2)
+                  : '0.00'
+              }
+              disabled
+              className="w-full border border-gray-300 bg-gray-100 rounded px-3 py-2 text-gray-700"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block font-medium mb-1">Total KG</label>
+          <input
+            type="text"
+            value={
+              formData.AMOUNT
+                ? `${parseInt(formData.AMOUNT) * 24} kg`
+                : '0 kg'
+            }
+            disabled
+            className="w-full border border-gray-300 bg-gray-100 rounded px-3 py-2 text-gray-700"
+          />
+        </div>
+
+
+  {/* ----------------------------------------------------------------------------------- */}
+
+        <hr />
+
+        <h3 className="text-lg font-semibold mt-6">Reservation Period</h3>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block font-medium mb-1">Start Month</label>
+            <input
+              type="month"
+              value={startDate}
+              onChange={(e) => {
+                setStartDate(e.target.value);
+                calculateReservationPeriod(e.target.value, endDate);
+              }}
+              className="w-full border border-gray-300 rounded px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label className="block font-medium mb-1">End Month</label>
+            <input
+              type="month"
+              value={endDate}
+              onChange={(e) => {
+                setEndDate(e.target.value);
+                calculateReservationPeriod(startDate, e.target.value);
+              }}
+              className="w-full border border-gray-300 rounded px-3 py-2"
+            />
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <label className="block font-medium mb-1">Total Duration (in months)</label>
+          <input
+            type="text"
+            value={formData.MONTHS}
+            disabled
+            className="w-full border border-gray-300 bg-gray-100 rounded px-3 py-2 text-gray-700"
+          />
+        </div>
+
+  {/* ----------------------------------------------------------------------------------- */}
+
+        <hr />
+
+        <h3 className="text-lg font-semibold mt-6">Delivery Frequency</h3>
+
+        <div>
+          <label className="block font-medium mb-1">Select delivery frequency</label>
+          <select
+            name="FREQUENCY"
+            value={formData.FREQUENCY}
+            onChange={handleChange}
+            required
+            className={`w-full rounded px-3 py-2 border ${
+              errors.FREQUENCY ? 'border-red-500' : 'border-gray-300'
+            }`}
+          >
+            <option value="">-- Select an option --</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+            <option value="annually">Annually</option>
+          </select>
+        </div>
+
+
 
         <button
-          type="button"
-          onClick={handleGeneratePdf}
-          className="py-2 px-4 bg-[#e6a318] text-white rounded-full shadow-md hover:bg-[#ca8e15] mt-4"
+          type="submit"
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full"
+          disabled={loading}
         >
-          Generate agreement
+          {loading ? 'Generating...' : 'Generate contract'}
         </button>
+
+        {message && <p className="mt-4 text-center text-sm text-green-600">{message}</p>}
       </form>
+      )}
     </div>
   );
 };
 
-export default CoffeeSupplyAgreementForm;
+export default ContractForm;

@@ -27,9 +27,10 @@ function Contact() {
                             <h3 className="text-xl font-bold">Email</h3>
                             <p>info@caribbeangoods.co.uk</p>
                         </div>
-                        <div className="flex flex-col justify-center items-center">
+                        <div className="flex flex-col justify-center items-center ">
                             <h3 className="text-xl font-bold">Social Media</h3>
                             <SocialMedia 
+                                color="#044421"
                                 instagramLink="https://www.instagram.com/caribbeangoods/" 
                                 facebookLink="https://www.facebook.com/caribbeangoodsuk/posts/2171011849881565/"
                                 linkedinLink="https://www.linkedin.com/company/caribbean-goods-ltd/?originalSubdomain=uk"

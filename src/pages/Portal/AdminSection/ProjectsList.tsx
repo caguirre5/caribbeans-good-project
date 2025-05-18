@@ -17,8 +17,8 @@ const ProjectsList: React.FC = () => {
   useEffect(() => {
     const loadProjects = async () => {
       const loadedProjects: Project[] = [
-        { id: 'planting-trees', name: 'Planting Trees', fields: { money: 320.9, trees: 321 } },
-        { id: 'maia', name: 'Urban Forest', fields: { donations: 150 } }
+        { id: 'planting-trees', name: 'Trees-for-file', fields: { trees: 321 } },
+        { id: 'maia', name: 'MAIA', fields: { donations: 150 } }
       ];
       setProjects(loadedProjects);
     };

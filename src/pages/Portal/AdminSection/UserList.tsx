@@ -7,9 +7,40 @@ const UserList: React.FC = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [menuOpen, setMenuOpen] = useState<{ [key: string]: boolean }>({});
+  const [menuOpenUid, setMenuOpenUid] = useState<string | null>(null);
   const [loadingRoleChange, setLoadingRoleChange] = useState<{ [key: string]: boolean }>({});
   const { currentUser } = useAuth();
+  const [modalUser, setModalUser] = useState<string | null>(null);
+  const [confirmChecked, setConfirmChecked] = useState(false);
+
+  const handleDelete = async (userUid: string) => {
+    if (userUid === currentUser?.uid) {
+      alert("You cannot delete your own account.");
+      return;
+    }
+    try {
+      const token = await currentUser?.getIdToken();
+      const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/api/users/${userUid}/delete`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+  
+      if (response.ok) {
+        setUsers(users.filter((user) => user.uid !== userUid));
+        setModalUser(null);
+        setConfirmChecked(false);
+      } else {
+        alert('Failed to delete user');
+      }
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      setError("Failed to delete user.");
+    }
+  };
+  
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -43,13 +74,23 @@ const UserList: React.FC = () => {
     fetchUsers();
   }, []);
 
+  useEffect(() => {
+    if (modalUser) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+  
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [modalUser]);
+  
+
   const toggleRoasterRole = async (userUid: string, hasRoasterRole: boolean) => {
     try {
       setLoadingRoleChange((prev) => ({ ...prev, [userUid]: true }));
-      setMenuOpen((prevMenuOpen) => ({
-        ...prevMenuOpen,
-        [userUid]: false,
-      }));
+      setMenuOpenUid(null);
   
       const token = await currentUser?.getIdToken();
       const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/api/users/${userUid}/role`, {
@@ -85,11 +126,9 @@ const UserList: React.FC = () => {
   };
 
   const toggleMenu = (userUid: string) => {
-    setMenuOpen((prevMenuOpen) => ({
-      ...prevMenuOpen,
-      [userUid]: !prevMenuOpen[userUid],
-    }));
+    setMenuOpenUid((prevUid) => (prevUid === userUid ? null : userUid));
   };
+  
 
   if (loading) return <p>Loading users...</p>;
   if (error) return <p>{error}</p>;
@@ -119,7 +158,9 @@ const UserList: React.FC = () => {
                 </div>
               ) : (
                 <button
-                  className="p-2 hover:bg-gray-100 rounded-full"
+                  className={`p-2 rounded-full ${
+                    menuOpenUid === user.uid ? 'bg-gray-100' : 'hover:bg-gray-100'
+                  }`}
                   onClick={() => toggleMenu(user.uid)}
                 >
                   <FontAwesomeIcon
@@ -128,13 +169,19 @@ const UserList: React.FC = () => {
                   />
                 </button>
               )}
-              {menuOpen[user.uid] && (
+              {menuOpenUid === user.uid && (
                 <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg py-1 z-50">
                   <button
                     onClick={() => toggleRoasterRole(user.uid, Array.isArray(user.roles) && user.roles.includes("roaster"))}
                     className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                   >
                     {Array.isArray(user.roles) && user.roles.includes("roaster") ? "Revoke Roaster" : "Make Roaster"}
+                  </button>
+                  <button
+                    onClick={() => setModalUser(user.uid)}
+                    className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-100"
+                  >
+                    Delete User
                   </button>
                 </div>
               )}
@@ -144,6 +191,47 @@ const UserList: React.FC = () => {
       ) : (
         <p>No active users found.</p>
       )}
+
+      {modalUser && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full">
+            <h2 className="text-lg font-bold mb-4">Confirm Deletion</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              This action cannot be undone. Please confirm you want to delete this user.
+            </p>
+            <label className="flex items-center mb-4">
+              <input
+                type="checkbox"
+                checked={confirmChecked}
+                onChange={() => setConfirmChecked(!confirmChecked)}
+                className="mr-2"
+              />
+              I understand this action is permanent
+            </label>
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 text-sm"
+                onClick={() => {
+                  setModalUser(null);
+                  setConfirmChecked(false);
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className={`px-4 py-2 bg-red-500 text-white rounded text-sm ${
+                  !confirmChecked ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-600'
+                }`}
+                disabled={!confirmChecked}
+                onClick={() => handleDelete(modalUser)}
+              >
+                Confirm Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

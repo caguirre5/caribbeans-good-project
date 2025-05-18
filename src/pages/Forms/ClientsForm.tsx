@@ -10,7 +10,6 @@ function ClientsForm() {
   const [areYou, setAreYou] = useState('');
   const [otherAreYou, setOtherAreYou] = useState('');
   const [company, setCompany] = useState('');
-  const [mailingList, setMailingList] = useState(false);
   const [feedback, setFeedback] = useState('');
 
   const [howDidYouHear, setHowDidYouHear] = useState<string[]>([]);
@@ -41,7 +40,6 @@ function ClientsForm() {
       areYou,
       otherAreYou,
       company,
-      mailingList,
       feedback,
       howDidYouHear
     };
@@ -172,12 +170,14 @@ const handleRefresh = () => {
                 />
               )}
             </div>
+            
           </div>
           <div className=' h-4/5 self-center w-0.5 py-8 bg-black opacity-10 divider-bar'></div>
           {/* DIV 2 */}
           <div className='flex-1 flex flex-col justify-between py-14 px-10 second-part-form'>
             
             <div>
+              
               <div className="mb-4">
                 <label className="block mb-2 font-extrabold">Which company do you work for?</label>
                 <input
@@ -187,17 +187,7 @@ const handleRefresh = () => {
                   onChange={(e) => setCompany(e.target.value)}
                 />
               </div>
-              <div className="mb-4">
-                <label className="block mb-2 font-extrabold">
-                  <input
-                    type="checkbox"
-                    className="mr-2"
-                    checked={mailingList}
-                    onChange={(e) => setMailingList(e.target.checked)}
-                  />
-                  Would you like to sign up for our mailing list to receive updates on future products that match your profile?
-                </label>
-              </div>
+                        
               <div className="mb-4">
                 <label className="block mb-2 font-extrabold">How did you hear about us?</label>
                 <div className="flex flex-wrap flex-col">
@@ -280,9 +270,27 @@ const handleRefresh = () => {
         </div>
       )}
       {formSubmitted && (
-        <div className="p-8 drop-shadow-md flex h-4/5 bg-[#9ED1C4] border rounded-lg shadow-md form-container flex-col items-center justify-center">
-          <p className="submittedForm">Your information has been successfully submitted!</p>
-          <button onClick={handleRefresh} className="w-60 rounded-full mt-8 lg:mt-0 bg-[#FAFAFA] bg-opacity-30 px-4 py-2 text-white  hover:bg-[#044421] focus:outline-none focus:ring-2 focus:ring-gray-400 transition duration-300 ease-in-out">Continue</button>
+        <div className="p-8 w-[80%] drop-shadow-md flex bg-[#9ED1C4] border rounded-lg shadow-md form-container  items-center justify-center">
+          <div className='flex-1 flex flex-col items-center justify-center h-full  p-6'>
+            <p className="text-center font-bold text-3xl">Your information has been successfully submitted!</p>
+            <button onClick={handleRefresh} className="text-2xl w-60 rounded-full mt-8 lg:mt-8 bg-[#FAFAFA] bg-opacity-30 px-4 py-2 text-white  hover:bg-[#044421] focus:outline-none focus:ring-2 focus:ring-gray-400 transition duration-300 ease-in-out">
+              Exit</button>
+          </div>
+          <div className='flex-2 h-full p-2'>
+            <iframe
+                src="https://7da3f3b2.sibforms.com/serve/MUIFAIm4d6X-yOQg_yk1vzUfko1R0VK8sHILXehHnm1xYy4xFmNuYhQtsfNhjUudDbbAsiydw6oJM2FhyIWwNBq4GS1hgxg3YcEwk9a_fYBlnb-f29Ys_yNvcJYk-fv9MvxxeGAHV5yyUFbU8hYHzPC1oLbChsaMR1pnvD5Z7caX600GctvygVh3s9qCYlNqDJ6h-WFHfuYcf4jY"
+                allowFullScreen
+                style={{
+                    display: 'block',
+                    margin: '0 auto',
+                    maxWidth: '100%',
+                    border: 'none',
+                    backgroundColor:"red"
+                }}
+                title="Brevo Form"
+                className="w-[600px] h-[780px] lg:h-[620px] rounded-none lg:rounded-xl"
+            ></iframe>
+          </div>
         </div>
       )}
     </div>

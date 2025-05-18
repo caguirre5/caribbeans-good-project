@@ -283,6 +283,10 @@ const CoffeeFarmCMSEditPage: React.FC<CoffeeFarmCMSPageProps> = ({ onClose, init
               <option value="Suchitepéquez">Suchitepéquez</option>
               <option value="Totonicapán">Totonicapán</option>
               <option value="Zacapa">Zacapa</option>
+              <option value="Acatenango">Zacapa</option>
+              <option value="Palencia">Zacapa</option>
+              <option value="Antigua Guatemala">Zacapa</option>
+              <option value="San Juan Sacatepequez">Zacapa</option>
             </select>
           </div>
 
