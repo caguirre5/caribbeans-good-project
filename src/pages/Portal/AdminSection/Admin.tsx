@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import UserList from './UserList';
 import Requests from './Requests';
-import Orders from './Orders'; // Importa el nuevo componente Orders
+// import Orders from './Orders'; // Importa el nuevo componente Orders
 import ProjectsList from './ProjectsList';
 
 const Dashboard: React.FC = () => {
@@ -48,7 +48,7 @@ const Dashboard: React.FC = () => {
         <div className="w-3/4 p-4">
           {activeTab === 'users' && <UserList />}
           {activeTab === 'requests' && <Requests />}
-          {activeTab === 'orders' && <Orders />} {/* Muestra el componente Orders */}
+          {/* {activeTab === 'orders' && <Orders />} */}
           {activeTab === 'projects' && <ProjectsList />} 
         </div>
       </div>

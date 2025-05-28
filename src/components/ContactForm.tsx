@@ -47,10 +47,9 @@ function ContactForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setSubmitted(false); // por si lo vuelven a enviar
+    setSubmitted(false);
   
     const payload = {
-      recipientEmail: 'caguirre.dt@gmail.com',
       firstName: formData.firstName,
       lastName: formData.lastName,
       email: formData.email,
@@ -58,15 +57,21 @@ function ContactForm() {
     };
   
     try {
-      await sendInfo(payload);
-      setSubmitted(true); // ✅ Solo si no hubo error
+      // Primer envío
+      await sendInfo({ recipientEmail: 'caguirre.dt@gmail.com', ...payload });
+  
+      // Segundo envío
+      await sendInfo({ recipientEmail: 'info@caribbeangoods.co.uk', ...payload });
+  
+      setSubmitted(true);
     } catch (error) {
       console.error("❌ Error sending info:", error);
       setSubmitted(false);
     } finally {
-      setLoading(false); // 🕐 Se detiene el loader siempre, al final
+      setLoading(false);
     }
   };
+  
   
   
   

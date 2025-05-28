@@ -218,14 +218,14 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
       });
 
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Error al generar el contrato');
+      if (!response.ok) throw new Error(result.error || 'Error generating contract');
 
-      setMessage(result.message || 'Contrato generado y enviado correctamente');
+      setMessage(result.message || 'Contract succesfully generated');
       setSuccess(true);
 
     } catch (error: any) {
-      console.error("❌ Error al enviar:", error);
-      setMessage(error.message || 'Error inesperado');
+      console.error("❌ Error sending:", error);
+      setMessage(error.message || 'Unexpected error');
     } finally {
       setLoading(false);
     }
@@ -292,13 +292,22 @@ const validateForm = () => {
   return (
     <div className="space-y-4 max-w-xl mx-auto p-4 bg-white shadow-md rounded">
       {success ? (
-        <div className="text-center">
-          <h2 className="text-xl font-bold text-green-700">Contract Sent!</h2>
-          <p className="mt-2 text-gray-700">
-            The contract has been successfully generated and sent to your email. Please review it, sign it,
-            and send it back to <strong>info@caribbeangoods.co.uk</strong>.
+        <div className="text-center text-gray-800">
+          <h2 className="text-xl font-bold text-green-700 mb-4">Contract Sent!</h2>
+          <p className="mb-2">To complete your order, please follow these simple steps:</p>
+          <ol className="list-decimal list-inside text-left max-w-md mx-auto space-y-2">
+            <li>Check your email inbox — we’ve just sent you the contract.</li>
+            <li>Download the attached contract file.</li>
+            <li>Sign the contract (you can sign it digitally or by hand).</li>
+            <li>Send the signed contract to <strong>info@caribbeangoods.co.uk</strong>.</li>
+          </ol>
+          <p className="mt-4 font-medium text-red-600">
+            Please note: your order is not complete yet.
           </p>
-        </div>
+          <p className="text-sm text-gray-700 mt-1">
+            Once you’ve completed all the steps and sent the signed contract by email, our team will review it. If everything is correct, we’ll approve it and confirm that your order is officially accepted.
+          </p>
+        </div>      
       ) : (
       <form onSubmit={handleSubmit} className="space-y-4 max-w-xl mx-auto p-4 bg-white shadow-md rounded">
         <h2 className="text-xl font-bold mb-4 text-center">Legal agreement</h2>

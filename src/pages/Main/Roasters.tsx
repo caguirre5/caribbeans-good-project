@@ -1,7 +1,7 @@
 import Header from "../../components/HeaderControls";
 import Footer from "../../components/Footer";
 import RoastersBusiness from "../../components/RoastersBusinesses";
-import CallbackForm from "../Forms/RoastersCallBackForm";
+// import CallbackForm from "../Forms/RoastersCallBackForm";
 
 import Image1 from '../../assets/Images/All/Hunbatz-39.jpg';
 import Image2 from '../../assets/Images/All/HAR07078.jpg';
@@ -16,8 +16,8 @@ const sections = [
         content: "We are the only green coffee importer based in Scotland, Glasgow to be exact. We offer our roasters fuss-free collection or shipping, avoiding extra charges."
     },
     {
-        title: "30kg Bags",
-        content: "At Caribbean Goods, we supply our green coffee in 30kg bags instead of the industry standard of 70kg. This is perfect for micro-lots and independents, allowing more flexibility and also a much easier time transporting!"
+        title: "24 kg Bags",
+        content: "At Caribbean Goods, we supply our green coffee in 24 kg bags instead of the industry standard of 70 kg. This is perfect for micro-lots and independents, allowing more flexibility and also a much easier time transporting!"
     },
     {
         title: "Easy Ordering",
@@ -101,7 +101,7 @@ const Roasters: React.FC = () => {
                 </div>
                 <img src={Image1} alt="" className="w-11/12 lg:w-[30%] rounded-full shadow-lg max-w-full h-auto object-cover mt-8 lg:ml-10 lg:order-2 order-0" />
             </div>
-            <CallbackForm />
+            {/* <CallbackForm /> */}
             <Footer />
         </div>
     );
