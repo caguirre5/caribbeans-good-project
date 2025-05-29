@@ -8,9 +8,10 @@ import roaster3 from '../assets/Images/Vectors/Logo/roasters-fower.png'
 import roaster4 from '../assets/Images/Vectors/Logo/roasters-thomsons.png'
 import roaster5 from '../assets/Images/Vectors/Logo/BlackPine.png'
 import { TextIconButton } from './Buttons';
+import { useAuth } from '../contexts/AuthContext';
 
 function Roasters() {
-
+    const { currentUser } = useAuth();
 
     return (
         <div className="roastersb-container">
@@ -27,7 +28,17 @@ function Roasters() {
                 <a target='_blank' href='https://www.thomsonscoffee.com/'><img src={roaster4} alt="" /></a>
                 <a target='_blank' href='https://www.blackpine.coffee/'><img src={roaster5} alt="" /></a>
             </div>
-            <TextIconButton text='Join the journey' color='#9ed1c4' route='/Roasters'/>
+            {currentUser ? (
+                        // Usuario autenticado
+                        <>
+                            <TextIconButton text="Join the journey" color="#9ed1c4" route="/Portal" />
+                        </>
+                    ) : (
+                        // Usuario no autenticado
+                        <>
+                            <TextIconButton text="Join the journey" color="#9ed1c4" route="/Signup" />
+                        </>
+                    )}
         </div>
     );
 }

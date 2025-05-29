@@ -52,7 +52,6 @@ const GoogleSheetTable: React.FC = () => {
             <th className="py-2 px-4 border-b bg-[#9da793] text-center">Our Tasting Notes</th>
             <th className="py-2 px-4 border-b bg-[#9da793] text-center">24 KG Sacks</th>
             <th className="py-2 px-8 border-b bg-[#9da793] text-center">Price / kg</th>
-            <th className="py-2 px-4 border-b bg-[#9da793] text-center">12 bags Bundle + 1 Free</th>
           </tr>
         </thead>
         <tbody>
