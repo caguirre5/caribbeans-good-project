@@ -3,6 +3,24 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEllipsis, faSyncAlt } from '@fortawesome/free-solid-svg-icons';
 
+const getRelativeTime = (dateString: string) => {
+  const now = new Date();
+  const past = new Date(dateString);
+  const diff = Math.floor((now.getTime() - past.getTime()) / 1000); // en segundos
+
+  if (diff < 60) return `just now`;
+  if (diff < 3600) {
+    const mins = Math.floor(diff / 60);
+    return `${mins} minute${mins !== 1 ? 's' : ''} ago`;
+  }
+  if (diff < 86400) {
+    const hours = Math.floor(diff / 3600);
+    return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+  }
+  const days = Math.floor(diff / 86400);
+  return `${days} day${days !== 1 ? 's' : ''} ago`;
+};
+
 const UserList: React.FC = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -150,6 +168,15 @@ const UserList: React.FC = () => {
             <div className="flex flex-col lg:flex-row lg:items-center lg:gap-4">
               <h3 className="text-lg font-bold">{user.firstName} {user.lastName}</h3>
               <p className="text-gray-500">{user.email}</p>
+              {user.lastLogin && (
+                <>
+                  <p className="text-gray-500">|</p>
+                  <p className="text-gray-400">
+                    Last login: {getRelativeTime(user.lastLogin)}
+                  </p>
+                </>
+              )}
+
             </div>
             <div className="relative mt-2 lg:mt-0">
               {loadingRoleChange[user.uid] ? (

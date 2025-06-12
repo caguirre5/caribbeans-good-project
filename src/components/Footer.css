@@ -6,9 +6,9 @@
 
 .info-container {
     color: #fff;
-    width: 55vw;
+    width: 45vw;
     display: grid;
-    grid-template-columns: repeat(3, 1fr); /* Tres columnas en la primera fila */
+    grid-template-columns: repeat(2, 1fr); /* Tres columnas en la primera fila */
     gap: 10px; /* Espacio entre los divs */
 }
 

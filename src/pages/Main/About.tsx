@@ -15,7 +15,7 @@ import TeamCarousel from "../../components/TeamCarousel"
 
 import teamMJavier from "../../assets/TeamMembers/Javier.jpg"
 // import teamMMaurice from "../../assets/TeamMembers/Maurice.jpg"
-import teamSofi from "../../assets/TeamMembers/Sofi.jpeg"
+import teamSofi from "../../assets/TeamMembers/Oceane.jpeg"
 // import teamMAlice from "../../assets/TeamMembers/Alice.jpg"
 import teamMBruce from "../../assets/TeamMembers/Bruce.jpg"
 import teamMCristian from "../../assets/TeamMembers/Cristian.jpg"
@@ -35,7 +35,7 @@ function About() {
         { name: 'Cristian Aguirre', position: 'Software Developer', image: teamMCristian },
         // { name: 'Efren', position: 'Videographer', image:teamMJavier },
         // { name: 'Alice Brown', position: 'Illustrator', image:teamMAlice },
-        { name: 'Sofía Saravia', position: 'Leader of Visual Content', image:teamSofi }
+        { name: 'Océane Touillon', position: 'Leader of Visual Content', image:teamSofi }
         // Añadir más miembros del equipo aquí...
       ];
 

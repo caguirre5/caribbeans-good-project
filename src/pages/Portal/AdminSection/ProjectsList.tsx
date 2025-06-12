@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faMinus } from '@fortawesome/free-solid-svg-icons';
+import { getFirestore, doc, getDoc } from "firebase/firestore";
 
 interface Project {
   id: string;
@@ -15,16 +16,51 @@ const ProjectsList: React.FC = () => {
   const { currentUser } = useAuth();
 
   useEffect(() => {
-    const loadProjects = async () => {
-      const loadedProjects: Project[] = [
-        { id: 'planting-trees', name: 'Trees-for-file', fields: { trees: 321 } },
-        { id: 'maia', name: 'MAIA', fields: { donations: 150 } }
-      ];
-      setProjects(loadedProjects);
+    const fetchProjects = async () => {
+      const db = getFirestore();
+  
+      const plantingRef = doc(db, "projects", "planting-trees");
+      const maiaRef = doc(db, "projects", "maia");
+  
+      try {
+        const [plantingSnap, maiaSnap] = await Promise.all([
+          getDoc(plantingRef),
+          getDoc(maiaRef)
+        ]);
+  
+        const loadedProjects: Project[] = [];
+  
+        if (plantingSnap.exists()) {
+          const data = plantingSnap.data();
+          loadedProjects.push({
+            id: "planting-trees",
+            name: "Trees-for-file",
+            fields: {
+              trees: Number(data.trees) || 0
+            }
+          });
+        }
+  
+        if (maiaSnap.exists()) {
+          const data = maiaSnap.data();
+          loadedProjects.push({
+            id: "maia",
+            name: "MAIA",
+            fields: {
+              donations: Number(data.donations) || 0
+            }
+          });
+        }
+  
+        setProjects(loadedProjects);
+      } catch (error) {
+        console.error("Error loading project data:", error);
+      }
     };
-
-    loadProjects();
+  
+    fetchProjects();
   }, []);
+  
 
   // Desplegar solo un proyecto a la vez
   const toggleMenu = (projectId: string) => {

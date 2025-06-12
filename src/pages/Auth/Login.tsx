@@ -1,21 +1,46 @@
 import React, { useState } from 'react';
 import { signInWithEmailAndPassword, sendPasswordResetEmail, signOut, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth, db } from '../../firebase/firebase';
-import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 
 import GoogleLogo from '../../assets/Google.png'
 import CaribbeanLogo from '../../assets/green_logo_icon.png'
 
+const checkEmailExists = async (email: string) => {
+  const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/api/users/check-email`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ email })
+  });
+
+  const data = await response.json();
+  return data.exists;
+};
+
+
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  const { currentUser } = useAuth();
   const navigate = useNavigate();
+
+  const updateLastLogin = async (user: any) => {
+    try {
+      const token = await user.getIdToken();
+      await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/api/users/${user.uid}/last-login`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+    } catch (err) {
+      console.error('Failed to update last login:', err);
+    }
+  };  
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,16 +48,6 @@ const Login: React.FC = () => {
     setLoading(true);
   
     try {
-      // console.log(email)
-      // const signInMethods = await fetchSignInMethodsForEmail(auth, email);
-
-      // console.log(signInMethods)
-  
-      // if (signInMethods.includes("google.com")) {
-      //   setError("This email is registered with Google. Please use Google Sign-In.");
-      //   setLoading(false);
-      //   return;
-      // }
   
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
@@ -40,6 +55,7 @@ const Login: React.FC = () => {
       if (user.emailVerified) {
         const userRef = doc(db, "users", user.uid);
         await updateDoc(userRef, { emailVerified: true });
+        // await updateLastLogin(user);
         navigate("/");
       } else {
         setError("Please verify your email before logging in.");
@@ -106,6 +122,7 @@ const Login: React.FC = () => {
         }
       }
   
+      await updateLastLogin(user);
       // console.log("Google Sign-in successful and user saved to Firestore");
       navigate('/'); // Navega al dashboard o home después del login con Google
     } catch (err: any) {
@@ -115,25 +132,27 @@ const Login: React.FC = () => {
   
 
   const handlePasswordReset = async () => {
+    setError(null);
     if (!email) {
       setError('Please enter your email to reset your password.');
       return;
     }
-
+  
+    const exists = await checkEmailExists(email);
+  
+    if (!exists) {
+      setError("No account found with this email.");
+      return;
+    }
+  
     try {
-      await sendPasswordResetEmail(auth, email);
+      await sendPasswordResetEmail(auth, email.trim().toLowerCase());
       alert('Password reset email sent!');
     } catch (err: any) {
       setError(err.message);
     }
   };
-
-  if (currentUser) {
-    <div className="flex items-center justify-center h-screen bg-[#c9d3c0]">
-        <p className="text-center text-lg">Already logged in as {currentUser.email}</p>
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#044421]"></div>
-    </div>
-  }
+  
   
 
   return (

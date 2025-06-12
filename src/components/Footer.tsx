@@ -15,7 +15,7 @@ function Footer() {
                         info@caribbeangoiods.co.uk
                         </p>
                 </div>
-                <div className='subscribe'>
+                {/* <div className='subscribe'>
                     <h3 className="mb-8 uppercase text-xl tracking-[.30em] text-[#9da793]">Subscribe</h3>
                     <p className='text-xs'>Get the latest news & updates. <br/>Subscribe to our newsletter.</p>
                     <div className='subscription-box'>
@@ -34,13 +34,14 @@ function Footer() {
                         </button>
                     </form>
                     </div>
-                </div>
-                <div className='guatemala'>
+                </div> */}
+                {/* <div className='guatemala'>
                     <h3 className="mb-8 uppercase text-xl tracking-[.30em] text-[#9da793]">Guatemala</h3>
                     <p className='text-[0.95rem]'>Km 22.1 Carretera al Salvador. <br/>Eco Plaza. Bodega 315. <br/>Guatemala. 01062</p>
-                </div>
+                </div> */}
                 <div className='flex flex-col justify-center'>
-                    <SocialMedia 
+                <h3 className="mb-8 uppercase text-xl tracking-[.30em] text-[#9da793]">Social media</h3>
+                <SocialMedia 
                         instagramLink="https://www.instagram.com/caribbeangoods/" 
                         facebookLink="https://www.facebook.com/caribbeangoodsuk/posts/2171011849881565/"
                         linkedinLink="https://www.linkedin.com/company/caribbean-goods-ltd/?originalSubdomain=uk"

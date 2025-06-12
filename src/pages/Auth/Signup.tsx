@@ -17,6 +17,20 @@ const Signup: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [verificationEmailSent, setVerificationEmailSent] = useState(false);
 
+  const updateLastLogin = async (user: any) => {
+    try {
+      const token = await user.getIdToken();
+      await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/api/users/${user.uid}/last-login`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+    } catch (err) {
+      console.error('Failed to update last login:', err);
+    }
+  }; 
+
   const navigate = useNavigate();
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -104,44 +118,29 @@ const Signup: React.FC = () => {
         roles: ["user"],
       });
 
-      // console.log("Google Sign-in successful");
+      const recipients = ['caguirre.dt@gmail.com', 'info@caribbeangoods.co.uk'];
 
-      // try {
-      //   const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/resourcelibray/sendalert`, {
-      //     method: 'POST',
-      //     headers: {
-      //       'Content-Type': 'application/json',
-      //     },
-      //     body: JSON.stringify({
-      //       recipientEmail: email,
-      //       alertMessage: 'Welcome to caribbean goods',
-      //     }),
-      //   });
-    
-      //   const result = await response.text();
-      //   console.log(result)
-      // } catch (err) {
-      //   console.error('Error:', err);
-      // }
+      for (const email of recipients) {
+        try {
+          const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/resourcelibray/sendalert`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              recipientEmail: email,
+              alertMessage: 'An user has signed up to the portal',
+            }),
+          });
 
-      try {
-        const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/resourcelibray/sendalert`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            recipientEmail: 'caguirre.dt@gmail.com',
-            alertMessage: 'An user has signed up to the portal',
-          }),
-        });
-    
-        const result = await response.text();
-        console.log(result)
-      } catch (err) {
-        console.error('Error:', err);
+          const result = await response.text();
+          console.log(`Alert sent to ${email}:`, result);
+        } catch (err) {
+          console.error(`Error sending alert to ${email}:`, err);
+        }
       }
 
+      await updateLastLogin(result.user);
       navigate('/'); 
     } catch (err: any) {
       setError(err.message);
