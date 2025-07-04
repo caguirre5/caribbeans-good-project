@@ -13,14 +13,6 @@ import imageCircle2 from "../../assets/Images/All/Medina-28 - Copy.jpg"
 
 import TeamCarousel from "../../components/TeamCarousel"
 
-import teamMJavier from "../../assets/TeamMembers/Javier.jpg"
-// import teamMMaurice from "../../assets/TeamMembers/Maurice.jpg"
-import teamSofi from "../../assets/TeamMembers/Oceane.jpeg"
-// import teamMAlice from "../../assets/TeamMembers/Alice.jpg"
-import teamMBruce from "../../assets/TeamMembers/Bruce.jpg"
-import teamMCristian from "../../assets/TeamMembers/Cristian.jpg"
-import teamHarold from "../../assets/TeamMembers/Harold.jpeg"
-
 import TeamCard from "../../components/TeamCard"
 
 import { getFirestore, collection, getDocs } from "firebase/firestore";

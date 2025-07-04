@@ -73,6 +73,8 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
 
   const [errors, setErrors] = useState<{ [K in keyof Replacements]?: boolean }>({});
 
+  const pricePerKgValue = 24
+
   useEffect(() => {
     const SHEET_ID = '1ee9mykWz7RPDuerdYphfTqNRmDaJQ6sNomhyppCt2mE'; // Reemplaza con el ID de tu hoja de cálculo
     const API_KEY = 'AIzaSyCFEBX2kLtYtyCBFrcCY4YN_uutqqQPC-k'; // Reemplaza con tu clave de API
@@ -197,7 +199,7 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
       ...formData,
       ENTITY: formData.CUSTOMERCOMPANYNAME,
       SIGNATORYNAME: formData.NAME,
-      TOTALAMOUNT: formData.AMOUNT ? (parseInt(formData.AMOUNT) * 24).toString() : '0',
+      TOTALAMOUNT: formData.AMOUNT ? (parseInt(formData.AMOUNT) * pricePerKgValue).toString() : '0',
       BAGS:bagLabel,
       PREFIX: formData.FREQUENCY === 'annually' ? 'an' : 'a',
       DATE: todayUK,
@@ -466,7 +468,7 @@ const validateForm = () => {
               type="text"
               value={
                 formData.AMOUNT && formData.PRICE
-                  ? (parseInt(formData.AMOUNT) * 30 * parseFloat(formData.PRICE)).toFixed(2)
+                  ? (parseInt(formData.AMOUNT) * pricePerKgValue * parseFloat(formData.PRICE)).toFixed(2)
                   : '0.00'
               }
               disabled
@@ -481,7 +483,7 @@ const validateForm = () => {
             type="text"
             value={
               formData.AMOUNT
-                ? `${parseInt(formData.AMOUNT) * 24} kg`
+                ? `${parseInt(formData.AMOUNT) * pricePerKgValue} kg`
                 : '0 kg'
             }
             disabled
