@@ -23,21 +23,39 @@ import teamHarold from "../../assets/TeamMembers/Harold.jpeg"
 
 import TeamCard from "../../components/TeamCard"
 
+import { getFirestore, collection, getDocs } from "firebase/firestore";
+import { useEffect, useState } from "react";
+
+
 // import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 // import { faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons';
 
 function About() {
-    const teamMembers = [
-        { name: 'Javier Gutierrez', position: 'Founder & CEO', image: teamMJavier },
-        // { name: 'Mr. Maurice Taylor OBE', position: 'Advisory Board', image:teamMMaurice },
-        { name: 'Bruce Lean', position: 'Consultant', image:teamMBruce },
-        { name: 'Harold', position: 'Photographer', image:teamHarold }, 
-        { name: 'Cristian Aguirre', position: 'Software Developer', image: teamMCristian },
-        // { name: 'Efren', position: 'Videographer', image:teamMJavier },
-        // { name: 'Alice Brown', position: 'Illustrator', image:teamMAlice },
-        { name: 'Océane Touillon', position: 'Leader of Visual Content', image:teamSofi }
-        // Añadir más miembros del equipo aquí...
-      ];
+    const [teamMembers, setTeamMembers] = useState<{ name: string; position: string; image: string; }[]>([]);
+
+    useEffect(() => {
+        const fetchTeamMembers = async () => {
+            try {
+                const db = getFirestore();
+                const teamCollection = collection(db, "teamMembers");
+                const snapshot = await getDocs(teamCollection);
+                const members = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return {
+                        name: data.name || "Unnamed",
+                        position: data.position || "Position",
+                        image: data.photoUrl || "", // asegúrate que sea el campo correcto
+                    };
+                });
+                setTeamMembers(members);
+            } catch (error) {
+                console.error("Error fetching team members:", error);
+            }
+        };
+
+        fetchTeamMembers();
+    }, []);
+
 
     return (
         <div>

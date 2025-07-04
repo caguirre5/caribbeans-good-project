@@ -30,6 +30,7 @@ const UserList: React.FC = () => {
   const { currentUser } = useAuth();
   const [modalUser, setModalUser] = useState<string | null>(null);
   const [confirmChecked, setConfirmChecked] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const handleDelete = async (userUid: string) => {
     if (userUid === currentUser?.uid) {
@@ -103,7 +104,11 @@ const UserList: React.FC = () => {
       document.body.style.overflow = '';
     };
   }, [modalUser]);
-  
+
+  const filteredUsers = users.filter(user =>
+    `${user.firstName} ${user.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const toggleRoasterRole = async (userUid: string, hasRoasterRole: boolean) => {
     try {
@@ -155,12 +160,22 @@ const UserList: React.FC = () => {
     <div className="bg-white p-4 rounded-lg shadow-md">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">Active Users</h2>
-        <button onClick={fetchUsers} className="text-gray-500 hover:text-gray-700">
-          <FontAwesomeIcon icon={faSyncAlt} className="h-5 w-5" />
-        </button>
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            placeholder="Search users..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="border border-gray-300 px-2 py-1 rounded-md text-sm"
+          />
+          <button onClick={fetchUsers} className="text-gray-500 hover:text-gray-700">
+            <FontAwesomeIcon icon={faSyncAlt} className="h-5 w-5" />
+          </button>
+        </div>
       </div>
-      {users.length > 0 ? (
-        users.map((user) => (
+
+      {filteredUsers.length > 0 ? (
+        filteredUsers.map((user) => (
           <div 
             key={user.uid} 
             className="flex flex-col lg:flex-row lg:justify-between items-center mb-4 p-2 border-b"

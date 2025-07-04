@@ -3,6 +3,8 @@ import Footer from "../../components/Footer"
 
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 
+
+
 import { motion } from "framer-motion"
 
 import image1 from "../../assets/Images/All/HAR07128.jpg"
@@ -25,7 +27,7 @@ import logo2 from "../../assets/Images/Vectors/Logo/MAIA_LOGO.png"
 
 //Components
 import SimpleContentSection from "../../components/SimpleContentSection"
-import { generateRandomBorderRadius } from "../../components/utilsFunctions"
+// import { generateRandomBorderRadius } from "../../components/utilsFunctions"
 import { TextIconButton } from "../../components/Buttons"
 import { useEffect, useState } from "react"
 
@@ -57,39 +59,58 @@ function Ethos(){
 
     const [treeData, setTreeData] = useState<TreeData>(defaultTreeData);
     const [maiaData, setMaiaData] = useState<number>(defaultMaiaData);
+    const [colegioData, setColegioData] = useState<number>(0);
+    const [hunchouenData, setHunchouenData] = useState<number>(0);
+    // const [othersData, setOthersData] = useState<number>(0);
+
 
     useEffect(() => {
-        const fetchTreeData = async () => {
+        const fetchProjectsData = async () => {
             const db = getFirestore();
-            const docRef = doc(db, "projects", "planting-trees");
-            const docSnap = await getDoc(docRef);
-
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                // Asegura que los datos son del tipo correcto
-                const newData: TreeData = {
-                    trees: Number(data.trees) || 0,  // Convierte a número y usa 0 si la conversión falla
+    
+            // Planting Trees
+            const plantingRef = doc(db, "projects", "planting-trees");
+            const plantingSnap = await getDoc(plantingRef);
+            if (plantingSnap.exists()) {
+                const data = plantingSnap.data();
+                setTreeData({
+                    trees: Number(data.trees) || 0,
                     money: Number(data.money) || 0
-                };
-                setTreeData(newData);
-            } else {
-                console.log("No such document!");
+                });
             }
-
-            const maiaDocRef = doc(db, "projects", "maia");
-            const maiaDocSnap = await getDoc(maiaDocRef);
-
-            if (maiaDocSnap.exists()) {
-                const maiaDataValue = Number(maiaDocSnap.data().donations) || 0;
-                setMaiaData(maiaDataValue);
-            } else {
-                console.log("No such document in maia!");
+    
+            // MAIA
+            const maiaRef = doc(db, "projects", "maia");
+            const maiaSnap = await getDoc(maiaRef);
+            if (maiaSnap.exists()) {
+                setMaiaData(Number(maiaSnap.data().donations) || 0);
             }
+    
+            // Colegio
+            const colegioRef = doc(db, "projects", "colegio");
+            const colegioSnap = await getDoc(colegioRef);
+            if (colegioSnap.exists()) {
+                setColegioData(Number(colegioSnap.data().donations) || 0);
+            }
+    
+            // Hunchouen
+            const hunchRef = doc(db, "projects", "hunchouen");
+            const hunchSnap = await getDoc(hunchRef);
+            if (hunchSnap.exists()) {
+                setHunchouenData(Number(hunchSnap.data().donations) || 0);
+            }
+    
+            // Other Coffees
+            // const otherRef = doc(db, "projects", "othercoffees");
+            // const otherSnap = await getDoc(otherRef);
+            // if (otherSnap.exists()) {
+            //     setOthersData(Number(otherSnap.data().donations) || 0);
+            // }
         };
-        
-
-        fetchTreeData();
+    
+        fetchProjectsData();
     }, []);
+    
 
     return (
         <div className="bg-[#c9d3c0]">
@@ -99,9 +120,9 @@ function Ethos(){
                 <p className="text-center">Our Ethos & Projects</p>
             </div>
             <div className="flex flex-col lg:flex-row min-h-screen">
-                <div className="flex-1 flex flex-col py-20 lg:py-0 justify-center bg-[#c9d3c0] text-[#044421]">
-                    <h1 className="text-center text-5xl mb-8" style={{fontFamily:'KingsThing'}}>Our<br/> Story</h1>
-                    <motion.p className="px-10 lg:px-[22%] text-xl lg:text-2xl" style={{fontFamily:'KingsThing'}}
+                <div className="flex-1 flex flex-col py-20 lg:py-0 justify-center items-center bg-[#c9d3c0] text-[#044421]">
+                    <h1 className="text-center text-5xl mb-8" style={{fontFamily:'KingsThing'}}>Our<br className="lg:hidden"/> Story</h1>
+                    <motion.p className="px-10 lg:px-[18%] text-lg lg:text-xl mb-12" style={{fontFamily:'KingsThing'}}
                         variants={fadeInAnimationLeftVariants}
                         initial='initial'
                         whileInView='animate'
@@ -113,6 +134,7 @@ function Ethos(){
                         <br/><br/>
                         This strategy allows us to cultivate strong bonds with our farming partners and ensures the establishment of secure and ethical labour practices for our farmers and employees. We hold these connections dear and are deeply dedicated to upholding sustainability and responsible business practices.
                     </motion.p>
+                    <TextIconButton text="Learn more" blank="https://www.youtube.com/watch?v=2rOmUxFbNgA" />
                 </div>
                 <div className="flex-1 bg-[#a6b09c] h-auto">
                     <img src={image2} alt="" className="w-full h-auto lg:h-full lg:w-full object-cover" />
@@ -175,27 +197,58 @@ function Ethos(){
                 textColor="#ffffff"
                 titleColor="#044421"
             />
-            <div className="bg-[#fffaf5] lg:bg-[#c9d3c0] px-8 py-20 flex flex-col justify-center items-center">
+            <div className="bg-[#fcf9f4]  px-8 py-20 flex flex-col justify-center items-center">
                 <h1 className="text-5xl lg:text-8xl text-[#044421]" style={{fontFamily:'KingsThing'}}>Social Impact</h1>
-                <div className="flex flex-col lg:flex-row justify-center items-center py-12">
-                    <div className="lg:w-[30%] flex flex-col justify-center items-start lg:mr-10 order-1">
-                        <a  target="_blank"><img src={logo2} alt="" className="w-[80%]"/></a>
-                        {/* <h3 className="text-xl font-bold text-[#044421] py-8">Planting Trees in Scotland</h3> */}
 
-                        <div className="my-4 text-[#044421] ">
-                            {/* <h4 className="text-2xl font-normal">
-                                <span className="font-semibold">{treeData.trees}</span> Trees in this grove
-                            </h4> */}
-                            <h4 className="text-2xl font-bold">
-                                We have donated $<span className="font-semibold">{maiaData.toFixed(2)}</span> to this entity.
-                            </h4>
+
+                <div className="flex flex-col  justify-center items-center py-12">
+                    <div className="flex flex-col lg:flex-row items-center justify-center ">
+                        <div className="lg:w-[30%] flex flex-col justify-center items-center lg:items-start lg:mr-10 order-1 lg:order-0 ">
+                            <a  target="_blank" href="https://www.maiaimpact.org/"><img src={logo2} alt="" className="lg:w-[80%]"/></a>
+                            {/* <h3 className="text-xl font-bold text-[#044421] py-8">Planting Trees in Scotland</h3> */}
+
+                            <div className="my-4 text-[#044421] ">
+                                {/* <h4 className="text-2xl font-normal">
+                                    <span className="font-semibold">{treeData.trees}</span> Trees in this grove
+                                </h4> */}
+                                <h4 className="text-xl lg:text-2xl text-center lg:text-start font-bold">
+                                    We have donated $<span className="font-semibold">{maiaData.toFixed(2)}</span> USD to MAIA since October 2024 — and counting!. This support comes from three main streams:
+                                </h4>
+                            </div>
+                        </div>
+                        {/* style={{ borderRadius: generateRandomBorderRadius() }} */}
+                        <img src={project1} alt="" className="w-11/12 lg:w-[30%] rounded-lg shadow-lg max-w-full h-auto object-cover lg:order-1 order-0 mb-6 lg:mb-0 "/>
+                    </div>
+
+                    <div className="lg:w-[62%] flex flex-col justify-center items-start mt-8">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 text-[#044421]">
+                            <div className="bg-[#c9d3c0] p-6 pt-10 shadow-lg rounded-xl">
+                                <p className="text-[#e6a318] font-bold text-lg mb-1">01.</p>
+                                <h3 className="font-semibold mb-1 text-lg">El Colegio Sales</h3>
+                                <p>Exclusive partnership between <a target="_blank" href="https://www.thomsonscoffee.com/" className="hover:underline">Thomsons</a> and Caribbean Goods, where £<span className="font-semibold">{colegioData.toFixed(2)}</span> per kg goes to MAIA.</p>
+                            </div>
+                            <div className="bg-[#c9d3c0] p-6 pt-10 shadow-lg rounded-xl">
+                                <p className="text-[#e6a318] font-bold text-lg mb-1">02.</p>
+                                <h3 className="font-semibold mb-1 text-lg">Hunchouen Sales</h3>
+                                <p>Used by multiple roasters, also generating £<span className="font-semibold">{hunchouenData.toFixed(2)}</span> per kg in donations.</p>
+                            </div>
+                            <div className="bg-[#c9d3c0] p-6 pt-10 shadow-lg rounded-xl">
+                                <p className="text-[#e6a318] font-bold text-lg mb-1">03.</p>
+                                <h3 className="font-semibold mb-1 text-lg">Other Coffees</h3>
+                                <p>Roasters who love MAIA donate through us, even if the coffee isn’t tied to a specific program.</p>
+                            </div>
                         </div>
 
-                        <p className="text-[#044421] mb-8 ">We believe that with quality education as a tool against adversity, these bold trailblazers will reshape their futures, uplift their communities, and create a better world for all of us. We do it through our flagship program, the MAIA Impact School, which is changing the game for education in Guatemala. We call our students Girl Pioneers because many are the first in their families to continue their education and begin to break cycles of generational poverty. </p>
-                        {/* <TextIconButton text="See the grove" blank="https://treesforlife.org.uk/groves/474546/"/> */}
-                        <TextIconButton text="See the project" blank="https://www.maiaimpact.org/"/>
+                        <p className="text-[#044421] mb-8">
+                            As a reference, $7.50 provides 5 meals to a Girl Pioneer at MAIA. With our total donations, we’ve helped fund approximately 
+                            <span className="font-semibold"> {(Number(maiaData) / 7.5 * 5).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> meals — nourishing futures one cup at a time.
+                            <br/><br/>
+                            We believe that with quality education as a tool against adversity, these bold trailblazers will reshape their futures, uplift their communities, and create a better world for all of us. MAIA’s flagship program, the MAIA Impact School, is changing the game for education in Guatemala. We call their students Girl Pioneers, because many are the first in their families to pursue an education and break the cycle of generational poverty.
+                        </p>
+
+                        <TextIconButton text="See the project" blank="https://www.youtube.com/watch?v=BC914v2rtU8" />
                     </div>
-                    <img src={project1} alt="" className="w-11/12 lg:w-[30%] rounded-lg shadow-lg max-w-full h-auto object-cover mt-8 lg:mr-10 order-0 " style={{ borderRadius: generateRandomBorderRadius() }}/>
+
                 </div>
                 <div className="flex flex-col lg:flex-row justify-center items-center py-12">
                     <div className="lg:w-[30%] lg:mr-10 order-1">
@@ -214,7 +267,7 @@ function Ethos(){
                         <p className="text-[#044421] mb-8">Pilgrims Coffee is a Coffee house and Roastery based on Holy Island, a small tidal island off the coast of Northumbria. We donated 350 kg of green coffee to them with one ask to do something great for the planet. They returned and told us our donation helped them plant 200 trees in the Scottish highland through the fantastic charity, Trees for Life! You can check out the change already made and even get involved and donate your tree! Trees For Life UK is a charity committed to rewilding the Scottish highlands.</p>
                         <TextIconButton text="See the grove" blank="https://treesforlife.org.uk/groves/474546/"/>
                     </div>
-                    <img src={project2} alt="" className="w-11/12 lg:w-[30%] rounded-lg shadow-lg max-w-full h-auto object-cover mt-8 lg:ml-10 order-0 lg:order-2" style={{ borderRadius: generateRandomBorderRadius() }} />
+                    <img src={project2} alt="" className="w-11/12 lg:w-[30%] rounded-lg shadow-lg max-w-full h-auto object-cover mt-8 lg:ml-10 order-0 lg:order-2" />
                 </div>
 
                 {/* <div className="flex flex-col lg:flex-row justify-center items-center py-12">

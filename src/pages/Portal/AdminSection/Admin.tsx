@@ -3,9 +3,11 @@ import UserList from './UserList';
 import Requests from './Requests';
 // import Orders from './Orders'; // Importa el nuevo componente Orders
 import ProjectsList from './ProjectsList';
+import ContractsDashboard from './ContractDashboard';
+import TeamMembersDashboard from './TeamDashboard';
 
 const Dashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'users' | 'requests' | 'orders' | 'projects'>('users'); // Agrega 'orders' como una opción
+  const [activeTab, setActiveTab] = useState<'users' | 'requests' | 'orders' | 'projects' | 'contracts' | 'teammembers'>('users'); // Agrega 'orders' como una opción
 
   return (
     <div 
@@ -30,17 +32,30 @@ const Dashboard: React.FC = () => {
           >
             Requests
           </button>
-          <button
+          {/* <button
             className={`block w-full text-left px-4 py-2 ${activeTab === 'orders' ? 'bg-gray-300' : ''}`} // Nueva pestaña
             onClick={() => setActiveTab('orders')}
           >
             Orders
-          </button>
+          </button> */}
           <button
             className={`block w-full text-left px-4 py-2 ${activeTab === 'projects' ? 'bg-gray-300' : ''}`} // Nueva pestaña
             onClick={() => setActiveTab('projects')}
           >
             Projects
+          </button>
+          <button
+            className={`block w-full text-left px-4 py-2 ${activeTab === 'contracts' ? 'bg-gray-300' : ''}`} // Nueva pestaña
+            onClick={() => setActiveTab('contracts')}
+          >
+            Contracts
+          </button>
+
+          <button
+            className={`block w-full text-left px-4 py-2 ${activeTab === 'teammembers' ? 'bg-gray-300' : ''}`} // Nueva pestaña
+            onClick={() => setActiveTab('teammembers')}
+          >
+            Team members
           </button>
         </div>
 
@@ -50,6 +65,9 @@ const Dashboard: React.FC = () => {
           {activeTab === 'requests' && <Requests />}
           {/* {activeTab === 'orders' && <Orders />} */}
           {activeTab === 'projects' && <ProjectsList />} 
+          
+          {activeTab === 'contracts' && <ContractsDashboard />} 
+          {activeTab === 'teammembers' && <TeamMembersDashboard />} 
         </div>
       </div>
     </div>

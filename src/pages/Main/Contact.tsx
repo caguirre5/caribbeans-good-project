@@ -6,10 +6,10 @@ import LeafletMapComponent from "../../components/LeafletMapComponent"
 
 function Contact() {
     return (
-        <div className="overflow-x-hidden">
+        <div className="overflow-x-hidden bg-[#fefaf4]">
             <Header/>
             {/* Welcoming Text */}
-            <div className="mt-20">
+            <div className="mt-20 ">
                 <div className="flex flex-col items-center justify-evenly py-8" style={{height:'40 vh'}}>
                     <p className="text-base text-[#779da0]" >Let's Connect</p>
                     <h2 className="text-6xl text-[#044421]" style={{fontFamily: 'KingsThing'}}>Contact</h2>

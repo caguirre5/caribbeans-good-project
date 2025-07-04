@@ -21,11 +21,18 @@ const ProjectsList: React.FC = () => {
   
       const plantingRef = doc(db, "projects", "planting-trees");
       const maiaRef = doc(db, "projects", "maia");
+      
+      const colegioRef = doc(db, "projects", "colegio");
+      const hunchouenRef = doc(db, "projects", "hunchouen");
+      const othersRef = doc(db, "projects", "othercoffees");
   
       try {
-        const [plantingSnap, maiaSnap] = await Promise.all([
+        const [plantingSnap, maiaSnap, colegioSnap, hunchouenSnap, othersSnap] = await Promise.all([
           getDoc(plantingRef),
-          getDoc(maiaRef)
+          getDoc(maiaRef),
+          getDoc(colegioRef),
+          getDoc(hunchouenRef),
+          getDoc(othersRef),
         ]);
   
         const loadedProjects: Project[] = [];
@@ -46,6 +53,39 @@ const ProjectsList: React.FC = () => {
           loadedProjects.push({
             id: "maia",
             name: "MAIA",
+            fields: {
+              donations: Number(data.donations) || 0
+            }
+          });
+        }
+
+        if (colegioSnap.exists()) {
+          const data = colegioSnap.data();
+          loadedProjects.push({
+            id: "colegio",
+            name: "El Colegio",
+            fields: {
+              donations: Number(data.donations) || 0
+            }
+          });
+        }
+
+        if (hunchouenSnap.exists()) {
+          const data = hunchouenSnap.data();
+          loadedProjects.push({
+            id: "hunchouen",
+            name: "Hunchouen",
+            fields: {
+              donations: Number(data.donations) || 0
+            }
+          });
+        }
+
+        if (othersSnap.exists()) {
+          const data = othersSnap.data();
+          loadedProjects.push({
+            id: "othercoffees",
+            name: "Other coffees",
             fields: {
               donations: Number(data.donations) || 0
             }

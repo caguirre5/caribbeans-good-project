@@ -9,6 +9,22 @@ import { db } from './firebase/firebase'; // Importa tu configuración de Fireba
 import Forum from './pages/Portal/Forum';
 import MyOrders from './pages/Portal/Orders';
 
+
+export const updateLastLogin = async (user: any) => {
+  try {
+    const token = await user.getIdToken();
+    await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/api/users/${user.uid}/last-login`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+  } catch (err) {
+    console.error('Failed to update last login:', err);
+  }
+};
+
+
 const ProtectedRoutes: React.FC = () => {
   const { currentUser } = useAuth(); // Usa useAuth para acceder al usuario autenticado
   const [isActive, setIsActive] = useState<boolean | null>(null); // Estado para guardar si el usuario está activo
@@ -20,6 +36,7 @@ const ProtectedRoutes: React.FC = () => {
         if (userDoc.exists()) {
           const userData = userDoc.data();
           setIsActive(userData?.isActive || false);
+          await updateLastLogin(currentUser);
         } else {
           setIsActive(false); // Usuario no encontrado, tratar como inactivo
         }

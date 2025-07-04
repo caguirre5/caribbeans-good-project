@@ -28,20 +28,6 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const updateLastLogin = async (user: any) => {
-    try {
-      const token = await user.getIdToken();
-      await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/api/users/${user.uid}/last-login`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-    } catch (err) {
-      console.error('Failed to update last login:', err);
-    }
-  };  
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -121,8 +107,6 @@ const Login: React.FC = () => {
           }
         }
       }
-  
-      await updateLastLogin(user);
       // console.log("Google Sign-in successful and user saved to Firestore");
       navigate('/'); // Navega al dashboard o home después del login con Google
     } catch (err: any) {

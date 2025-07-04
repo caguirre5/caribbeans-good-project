@@ -44,21 +44,42 @@ const Roasters: React.FC = () => {
     return (
         <div className="min-h-screen">
             <Header />
-            <div className="bg-[#fcf9f4] flex flex-col items-center p-8 lg:flex-row lg:flex-wrap lg:justify-between lg:py-20 lg:px-[20%] pt-20 lg:pt-24 text-[#044421] pb-8">
+            <div className="bg-[#fcf9f4] lg:min-h-screen flex flex-col items-center p-8 lg:flex-row lg:flex-wrap lg:justify-between lg:py-20 lg:px-[20%] pt-20 lg:pt-24 text-[#044421] pb-8">
                 <h1 className="text-4xl lg:text-5xl font-bold mb-6 lg:w-full lg:text-center py-8" style={{ fontFamily: 'KingsThing' }}>
                     Working with Us
                 </h1>
-                {sections.map((section, index) => (
-                    <div key={index} className="w-full mb-6 lg:w-1/3 lg:mb-0 lg:px-4">
-                        <div className="flex flex-row mb-2">
-                            <h2 className="text-xl font-bold mr-4" style={{ fontFamily: 'KingsThing' }}>{section.title}</h2>
+                <div className="flex flex-col lg:flex-row lg:flex-wrap lg:items-start lg:justify-between gap-y-6 ">
+                    {sections.map((section, index) => (
+                        <div
+                        key={index}
+                        className="w-full mb-6 lg:w-1/3 lg:mb-0 lg:px-4"
+                        >
+                        <div className="flex flex-row mb-2 ">
+                            <h2 className="text-xl font-bold mr-4" style={{ fontFamily: 'KingsThing' }}>
+                            {section.title}
+                            </h2>
                             {section.href && (
-                                <IconButton route={'/Ethos'} />
+                            <IconButton route={'/Ethos'} />
                             )}
                         </div>
                         <p className="text-base">{section.content}</p>
-                    </div>
-                ))}
+                        </div>
+                    ))}
+                </div>
+
+
+                <div className="w-full flex justify-center mt-10 lg:mt-0">   
+                    {currentUser ? (
+                        // Usuario autenticado
+                        <>
+                            <TextIconButton text="Go to Portal" color="#e6a318" textColor="#FAFAFA" route="/portal" />
+                        </>
+                    ) : (
+                        // Usuario no autenticado
+                        <TextIconButton text="Become a roaster" color="#e6a318" textColor="#FAFAFA" route="/login" />
+                            
+                    )}
+                </div>
             </div>
             
             {/* Sección Actualizada */}
