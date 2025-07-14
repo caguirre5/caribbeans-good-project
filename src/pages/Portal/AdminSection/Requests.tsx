@@ -43,9 +43,9 @@ const Requests: React.FC = () => {
     fetchUsers();
   }, []);
 
-  const handleAccept = async (userUid: string) => {
+  const handleAccept = async (userUid: string, userEmail: string, userName: string) => {
     setUpdating((prev) => ({ ...prev, [userUid]: 'accept' }));
-    
+  
     try {
       const token = await currentUser?.getIdToken();
       const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/api/users/${userUid}/activate`, {
@@ -55,9 +55,15 @@ const Requests: React.FC = () => {
           'Authorization': `Bearer ${token}`
         }
       });
-
+  
       if (response.ok) {
+        // 1️⃣ Eliminar usuario de la lista local
         setUsers(users.filter((user) => user.uid !== userUid));
+  
+        // 2️⃣ Enviar correo de activación
+        await handleSendWelcomeEmail(userEmail, userName);
+
+  
       } else {
         alert("Failed to activate user");
       }
@@ -68,6 +74,7 @@ const Requests: React.FC = () => {
       setUpdating((prev) => ({ ...prev, [userUid]: null }));
     }
   };
+  
 
   const handleDecline = async (userUid: string) => {
     setUpdating((prev) => ({ ...prev, [userUid]: 'decline' }));
@@ -95,6 +102,35 @@ const Requests: React.FC = () => {
     }
   };
 
+  const handleSendWelcomeEmail = async (recipientEmail: string, userName: string) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/email/sendWelcomeEmail`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          recipientEmail,
+          userName,
+        }),
+      });
+  
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error sending welcome email:', errorText);
+        alert("Failed to send welcome email.");
+      } else {
+        console.log("Welcome email sent successfully!");
+      }
+    } catch (error) {
+      console.error("Error sending welcome email:", error);
+      alert("An error occurred while sending the welcome email.");
+    }
+  };
+  
+  
+  
+
   if (loading) return <p>Loading users...</p>;
   if (error) return <p>{error}</p>;
 
@@ -118,7 +154,7 @@ const Requests: React.FC = () => {
             </div>
             <div className="flex gap-2">
               <button
-                onClick={() => handleAccept(user.uid)}
+                onClick={() => handleAccept(user.uid, user.email, `${user.firstName} ${user.lastName}`)}
                 className="mt-2 lg:mt-0 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded"
                 disabled={updating[user.uid] === 'accept'}
               >

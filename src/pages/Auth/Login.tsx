@@ -85,6 +85,23 @@ const Login: React.FC = () => {
           roles: ["user"],
         });
 
+        try {
+          const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/email/sendAccessRequestEmail`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              recipientEmail: user.email,
+            }),
+          });
+  
+          const result = await response.text();
+          console.log(`Alert sent`, result);
+        } catch (err) {
+          console.error(`Error sending alert`, err);
+        }
+
         const recipients = ['caguirre.dt@gmail.com', 'info@caribbeangoods.co.uk'];
 
         for (const email of recipients) {

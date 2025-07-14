@@ -16,6 +16,7 @@ const ContractLoader: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -112,6 +113,7 @@ const ContractLoader: React.FC = () => {
           name: `${selectedUser.firstName} ${selectedUser.lastName}`,
           email: selectedUser.email,
           s3Url: s3Url,
+          fileKey: uploadData.fileKey
         }),
       });
   

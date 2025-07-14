@@ -1,155 +1,67 @@
-import React, { useState, useEffect } from 'react';
-import { User } from 'firebase/auth';
-import { db } from '../firebase/firebase'; // Asegúrate de importar tu instancia de Firestore
-import { doc, getDoc } from 'firebase/firestore';
+import React, { useState } from 'react';
 
-interface Replacements {
-  ENTITY: string;
-  CITY: string;
-  COMPNUMBER: string;
-  REGISTEREDOFFICE: string;
-  CUSTOMERCOMPANYNAME: string;
-  NAME: string;
-  NUMBER: string;
-  EMAIL: string;
-  AMOUNT: string;
-  VARIETY: string;
-  PRICE: string;
-  MONTHS: string;
-  MONTH1: string;
-  YEAR1: string;
-  MONTH2: string;
-  YEAR2: string;
-  FREQUENCY: string;
-  DIVISION: string;
-  SIGNATORYNAME: string;
-}
-
-interface Props {
-  currentUser: User | null;
-}
-
-const initialFormState: Replacements = {
-  ENTITY: '',
-  CITY: '',
-  COMPNUMBER: '',
-  REGISTEREDOFFICE: '',
-  CUSTOMERCOMPANYNAME: '',
-  NAME: '',
-  NUMBER: '',
-  EMAIL: '',
-  AMOUNT: '',
-  VARIETY: '',
-  PRICE: '',
-  MONTHS: '',
-  MONTH1: '',
-  YEAR1: '',
-  MONTH2: '',
-  YEAR2: '',
-  FREQUENCY: '',
-  DIVISION: '',
-  SIGNATORYNAME: '',
-};
-
-const ContractForm: React.FC<Props> = ({ currentUser }) => {
-  const [formData, setFormData] = useState<Replacements>(initialFormState);
-  const [loading, setLoading] = useState(false);
+const EmailTestForm: React.FC = () => {
+  const [email, setEmail] = useState('');
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      if (!currentUser) {
-        console.log("🔴 currentUser no está definido");
-        return;
-      }
-      try {
-        const userRef = doc(db, 'users', currentUser.uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          const userData = userSnap.data();
-          console.log("📥 Datos del usuario:", userData);
-
-          setFormData((prev) => ({
-            ...prev,
-            ENTITY: userData.company || '',
-            CITY: userData.companyCity || '',
-            REGISTEREDOFFICE: userData.companyAddress || '',
-            CUSTOMERCOMPANYNAME: userData.company || '',
-            NAME: `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
-            EMAIL: userData.email || '',
-            NUMBER: userData.phoneNumber || '',
-            SIGNATORYNAME: `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
-          }));
-        }
-      } catch (err) {
-        console.error('Error fetching user data:', err);
-      }
-    };
-
-    fetchUserData();
-  }, [currentUser]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  const handleSendEmail = async () => {
+    setStatus('loading');
     setMessage('');
 
     try {
-      const token = await currentUser?.getIdToken();
-      const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/docx/generate`, {
+      const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/email/sendWelcomeEmail`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ replacements: formData }),
+        body: JSON.stringify({
+          recipientEmail: 'caguirre.dt@gmail.com',
+          userName: 'Cristian',
+        }),
       });
+      
 
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Error al generar el contrato');
-
-      setMessage(result.message || 'Contrato generado y enviado correctamente');
-    } catch (error: any) {
-      console.error("❌ Error al enviar:", error);
-      setMessage(error.message || 'Error inesperado');
-    } finally {
-      setLoading(false);
+      if (response.ok) {
+        setStatus('success');
+        setMessage('Email sent successfully!');
+      } else {
+        const text = await response.text();
+        setStatus('error');
+        setMessage(`Failed to send email: ${text}`);
+      }
+    } catch (err) {
+      console.error(err);
+      setStatus('error');
+      setMessage('Something went wrong while sending the email.');
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 max-w-xl mx-auto p-4 bg-white shadow-md rounded">
-      <h2 className="text-xl font-bold mb-4 text-center">Contrato</h2>
-
-      {Object.entries(formData).map(([key, value]) => (
-        <div key={key}>
-          <label className="block font-medium mb-1">{key}</label>
-          <input
-            type="text"
-            name={key}
-            value={value}
-            onChange={handleChange}
-            required
-            className="w-full border border-gray-300 rounded px-3 py-2"
-          />
-        </div>
-      ))}
-
+    <div className="max-w-md mx-auto mt-10 p-6 border rounded-lg shadow-md bg-white">
+      <h2 className="text-xl font-semibold mb-4 text-[#174B3D]">Send Test Email</h2>
+      <input
+        type="email"
+        placeholder="Enter email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        className="w-full px-4 py-2 border border-[#174B3D] rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-[#174B3D]"
+      />
       <button
-        type="submit"
-        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full"
-        disabled={loading}
+        onClick={handleSendEmail}
+        disabled={status === 'loading' || !email}
+        className="w-full bg-[#174B3D] text-white py-2 px-4 rounded-md hover:bg-[#1E5A49] transition"
       >
-        {loading ? 'Enviando...' : 'Generar y Enviar Contrato'}
+        {status === 'loading' ? 'Sending...' : 'Send Email'}
       </button>
 
-      {message && <p className="mt-4 text-center text-sm text-green-600">{message}</p>}
-    </form>
+      {message && (
+        <p className={`mt-4 text-center ${status === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+          {message}
+        </p>
+      )}
+    </div>
   );
 };
 
-export default ContractForm;
+export default EmailTestForm;

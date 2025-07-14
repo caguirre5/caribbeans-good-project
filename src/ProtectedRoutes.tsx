@@ -56,21 +56,47 @@ const ProtectedRoutes: React.FC = () => {
 
   if (!currentUser || !isActive) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-[#c9d3c0]">
-        <div className="text-center w-[90%] text-[#044421] text-2xl font-semibold">
-          You need to be an active user to view this content.
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#c9d3c0] px-6">
+        <div className="bg-white rounded-lg shadow-md p-12 max-w-5xl text-center">
+          <h2 className="text-2xl font-bold text-[#044421] mb-4">
+            We’ve got your request, hang tight! ☕
+          </h2>
+          <p className="mb-4">
+            Just popping in to say we’ve received your request to join our portal. Awesome to have you on board! 
+          </p>
+          <p className="mb-4">
+            <strong className="text-[#044421]">Quick heads-up:</strong> this is a roasters-only site. We display pictures and stories of people behind the coffee, and we’ve made a promise to share these only with folks who actively roast coffee.
+          </p>
+          <p className="mb-4">
+            If you’re already roasting, brilliant! We’ll get back to you ASAP to get you all set up.
+          </p>
+          <p className="mb-4">
+            If you’re thinking about roasting, that’s exciting! Just drop us an email at{" "}
+            <a href="mailto:info@caribbeangoods.co.uk" className="text-blue-600 underline">
+              info@caribbeangoods.co.uk
+            </a>{" "}
+            and we’ll be happy to chat 😊
+          </p>
+          <p className="mb-4">
+            In the meantime, if you have any questions (or just want to talk coffee), don’t hesitate to reach out.
+          </p>
+          <p className="mb-6">
+            Thanks for getting in touch!
+            <br />
+            Cheers,
+            <br /><br/>
+            The Caribbean Goods Team 🌴
+          </p>
+          <Link to="/" className="inline-block">
+            <button className="px-6 py-2 mt-4 text-white bg-[#044421] hover:bg-[#033914] rounded-full">
+              Return to Home
+            </button>
+          </Link>
         </div>
-        <p className="text-sm mt-4 text-center mb-6 w-[90%] lg:w-[28%]">
-          Your account has been successfully created, but it is still pending approval. Please wait for your account to be activated by our team.
-        </p>
-        <Link to="/" className="mt-6">
-          <button className="px-6 py-2 text-white bg-[#044421] hover:bg-[#033914] rounded-full">
-            Return to Home
-          </button>
-        </Link>
       </div>
     );
   }
+  
 
   return (
     <DataProvider>

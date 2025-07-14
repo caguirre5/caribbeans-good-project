@@ -12,7 +12,7 @@ function Footer() {
                 <div className='contact'>
                     <h3 className="mb-8 uppercase text-xl tracking-[.30em] text-[#9da793]">Contact</h3>
                     <p className='text-[0.95rem]'>
-                        info@caribbeangoiods.co.uk
+                        info@caribbeangoods.co.uk
                         </p>
                 </div>
                 {/* <div className='subscribe'>

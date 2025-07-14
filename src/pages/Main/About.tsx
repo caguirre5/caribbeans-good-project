@@ -15,7 +15,7 @@ import TeamCarousel from "../../components/TeamCarousel"
 
 import TeamCard from "../../components/TeamCard"
 
-import { getFirestore, collection, getDocs } from "firebase/firestore";
+import { getFirestore, collection, getDocs, query, orderBy } from "firebase/firestore";
 import { useEffect, useState } from "react";
 
 
@@ -30,7 +30,9 @@ function About() {
             try {
                 const db = getFirestore();
                 const teamCollection = collection(db, "teamMembers");
-                const snapshot = await getDocs(teamCollection);
+                const teamQuery = query(teamCollection, orderBy("order", "asc"));
+
+                const snapshot = await getDocs(teamQuery);
                 const members = snapshot.docs.map(doc => {
                     const data = doc.data();
                     return {

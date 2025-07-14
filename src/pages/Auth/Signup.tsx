@@ -17,24 +17,24 @@ const Signup: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [verificationEmailSent, setVerificationEmailSent] = useState(false);
 
-  const updateLastLogin = async (user: any) => {
-    try {
-      const token = await user.getIdToken();
-      await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/api/users/${user.uid}/last-login`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-    } catch (err) {
-      console.error('Failed to update last login:', err);
-    }
-  }; 
-
   const navigate = useNavigate();
+
+  const checkEmailExists = async (email: string) => {
+    const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/api/users/check-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ email })
+    });
+  
+    const data = await response.json();
+    return data.exists;
+  };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
@@ -45,9 +45,17 @@ const Signup: React.FC = () => {
       return;
     }
 
+    setError(null);
+    setLoading(true);
+
     try {
-      setError(null);
-      setLoading(true);
+      const emailInUse = await checkEmailExists(email);
+      if (emailInUse) {
+        setError("Email is already in use. Please use a different email or log in.");
+        setLoading(false);
+        return;
+      }
+
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
       await updateProfile(userCredential.user, {
@@ -69,6 +77,23 @@ const Signup: React.FC = () => {
       });
 
       await signOut(auth);
+      
+      try {
+        const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/email/sendAccessRequestEmail`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            recipientEmail: email,
+          }),
+        });
+
+        const result = await response.text();
+        console.log(`Alert sent to ${email}:`, result);
+      } catch (err) {
+        console.error(`Error sending alert to ${email}:`, err);
+      }
 
       const recipients = ['caguirre.dt@gmail.com', 'info@caribbeangoods.co.uk'];
 
@@ -105,6 +130,19 @@ const Signup: React.FC = () => {
     try {
       const result = await signInWithPopup(auth, provider);
 
+      const user = result.user;
+
+      if (!user.email) {
+        setError("Google account does not have an email associated.");
+        return;
+      }
+
+      const emailInUse = await checkEmailExists(user.email);
+      if (emailInUse) {
+        navigate('/');
+        return;
+      }
+
       await setDoc(doc(db, "users", result.user.uid), {
         uid: result.user.uid,
         firstName: result.user.displayName?.split(' ')[0] || '',
@@ -117,6 +155,23 @@ const Signup: React.FC = () => {
         profileCompleted: false,
         roles: ["user"],
       });
+      
+      try {
+        const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/email/sendAccessRequestEmail`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            recipientEmail: user.email,
+          }),
+        });
+
+        const result = await response.text();
+        console.log(`Alert sent!`, result);
+      } catch (err) {
+        console.error(`Error sending alert!`, err);
+      }
 
       const recipients = ['caguirre.dt@gmail.com', 'info@caribbeangoods.co.uk'];
 
@@ -140,7 +195,6 @@ const Signup: React.FC = () => {
         }
       }
 
-      await updateLastLogin(result.user);
       navigate('/'); 
     } catch (err: any) {
       setError(err.message);

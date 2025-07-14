@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../contexts/AuthContext';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faEye, faUpload, faTimes, faSpinner, faEllipsisV, faTrash, faEdit } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faEye, faUpload, faTimes, faSpinner, faBars , faTrash, faEdit, faCheckCircle } from '@fortawesome/free-solid-svg-icons';
 
 
 interface TeamMember {
@@ -30,11 +30,22 @@ const TeamMembersDashboard: React.FC = () => {
     const [uploading, setUploading] = useState(false);
     const [uploadMessage, setUploadMessage] = useState<string | null>(null);
 
-    const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+    const [membersOrder, setMembersOrder] = useState<TeamMember[]>([]);
+
+    const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
+    const [editName, setEditName] = useState('');
+    const [editPosition, setEditPosition] = useState('');
+
+    const [editLoading, setEditLoading] = useState(false);
+    const [editSuccess, setEditSuccess] = useState(false);
 
     useEffect(() => {
         if (activeTab === 'list') fetchTeamMembers();
     }, [activeTab]);
+
+    useEffect(() => {
+        setMembersOrder(teamMembers);
+    }, [teamMembers]);
 
     const fetchTeamMembers = async () => {
         setLoading(true);
@@ -50,6 +61,30 @@ const TeamMembersDashboard: React.FC = () => {
             console.error('Error fetching team members:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleReorder = async (newOrder: TeamMember[]) => {
+        setMembersOrder(newOrder);
+    
+        try {
+            const token = await currentUser?.getIdToken();
+            const orderedIds = newOrder.map(member => member.id);
+    
+            const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/api/updateTeamMembersOrder`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ orderedIds }),
+            });
+    
+            if (!response.ok) throw new Error('Failed to update order');
+            // console.log('Order updated successfully');
+        } catch (error) {
+            console.error('Error updating order:', error);
+            alert('Failed to update order');
         }
     };
 
@@ -122,12 +157,54 @@ const TeamMembersDashboard: React.FC = () => {
             setSelectedFile(null);
             fetchTeamMembers();
         } catch (error) {
-            console.error('Error adding team member:', error);
+            alert('Error adding team member:');
             setUploadMessage('An error occurred while adding the team member.');
         } finally {
             setUploading(false);
         }
     };
+    
+    const handleEditMember = async () => {
+        if (!editName || !editPosition || !editingMemberId) {
+            alert("Please fill in all fields.");
+            return;
+        }
+
+        setEditLoading(true);
+    
+        try {
+            const token = await currentUser?.getIdToken();
+    
+            const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/api/teamMembers/${editingMemberId}/update`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    name: editName,
+                    position: editPosition
+                }),
+            });
+    
+            if (!response.ok) throw new Error('Failed to update team member');
+            setEditLoading(false);
+            setEditSuccess(true);
+            fetchTeamMembers();
+
+            setTimeout(() => {
+                setEditingMemberId(null);
+                setEditSuccess(false);
+            }, 2000);
+        } catch (error) {
+            console.error('Error updating team member:', error);
+            alert('An error occurred while updating the team member.');
+            setEditName('');
+            setEditPosition('');
+            setEditLoading(false);
+        }
+    };
+    
     
 
     const handleDeleteTeamMember = async (id: string, fileKey: string) => {
@@ -181,84 +258,74 @@ const TeamMembersDashboard: React.FC = () => {
 
             {/* View Members */}
             {activeTab === 'list' && (
-                <div>
-                    {loading ? (
-                        <div className="flex justify-center items-center">
-                            <FontAwesomeIcon icon={faSpinner} spin size="2x" className="text-blue-600" />
-                        </div>
-                    ) : teamMembers.length === 0 ? (
-                        <p>No team members found.</p>
-                    ) : (
-                        <table className="min-w-full border text-sm">
-                            <thead>
-                                <tr className="bg-gray-100">
-                                    <th className="border px-2 py-1 text-left">Name</th>
-                                    <th className="border px-2 py-1 text-left">Position</th>
-                                    <th className="border px-2 py-1 text-left">Photo</th>
-                                    <th className="border px-2 py-1 text-left">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {teamMembers.map(member => (
-                                    <tr key={member.id}>
-                                        <td className="border px-2 py-1">{member.name}</td>
-                                        <td className="border px-2 py-1">{member.position}</td>
-                                        <td className="border px-2 py-1">
-                                            <button
-                                                onClick={() => setSelectedPhotoUrl(member.photoUrl)}
-                                                className="text-blue-600 hover:text-blue-800"
-                                            >
-                                                <FontAwesomeIcon icon={faEye} />
-                                            </button>
-                                        </td>
-                                        <td className="border px-2 py-1 relative">
-                                            <button
-                                                onClick={() => setOpenDropdownId(openDropdownId === member.id ? null : member.id)}
-                                                className="text-gray-600 hover:text-gray-800"
-                                            >
-                                                <FontAwesomeIcon icon={faEllipsisV} />
-                                            </button>
+                loading ? (
+                    <div className="flex justify-center items-center">
+                        <FontAwesomeIcon icon={faSpinner} spin size="2x" className="text-blue-600" />
+                    </div>
+                ) : (
+                    <Reorder.Group
+                        axis="y"
+                        values={membersOrder}
+                        onReorder={handleReorder}
+                        className="flex flex-col gap-2"
+                    >
+                        {membersOrder.map((member) => (
+                            <Reorder.Item
+                                key={member.id}
+                                value={member}
+                                className="flex flex-col lg:flex-row lg:justify-between items-center p-4 border rounded-md shadow-sm bg-white"
+                            >
+                                <div className="flex flex-col lg:flex-row lg:items-center lg:gap-4 w-full">
+                                    {/* Drag handle */}
+                                    <button className="cursor-grab active:cursor-grabbing p-2 rounded-full bg-gray-100 hover:bg-gray-200">
+                                        <FontAwesomeIcon icon={faBars} className="text-gray-500" />
+                                    </button>
 
-                                            <AnimatePresence>
-                                                {openDropdownId === member.id && (
-                                                    <motion.div
-                                                        initial={{ opacity: 0, y: -10 }}
-                                                        animate={{ opacity: 1, y: 0 }}
-                                                        exit={{ opacity: 0, y: -10 }}
-                                                        className="absolute right-0 mt-2 bg-white border rounded shadow-md z-50 w-32"
-                                                    >
-                                                        <button
-                                                            onClick={() => {
-                                                                // placeholder, implementar luego
-                                                                alert('Edit functionality coming soon!');
-                                                                setOpenDropdownId(null);
-                                                            }}
-                                                            className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
-                                                        >
-                                                            <FontAwesomeIcon icon={faEdit} className="mr-2" /> Edit
-                                                        </button>
-                                                        <button
-                                                            onClick={() => {
-                                                                if (confirm('Are you sure you want to delete this team member?')) {
-                                                                    handleDeleteTeamMember(member.id, member.fileKey);
-                                                                }
-                                                                setOpenDropdownId(null);
-                                                            }}
-                                                            className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-red-600"
-                                                        >
-                                                            <FontAwesomeIcon icon={faTrash} className="mr-2" /> Delete
-                                                        </button>
-                                                    </motion.div>
-                                                )}
-                                            </AnimatePresence>
-                                        </td>
+                                    {/* <span className="text-gray-400 text-sm font-mono lg:mt-0 mt-1">
+                                        #{index + 1}
+                                    </span> */}
 
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    )}
-                </div>
+                                    <div className="flex flex-col">
+                                        <h3 className="text-lg font-bold">{member.name}</h3>
+                                        <p className="text-gray-500">{member.position}</p>
+                                    </div>
+
+                                    <button
+                                        onClick={() => setSelectedPhotoUrl(member.photoUrl)}
+                                        className="ml-0 lg:ml-4 mt-2 lg:mt-0 inline-flex items-center justify-center p-2 rounded-full bg-blue-50 hover:bg-blue-100"
+                                    >
+                                        <FontAwesomeIcon icon={faEye} className="text-blue-600" />
+                                    </button>
+                                </div>
+
+                                <div className="flex items-center gap-2 mt-3 lg:mt-0">
+                                    <button
+                                        onClick={() => {
+                                            setEditingMemberId(member.id);
+                                            setEditName(member.name);
+                                            setEditPosition(member.position);
+                                        }}
+                                        className="p-2 rounded-full bg-blue-50 hover:bg-blue-100 transition"
+                                        title="Edit"
+                                    >
+                                        <FontAwesomeIcon icon={faEdit} className="text-blue-600" />
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            if (confirm('Are you sure you want to delete this team member?')) {
+                                                handleDeleteTeamMember(member.id, member.fileKey);
+                                            }
+                                        }}
+                                        className="p-2 rounded-full bg-red-50 hover:bg-red-100 transition"
+                                        title="Delete"
+                                    >
+                                        <FontAwesomeIcon icon={faTrash} className="text-red-600" />
+                                    </button>
+                                </div>
+                            </Reorder.Item>
+                        ))}
+                    </Reorder.Group>
+                )
             )}
 
             {/* Add Member */}
@@ -347,6 +414,77 @@ const TeamMembersDashboard: React.FC = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {editingMemberId && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <motion.div
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0.8, opacity: 0 }}
+                        className="bg-white rounded-lg p-6 shadow-lg w-full max-w-md relative text-center"
+                    >
+                        {!editLoading && !editSuccess && (
+                            <>
+                                <button
+                                    onClick={() => setEditingMemberId(null)}
+                                    className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+                                >
+                                    <FontAwesomeIcon icon={faTimes} />
+                                </button>
+                                <h2 className="text-lg font-bold mb-4">Edit Team Member</h2>
+                                <div className="mb-4 text-left">
+                                    <label className="block mb-1 font-medium">Name</label>
+                                    <input
+                                        type="text"
+                                        value={editName}
+                                        onChange={(e) => setEditName(e.target.value)}
+                                        className="border px-3 py-2 w-full rounded text-sm"
+                                    />
+                                </div>
+                                <div className="mb-4 text-left">
+                                    <label className="block mb-1 font-medium">Position</label>
+                                    <input
+                                        type="text"
+                                        value={editPosition}
+                                        onChange={(e) => setEditPosition(e.target.value)}
+                                        className="border px-3 py-2 w-full rounded text-sm"
+                                    />
+                                </div>
+                                <button
+                                    onClick={handleEditMember}
+                                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full flex justify-center items-center gap-2"
+                                >
+                                    <FontAwesomeIcon icon={faUpload} />
+                                    Save Changes
+                                </button>
+                            </>
+                        )}
+
+                        {editLoading && (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                className="flex flex-col justify-center items-center"
+                            >
+                                <FontAwesomeIcon icon={faSpinner} spin size="3x" className="text-blue-600 mb-4" />
+                                <p className="text-blue-600 font-medium">Saving changes...</p>
+                            </motion.div>
+                        )}
+
+                        {editSuccess && (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="flex flex-col justify-center items-center text-green-600"
+                            >
+                                <FontAwesomeIcon icon={faCheckCircle} size="3x" className="mb-4" />
+                                <p className="font-semibold">Changes saved successfully!</p>
+                            </motion.div>
+                        )}
+                    </motion.div>
+                </div>
+            )}
+
         </div>
     );
 };
