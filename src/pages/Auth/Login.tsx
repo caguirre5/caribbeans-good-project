@@ -40,11 +40,41 @@ const Login: React.FC = () => {
   
       if (user.emailVerified) {
         const userRef = doc(db, "users", user.uid);
-        await updateDoc(userRef, { emailVerified: true });
-        // await updateLastLogin(user);
+        const userSnap = await getDoc(userRef);
+      
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          if (!userData.emailVerified) {
+            const recipients = ['caguirre.dt@gmail.com', 'info@caribbeangoods.co.uk'];
+
+            for (const email of recipients) {
+              try {
+                const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/resourcelibray/sendalert`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    recipientEmail: email,
+                    alertMessage: `User ${user.email} has just verified their email. You can now review and manage their account in the admin panel.`,
+                  }),
+                });
+
+                const result = await response.text();
+                console.log(`Alert sent to ${email}:`, result);
+              } catch (err) {
+                console.error(`Error sending alert to ${email}:`, err);
+              }
+            }
+            await updateDoc(userRef, { emailVerified: true });
+            // console.log("✅ emailVerified updated to true in Firestore");
+          }
+        }
+      
         navigate("/");
-      } else {
-        setError("Please verify your email before logging in.");
+      }
+       else {
+        setError("Please verify your email before logging in. Look for an email with a verification link — check your inbox, spam, and promotions folders.");
         await signOut(auth);
       }
     } catch (err: any) {
@@ -113,7 +143,7 @@ const Login: React.FC = () => {
               },
               body: JSON.stringify({
                 recipientEmail: email,
-                alertMessage: 'An user has signed up to the portal',
+                alertMessage: `A new user signed up with Google: ${user.email}. Check the admin panel to manage their access request.`,
               }),
             });
 

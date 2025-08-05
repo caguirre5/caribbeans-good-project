@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification, signOut, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
 import { auth, db } from '../../firebase/firebase'; 
 import { useNavigate } from 'react-router-dom';
 import { doc, setDoc } from 'firebase/firestore'; 
@@ -30,6 +30,19 @@ const Signup: React.FC = () => {
   
     const data = await response.json();
     return data.exists;
+  };
+
+  const handleResendVerification = async () => {
+    try {
+      if (auth.currentUser) {
+        await sendEmailVerification(auth.currentUser);
+        alert('Verification email resent!');
+      } else {
+        alert('Verification email not resent!');
+      }
+    } catch (error) {
+      console.error('Error resending verification email:', error);
+    }
   };
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -64,6 +77,7 @@ const Signup: React.FC = () => {
 
       await sendEmailVerification(userCredential.user);
 
+
       await setDoc(doc(db, "users", userCredential.user.uid), {
         uid: userCredential.user.uid,
         firstName: firstName,
@@ -76,7 +90,6 @@ const Signup: React.FC = () => {
         roles: ["user"],
       });
 
-      await signOut(auth);
       
       try {
         const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/email/sendAccessRequestEmail`, {
@@ -106,7 +119,7 @@ const Signup: React.FC = () => {
             },
             body: JSON.stringify({
               recipientEmail: email,
-              alertMessage: 'An user has signed up to the portal',
+              alertMessage: `A new user signed up using email and password: ${email}. The account is pending email verification.`,
             }),
           });
 
@@ -184,7 +197,7 @@ const Signup: React.FC = () => {
             },
             body: JSON.stringify({
               recipientEmail: email,
-              alertMessage: 'An user has signed up to the portal',
+              alertMessage: `A new user signed up with Google: ${user.email}. Check the admin panel to manage their access request.`,
             }),
           });
 
@@ -212,10 +225,24 @@ const Signup: React.FC = () => {
         <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-lg">
           <h2 className="text-2xl font-bold text-center text-[#174B3D]">Check Your Email</h2>
           <p className="text-center text-gray-700">
-            We've sent a verification link to your email. Please check your inbox and click the link to verify your email before logging in.
+            We've sent a verification link to your email. Please check your inbox and click the link to verify your email before logging in. If you don’t see the email, check your spam folder. You can also try signing up again with the same email or contact us if the problem persists.
           </p>
           <button
-            onClick={() => navigate('/')}
+            onClick={handleResendVerification}
+            className="text-sm text-blue-600 hover:underline mt-2 text-center w-full"
+          >
+            Didn't receive the email? Click here to resend.
+          </button>
+
+          <button
+            onClick={async () => {
+              try {
+                await signOut(auth);
+                navigate('/');
+              } catch (error) {
+                console.error('Error during logout:', error);
+              }
+            }}
             className="w-full py-2 px-4 bg-[#174B3D] text-white font-semibold rounded-md hover:bg-[#1E5A49] focus:outline-none focus:ring-2 focus:ring-[#174B3D] mt-4"
           >
             Go to Home
