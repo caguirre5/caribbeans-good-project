@@ -33,7 +33,7 @@ const PlaceOrderForm: React.FC = () => {
   const [deliveryDate, setDeliveryDate] = useState('');
   const [deliveryType, setDeliveryType] = useState<'economy' | 'express' | 'saturday'>('economy');
 
-  const approvedPostcode = true; // Simulación por ahora
+  // const approvedPostcode = true; // Simulación por ahora
 
   useEffect(() => {
     const SHEET_ID = '1ee9mykWz7RPDuerdYphfTqNRmDaJQ6sNomhyppCt2mE';
