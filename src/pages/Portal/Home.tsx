@@ -36,6 +36,13 @@ const PortalHome: React.FC = () => {
     fetchUserRoles();
   }, [currentUser]);
 
+  useEffect(() => {
+    const handler = () => setActiveTab('place-order');
+    window.addEventListener('openPlaceOrder', handler);
+    return () => window.removeEventListener('openPlaceOrder', handler);
+  }, []);
+  
+
   const renderContent = () => {
     switch (activeTab) {
       case 'resource-library':
@@ -85,7 +92,7 @@ const PortalHome: React.FC = () => {
             onClick={() => setActiveTab('resource-library')}
             className={activeTab === 'resource-library' ? 'text-[#044421] font-semibold border-t-2 border-[#044421]' : 'text-[#044421]'}
           >
-            Resource Library
+            Farm information
           </button>
           <button
             onClick={() => setActiveTab('coffee-charts')}
@@ -110,7 +117,7 @@ const PortalHome: React.FC = () => {
               onClick={() => setActiveTab('admin')}
               className={activeTab === 'admin' ? 'text-[#044421] font-semibold border-t-2 border-[#044421]' : 'text-[#044421]'}
             >
-              Users
+              Admin
             </button>
           )}
         </nav>

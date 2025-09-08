@@ -38,6 +38,13 @@ interface SheetData {
   '12 bags Bundle + 1 Free': string;
 }
 
+interface CoffeeSelection {
+  variety: string;
+  amount: number;
+  price: number;
+}
+
+
 
 const initialFormState: Replacements = {
   ENTITY: '',
@@ -72,6 +79,9 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
   const [success, setSuccess] = useState(false);
 
   const [errors, setErrors] = useState<{ [K in keyof Replacements]?: boolean }>({});
+
+  
+const [coffeeSelections, setCoffeeSelections] = useState<CoffeeSelection[]>([]);
 
   const pricePerKgValue = 24
 
@@ -185,25 +195,45 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
       return;
     }
 
-    const amount = parseInt(formData.AMOUNT);
-    const bagLabel = amount === 1 ? 'bag' : 'bags';
 
     const todayUK = new Date().toLocaleDateString('en-GB', {
       day: 'numeric',
       month: 'long',
       year: 'numeric'
     });
-    
+
+    const varietySummary = coffeeSelections
+    .map(
+      (item) =>
+        `${item.amount} ${item.amount === 1 ? 'bag' : 'bags'} 24 kg each of ${item.variety} green coffee beans equivalent to ${item.amount*24} kg of ${item.variety} green coffee`
+    )
+    .join('; ');
+
+    const priceBreakdown = coffeeSelections
+    .map(
+      (item) =>
+        `${item.variety} – £${(
+          item.amount * 24 * item.price
+        ).toFixed(2)}`
+    )
+    .join('; ');
 
     const replacementsToSend = {
       ...formData,
       ENTITY: formData.CUSTOMERCOMPANYNAME,
       SIGNATORYNAME: formData.NAME,
-      TOTALAMOUNT: formData.AMOUNT ? (parseInt(formData.AMOUNT) * pricePerKgValue).toString() : '0',
-      BAGS:bagLabel,
+      TOTALAMOUNT: coffeeSelections
+        .reduce((acc, item) => acc + item.amount * 24 * item.price, 0)
+        .toFixed(2),
+      VARIETY: varietySummary,
+      PRICE: priceBreakdown,
+      BAGS: coffeeSelections.reduce((acc, item) => acc + item.amount, 0) === 1 ? 'bag' : 'bags',
       PREFIX: formData.FREQUENCY === 'annually' ? 'an' : 'a',
       DATE: todayUK,
     };
+    
+
+    console.log(replacementsToSend)
 
     try {
       const token = await currentUser?.getIdToken();
@@ -260,35 +290,35 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
     setFormData((prev) => ({ ...prev, ...updatedFields }));
   };
 
-const validateForm = () => {
-  const newErrors: { [K in keyof Replacements]?: boolean } = {};
-
-  // Campos que NO deben validarse porque se llenan automáticamente
-  const excludedKeys: (keyof Replacements)[] = [
-    'PRICE',
-    'ENTITY',
-    'MONTHS',
-    'MONTH1',
-    'YEAR1',
-    'MONTH2',
-    'YEAR2'
-  ];
-
-  for (const key in formData) {
-    if (
-      !excludedKeys.includes(key as keyof Replacements) &&
-      formData[key as keyof Replacements].trim() === ''
-    ) {
-      newErrors[key as keyof Replacements] = true;
+  const validateForm = () => {
+    // Puedes tipar un error “virtual” para varieties:
+    const newErrors: { [K in keyof Replacements]?: boolean } & { COFFEE?: boolean } = {};
+  
+    // Campos realmente obligatorios del cliente y contrato
+    const requiredKeys: (keyof Replacements)[] = [
+      'NAME',
+      'CITY',
+      'COMPNUMBER',
+      'REGISTEREDOFFICE',
+      'CUSTOMERCOMPANYNAME',
+      'NUMBER',
+      'EMAIL',
+      'FREQUENCY',
+    ];
+  
+    for (const k of requiredKeys) {
+      const v = String(formData[k] ?? '').trim();
+      if (!v) newErrors[k] = true;
     }
-  }
-
-  setErrors(newErrors);
-  return Object.keys(newErrors).length === 0;
-};
-
   
+    // Debe haber al menos una variety agregada
+    if (coffeeSelections.length === 0) {
+      newErrors.COFFEE = true;
+    }
   
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
   
 
   return (
@@ -414,11 +444,13 @@ const validateForm = () => {
         
         <hr />
 
+
         <h3 className="text-lg font-semibold mt-6">Order Details</h3>
 
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block font-medium mb-1">Select Variety</label>
+          {/* Select Variety (ocupa 2 columnas) */}
+          <div className="col-span-2">
+            <label className="block font-medium mb-1">Select a coffee</label>
             <select
               name="VARIETY"
               value={formData.VARIETY}
@@ -434,6 +466,7 @@ const validateForm = () => {
             </select>
           </div>
 
+          {/* Bags + Unit Price */}
           <div>
             <label className="block font-medium mb-1">Bags (24kg each)</label>
             <input
@@ -462,8 +495,9 @@ const validateForm = () => {
             />
           </div>
 
+          {/* Subtotal + Add variety */}
           <div>
-            <label className="block font-medium mb-1">Estimated Total Price (£)</label>
+            <label className="block font-medium mb-1">Subtotal for this selection (£)</label>
             <input
               type="text"
               value={
@@ -475,21 +509,111 @@ const validateForm = () => {
               className="w-full border border-gray-300 bg-gray-100 rounded px-3 py-2 text-gray-700"
             />
           </div>
+
+          <div className="flex items-end">
+            <button
+              type="button"
+              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 w-full"
+              onClick={() => {
+                const varietyExists = coffeeSelections.some(sel => sel.variety === formData.VARIETY);
+                if (varietyExists) {
+                  alert('This variety has already been added.');
+                  return;
+                }
+
+                if (!formData.VARIETY || !formData.AMOUNT || !formData.PRICE) {
+                  alert('Please complete all fields before adding.');
+                  return;
+                }
+
+                setCoffeeSelections(prev => [
+                  ...prev,
+                  {
+                    variety: formData.VARIETY,
+                    amount: parseInt(formData.AMOUNT),
+                    price: parseFloat(formData.PRICE),
+                  },
+                ]);
+
+                setFormData(prev => ({
+                  ...prev,
+                  VARIETY: '',
+                  AMOUNT: '',
+                  PRICE: '',
+                }));
+              }}
+            >
+              Add coffee
+            </button>
+          </div>
         </div>
 
-        <div>
-          <label className="block font-medium mb-1">Total KG</label>
-          <input
-            type="text"
-            value={
-              formData.AMOUNT
-                ? `${parseInt(formData.AMOUNT) * pricePerKgValue} kg`
-                : '0 kg'
-            }
-            disabled
-            className="w-full border border-gray-300 bg-gray-100 rounded px-3 py-2 text-gray-700"
-          />
+        {/* Selected items */}
+        <div className="mt-6">
+          <h4 className="font-semibold mb-2 text-gray-800">Selected Coffees</h4>
+          {coffeeSelections.length === 0 ? (
+            <p className="text-sm text-gray-500 italic">No coffees added yet.</p>
+          ) : (
+            <ul className="space-y-2 text-sm text-gray-800">
+              {coffeeSelections.map((item, idx) => (
+                <li
+                  key={idx}
+                  className="relative border border-gray-200 rounded px-4 py-3 bg-gray-50"
+                >
+                  {/* Botón de eliminar */}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCoffeeSelections(prev => prev.filter((_, i) => i !== idx))
+                    }
+                    className="absolute top-1 right-2 text-gray-500 hover:text-red-600 text-lg font-bold"
+                    aria-label="Remove item"
+                    title="Remove item"
+                  >
+                    ×
+                  </button>
+
+                  {/* Nombre principal */}
+                  <div className="font-semibold">{item.variety}</div>
+
+                  {/* Detalles debajo */}
+                  <div className="text-gray-700 text-sm mt-1">
+                    {item.amount} bags × £{item.price} = £
+                    {(item.amount * pricePerKgValue * item.price).toFixed(2)}
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+
+          )}
         </div>
+
+        {/* Totals */}
+        <div className="mt-4 grid grid-cols-2 gap-4">
+          <div>
+            <label className="block font-medium mb-1">Estimated Total Price (£)</label>
+            <input
+              type="text"
+              value={coffeeSelections
+                .reduce((acc, item) => acc + item.amount * pricePerKgValue * item.price, 0)
+                .toFixed(2)}
+              disabled
+              className="w-full border border-gray-300 bg-gray-100 rounded px-3 py-2 text-gray-700"
+            />
+          </div>
+
+          <div>
+            <label className="block font-medium mb-1">Total KG</label>
+            <input
+              type="text"
+              value={`${coffeeSelections.reduce((acc, item) => acc + item.amount * pricePerKgValue, 0)} kg`}
+              disabled
+              className="w-full border border-gray-300 bg-gray-100 rounded px-3 py-2 text-gray-700"
+            />
+          </div>
+        </div>
+
 
 
   {/* ----------------------------------------------------------------------------------- */}

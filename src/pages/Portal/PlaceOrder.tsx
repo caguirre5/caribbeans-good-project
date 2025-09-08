@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import Modal from '../../components/ModalPopUp'; // Modal grande existente para el contrato
 import { useAuth } from '../../contexts/AuthContext';
 import OrderIcon from '../../assets/Icons/order2.svg';
 import ReserveIcon from '../../assets/Icons/reserve1.svg';
 import Contract from '../Legal/Contract'; // Componente Contract
+import PlaceOrderForm from '../../components/OrderOptions';
 
 const PlaceOrder: React.FC = () => {
   const [showLargeModal, setShowLargeModal] = useState(false); // Modal grande para el contrato
@@ -15,6 +16,15 @@ const PlaceOrder: React.FC = () => {
   const handleCloseSmallModal = () => setShowSmallModal(false);
 
   const { currentUser } = useAuth();
+
+  useEffect(() => {
+    const flag = sessionStorage.getItem('openOrderNow');
+    if (flag === 'true') {
+      setShowSmallModal(true);
+      sessionStorage.removeItem('openOrderNow');
+    }
+  }, []);
+  
 
   return (
     <div 
@@ -50,7 +60,7 @@ const PlaceOrder: React.FC = () => {
       </div>
 
       {/* Modal pequeño para el mensaje */}
-      {showSmallModal && (
+      {/* {showSmallModal && (
         <div 
           className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50"
           onClick={handleCloseSmallModal} // Cierra al hacer clic fuera
@@ -72,7 +82,17 @@ const PlaceOrder: React.FC = () => {
             </p>
           </div>
         </div>
-      )}
+      )} */}
+
+      <AnimatePresence>
+        {showSmallModal && (
+          <Modal show={showSmallModal} onClose={handleCloseSmallModal}>
+            <div className="p-6">
+              <PlaceOrderForm/>
+            </div>
+          </Modal>
+        )}
+      </AnimatePresence>
 
       {/* Modal grande para el contrato */}
       <AnimatePresence>
@@ -84,6 +104,45 @@ const PlaceOrder: React.FC = () => {
           </Modal>
         )}
       </AnimatePresence>
+
+      {/* --- Tarifa de delivery / info strip --- */}
+    <div className="w-full flex justify-center mt-10 px-4">
+      <div className="w-full max-w-5xl overflow-x-auto">
+        <div className="min-w-[720px] bg-[#044421] text-white rounded-xl shadow-lg ring-1 ring-white/10">
+          <div className="grid grid-cols-4">
+            {/* Col 1 */}
+            <div className="flex flex-col items-center justify-center px-6 py-6">
+              <div className="text-xl font-bold leading-tight">FREE</div>
+              <div className="mt-1 text-sm opacity-90 text-center">
+                Pick up
+                <br />(Loom 9–3 Tue–Sun
+                <br />or CG any day 8–6)
+              </div>
+            </div>
+
+            {/* Col 2 */}
+            <div className="flex flex-col items-center justify-center px-6 py-6">
+              <div className="text-xl font-bold leading-tight">£42.5</div>
+              <div className="mt-1 text-sm opacity-90 text-center">1 bag</div>
+            </div>
+
+            {/* Col 3 */}
+            <div className="flex flex-col items-center justify-center px-6 py-6">
+              <div className="text-xl font-bold leading-tight">£75</div>
+              <div className="mt-1 text-sm opacity-90 text-center">2–13 bags</div>
+            </div>
+
+            {/* Col 4 */}
+            <div className="flex flex-col items-center justify-center px-6 py-6">
+              <div className="text-xl font-bold leading-tight">FREE</div>
+              <div className="mt-1 text-sm opacity-90 text-center">+13 bags</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
     </div>
   );
 };

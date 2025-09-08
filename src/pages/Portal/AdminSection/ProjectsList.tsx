@@ -65,7 +65,8 @@ const ProjectsList: React.FC = () => {
             id: "colegio",
             name: "El Colegio",
             fields: {
-              donations: Number(data.donations) || 0
+              donations: Number(data.donations) || 0,
+              kilograms: Number(data.kilograms) || 0
             }
           });
         }
@@ -76,7 +77,8 @@ const ProjectsList: React.FC = () => {
             id: "hunchouen",
             name: "Hunchouen",
             fields: {
-              donations: Number(data.donations) || 0
+              donations: Number(data.donations) || 0,
+              kilograms: Number(data.kilograms) || 0
             }
           });
         }

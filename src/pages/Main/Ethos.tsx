@@ -52,15 +52,22 @@ interface TreeData {
     money: number;
 }
 
+interface DonationsData {
+    donations: number;
+    kilograms: number;
+}
+
 function Ethos(){
     const defaultTreeData: TreeData = { trees: 0, money: 0 };
 
     const defaultMaiaData: number = 1050
 
+    const defaultDonations: DonationsData = { donations: 0, kilograms: 0 };
+
     const [treeData, setTreeData] = useState<TreeData>(defaultTreeData);
     const [maiaData, setMaiaData] = useState<number>(defaultMaiaData);
-    const [colegioData, setColegioData] = useState<number>(0);
-    const [hunchouenData, setHunchouenData] = useState<number>(0);
+    const [colegioData, setColegioData] = useState<DonationsData>(defaultDonations);
+    const [hunchouenData, setHunchouenData] = useState<DonationsData>(defaultDonations);
     // const [othersData, setOthersData] = useState<number>(0);
 
 
@@ -90,14 +97,20 @@ function Ethos(){
             const colegioRef = doc(db, "projects", "colegio");
             const colegioSnap = await getDoc(colegioRef);
             if (colegioSnap.exists()) {
-                setColegioData(Number(colegioSnap.data().donations) || 0);
+                setColegioData({
+                    donations: Number(colegioSnap.data().donations) || 0,
+                    kilograms: Number(colegioSnap.data().kilograms) || 0
+                });
             }
     
             // Hunchouen
             const hunchRef = doc(db, "projects", "hunchouen");
             const hunchSnap = await getDoc(hunchRef);
             if (hunchSnap.exists()) {
-                setHunchouenData(Number(hunchSnap.data().donations) || 0);
+                setHunchouenData({
+                    donations: Number(hunchSnap.data().donations) || 0,
+                    kilograms: Number(hunchSnap.data().kilograms) || 0
+                });
             }
     
             // Other Coffees
@@ -225,12 +238,12 @@ function Ethos(){
                             <div className="bg-[#c9d3c0] p-6 pt-10 shadow-lg rounded-xl">
                                 <p className="text-[#e6a318] font-bold text-lg mb-1">01.</p>
                                 <h3 className="font-semibold mb-1 text-lg">El Colegio Sales</h3>
-                                <p>Exclusive partnership between <a target="_blank" href="https://www.thomsonscoffee.com/" className="hover:underline">Thomsons</a> and Caribbean Goods, where £<span className="font-semibold">{colegioData.toFixed(2)}</span> per kg goes to MAIA.</p>
+                                <p>Exclusive partnership between <a target="_blank" href="https://www.thomsonscoffee.com/" className="hover:underline">Thomsons</a> and Caribbean Goods, where £<span className="font-semibold">{colegioData.donations.toFixed(2)}</span> per kg goes to MAIA. — already contributing a total of £<span className="font-semibold">{(colegioData.kilograms * colegioData.donations).toFixed(2)}</span></p>
                             </div>
                             <div className="bg-[#c9d3c0] p-6 pt-10 shadow-lg rounded-xl">
                                 <p className="text-[#e6a318] font-bold text-lg mb-1">02.</p>
                                 <h3 className="font-semibold mb-1 text-lg">Hunchouen Sales</h3>
-                                <p>Used by multiple roasters, also generating £<span className="font-semibold">{hunchouenData.toFixed(2)}</span> per kg in donations.</p>
+                                <p>Used by multiple roasters, also generating £<span className="font-semibold">{hunchouenData.donations.toFixed(2)}</span> per kg in donations. — already contributing a total of £<span className="font-semibold">{(hunchouenData.kilograms * hunchouenData.donations).toFixed(2)}</span></p>
                             </div>
                             <div className="bg-[#c9d3c0] p-6 pt-10 shadow-lg rounded-xl">
                                 <p className="text-[#e6a318] font-bold text-lg mb-1">03.</p>

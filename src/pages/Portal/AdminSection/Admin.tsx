@@ -5,6 +5,7 @@ import Requests from './Requests';
 import ProjectsList from './ProjectsList';
 import ContractsDashboard from './ContractDashboard';
 import TeamMembersDashboard from './TeamDashboard';
+import OrdersList from './OrdersList';
 
 const Dashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'users' | 'requests' | 'orders' | 'projects' | 'contracts' | 'teammembers'>('users'); // Agrega 'orders' como una opción
@@ -52,6 +53,13 @@ const Dashboard: React.FC = () => {
           </button>
 
           <button
+            className={`block w-full text-left px-4 py-2 ${activeTab === 'orders' ? 'bg-gray-300' : ''}`} // Nueva pestaña
+            onClick={() => setActiveTab('orders')}
+          >
+            Orders
+          </button>
+
+          <button
             className={`block w-full text-left px-4 py-2 ${activeTab === 'teammembers' ? 'bg-gray-300' : ''}`} // Nueva pestaña
             onClick={() => setActiveTab('teammembers')}
           >
@@ -68,6 +76,7 @@ const Dashboard: React.FC = () => {
           
           {activeTab === 'contracts' && <ContractsDashboard />} 
           {activeTab === 'teammembers' && <TeamMembersDashboard />} 
+          {activeTab === 'orders' && <OrdersList />} 
         </div>
       </div>
     </div>

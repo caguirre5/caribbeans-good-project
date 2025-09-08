@@ -1,104 +1,176 @@
-import React, { useEffect, useState } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../firebase/firebase';
-import { useAuth } from '../../contexts/AuthContext';
-import Header from '../../components/HeaderControls';
-import Footer from '../../components/Footer';
-import { Timestamp } from 'firebase/firestore'; // Importa el tipo Timestamp
+import React, { useEffect, useMemo, useState } from "react";
+import { collection, getDocs, getFirestore, query, where, Timestamp } from "firebase/firestore";
+import { useAuth } from "../../contexts/AuthContext";
+import Header from "../../components/HeaderControls";
+import Footer from "../../components/Footer";
 
-interface Contract {
+type OrderItem = {
+  varietyName?: string;
+  bags?: number;
+  unitPricePerKg?: number;
+  lineSubtotal?: number;
+};
+
+type Order = {
   id: string;
-  email: string;
-  fileUrl: string;
-  status: string;
-  createdAt: Timestamp; // Asegúrate de que createdAt sea del tipo Timestamp
-}
+  customerName: string | null;
+  customerEmail: string | null;
+  createdAt: Date | null;
+  status: "pending" | "processing" | "completed" | "cancelled" | string;
+  totals: { total: number; currency: string };
+  items: OrderItem[];
+};
+
+const currencyFmt = (v: number, c: string) =>
+  new Intl.NumberFormat("en-GB", { style: "currency", currency: c }).format(v);
+
+const statusColors: Record<string, string> = {
+  pending: "bg-orange-100 text-orange-700 border-orange-300",
+  processing: "bg-blue-100 text-blue-700 border-blue-300",
+  completed: "bg-green-100 text-green-700 border-green-300",
+  cancelled: "bg-red-100 text-red-700 border-red-300",
+};
 
 const MyOrders: React.FC = () => {
-  const [contracts, setContracts] = useState<Contract[]>([]);
-  const [filteredContracts, setFilteredContracts] = useState<Contract[]>([]);
-  const [filter, setFilter] = useState<'all' | 'Pending' | 'Completed'>('all');
-  const { currentUser } = useAuth(); // Esto obtiene el usuario autenticado
-  
-  // Función para obtener los contratos del usuario actual
-  const fetchUserContracts = async () => {
-    if (!currentUser) return;
+  const { currentUser } = useAuth();
 
-    const q = query(collection(db, 'contracts'), where('userId', '==', currentUser.uid));
-    
-    try {
-      const querySnapshot = await getDocs(q);
-      const contractsData: Contract[] = [];
-      querySnapshot.forEach((doc) => {
-        contractsData.push({ id: doc.id, ...doc.data() } as Contract);
-      });
-      setContracts(contractsData);
-      setFilteredContracts(contractsData); // Inicialmente muestra todos los contratos
-    } catch (error) {
-      console.error('Error fetching contracts:', error);
-    }
-  };
+  const [activeTab, setActiveTab] = useState<"orders" | "contracts">("orders");
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<"" | "pending" | "processing" | "completed" | "cancelled">("");
 
   useEffect(() => {
-    fetchUserContracts();
+    (async () => {
+      if (!currentUser) return;
+      setLoading(true);
+      try {
+        const db = getFirestore();
+        // Solo órdenes del usuario autenticado (sin orderBy para evitar índice)
+        const q = query(collection(db, "orders"), where("createdBy", "==", currentUser.uid));
+        const snap = await getDocs(q);
+
+        const list: Order[] = snap.docs.map((d) => {
+          const data: any = d.data();
+          const ts: Timestamp | undefined = data.createdAt;
+          return {
+            id: d.id,
+            customerName: data.customerName ?? null,
+            customerEmail: data.customerEmail ?? null,
+            createdAt: ts?.toDate?.() ?? null,
+            status: data.status ?? "pending",
+            totals: {
+              total: data.totals?.total ?? 0,
+              currency: data.totals?.currency ?? "GBP",
+            },
+            items: data.items ?? [],
+          };
+        });
+
+        // Ordena en el cliente por fecha desc
+        list.sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
+        setOrders(list);
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, [currentUser]);
 
-  // Función para manejar el cambio de filtro
-  const handleFilterChange = (status: 'all' | 'Pending' | 'Completed') => {
-    setFilter(status);
-    if (status === 'all') {
-      setFilteredContracts(contracts);
-    } else {
-      setFilteredContracts(contracts.filter(contract => contract.status === status));
-    }
-  };
+  const filtered = useMemo(() => {
+    return orders.filter((o) => (statusFilter ? o.status === statusFilter : true));
+  }, [orders, statusFilter]);
 
   return (
     <div>
       <Header />
-      <div className="p-4 my-20 mx-4 pb-20 lg:mx-40" style={{ height: 'calc(100vh - 10rem)' }}>
+
+      <div className="p-4 my-20 mx-4 pb-20 lg:mx-40" style={{ height: "calc(100vh - 10rem)" }}>
         <h1 className="text-2xl font-bold mb-4">My Orders</h1>
-        
-        {/* Filtro de contratos */}
-        <div className="mb-4">
-          <label htmlFor="filter" className="mr-2 font-semibold">Filter by status:</label>
-          <select
-            id="filter"
-            value={filter}
-            onChange={(e) => handleFilterChange(e.target.value as 'all' | 'Pending' | 'Completed')}
-            className="border p-2 rounded"
+
+        {/* Tabs */}
+        <div className="mb-6 flex gap-2 border-b">
+          <button
+            className={`px-4 py-2 -mb-px border-b-2 ${
+              activeTab === "orders" ? "border-emerald-700 text-emerald-800 font-semibold" : "border-transparent text-gray-600"
+            }`}
+            onClick={() => setActiveTab("orders")}
           >
-            <option value="all">All</option>
-            <option value="Pending">Pending</option>
-            <option value="Completed">Completed</option>
-          </select>
+            Orders
+          </button>
+          <button
+            className={`px-4 py-2 -mb-px border-b-2 ${
+              activeTab === "contracts" ? "border-emerald-700 text-emerald-800 font-semibold" : "border-transparent text-gray-600"
+            }`}
+            onClick={() => setActiveTab("contracts")}
+          >
+            Contracts (coming soon)
+          </button>
         </div>
-        
-        {filteredContracts.length > 0 ? (
-          <div className="overflow-y-scroll h-full border rounded-lg p-4 bg-gray-50 shadow-md">
-            <ul className="space-y-4">
-              {filteredContracts.map((contract) => (
-                <li key={contract.id} className="border p-4 rounded-lg shadow-md bg-white">
-                  <p className="font-semibold">Email: {contract.email}</p>
-                  <p>Status: {contract.status}</p>
-                  {/* Convierte el Timestamp a una fecha con .toDate() */}
-                  <p>Created At: {new Date(contract.createdAt.toDate()).toLocaleString()}</p>
-                  <a
-                    href={contract.fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-500 underline"
-                  >
-                    View Contract
-                  </a>
-                </li>
-              ))}
-            </ul>
+
+        {activeTab === "orders" && (
+          <>
+            {/* Filtro por estado */}
+            <div className="flex justify-end mb-4">
+              <select
+                className="border rounded px-3 py-2 text-sm md:w-48"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as any)}
+              >
+                <option value="">All statuses</option>
+                <option value="pending">Pending</option>
+                <option value="processing">Processing</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+
+            {/* Lista de órdenes */}
+            <div className="bg-white border rounded-lg">
+              {loading ? (
+                <div className="p-6 text-gray-600">Loading…</div>
+              ) : filtered.length === 0 ? (
+                <div className="p-6 text-gray-600">No orders found.</div>
+              ) : (
+                <ul className="divide-y">
+                  {filtered.map((o) => (
+                    <li key={o.id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <div>
+                        <div className="font-semibold">Order #{o.id}</div>
+                        <div className="text-sm text-gray-600">
+                          {o.customerName || "(No name)"} — {o.customerEmail || ""}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {o.createdAt ? o.createdAt.toLocaleString() : "No date"}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span
+                          className={`px-2 py-0.5 rounded-full border text-sm ${
+                            statusColors[o.status] || "bg-gray-100 text-gray-700 border-gray-300"
+                          }`}
+                        >
+                          {o.status}
+                        </span>
+                        <div className="font-semibold">
+                          {currencyFmt(o.totals.total, o.totals.currency)}
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </>
+        )}
+
+        {activeTab === "contracts" && (
+          <div className="p-6 bg-gray-50 border rounded-lg text-gray-700">
+            <p>
+              Contracts area is <b>coming soon</b>. You’ll be able to see your reservation agreements here.
+            </p>
           </div>
-        ) : (
-          <p>No contracts found.</p>
         )}
       </div>
+
       <Footer />
     </div>
   );
