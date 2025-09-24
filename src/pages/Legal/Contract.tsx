@@ -210,12 +210,7 @@ const [coffeeSelections, setCoffeeSelections] = useState<CoffeeSelection[]>([]);
     .join('; ');
 
     const priceBreakdown = coffeeSelections
-    .map(
-      (item) =>
-        `${item.variety} – £${(
-          item.amount * 24 * item.price
-        ).toFixed(2)}`
-    )
+    .map((item) => `${item.variety} – £${item.price.toFixed(2)}`)
     .join('; ');
 
     const replacementsToSend = {
