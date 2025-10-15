@@ -3,6 +3,22 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSyncAlt } from '@fortawesome/free-solid-svg-icons';
 
+const getRelativeTime = (dateString: string) => {
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "—";
+
+  return date.toLocaleString("en-US", {
+    weekday: "short",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+
+
 const Requests: React.FC = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -142,50 +158,91 @@ const Requests: React.FC = () => {
           <FontAwesomeIcon icon={faSyncAlt} className="h-5 w-5" />
         </button>
       </div>
+  
       {users.length > 0 ? (
-        users.map((user) => (
-          <div 
-            key={user.uid} 
-            className="flex flex-col lg:flex-row lg:justify-between items-center mb-4 p-2 border-b"
-          >
-            <div className="flex flex-col lg:flex-row lg:items-center lg:gap-4">
-              <h3 className="text-lg font-bold">{user.firstName} {user.lastName}</h3>
-              <p className="text-gray-500">{user.email}</p>
+        users.map((user) => {
+          const raw = user.createdAt ?? user.metadata?.creationTime;
+          let created: string | null = null;
+  
+          // 🔽 Normalizamos el formato de fecha desde Firestore o Auth
+          if (raw instanceof Date) {
+            created = raw.toISOString();
+          } else if (typeof raw === "string") {
+            created = raw;
+          } else if (raw && typeof raw === "object") {
+            if (typeof raw.seconds === "number") {
+              created = new Date(raw.seconds * 1000).toISOString();
+            } else if (typeof (raw as any)._seconds === "number") {
+              created = new Date((raw as any)._seconds * 1000).toISOString();
+            }
+          }
+  
+          const relative = created ? getRelativeTime(created) : "—";
+  
+          return (
+            <div
+              key={user.uid}
+              className="flex flex-col lg:flex-row lg:justify-between items-center mb-4 p-2 border-b"
+            >
+              <div className="flex flex-col lg:flex-row lg:items-center lg:gap-4">
+                <div>
+                  <h3 className="text-lg font-bold">
+                    {user.firstName} {user.lastName}
+                  </h3>
+                  <p className="text-gray-500">{user.email}</p>
+                  <p className="text-sm text-gray-500">
+                    Requested:&nbsp;
+                    <span className="font-medium">{relative}</span>
+                  </p>
+                </div>
+              </div>
+  
+              <div className="flex gap-2">
+                <button
+                  onClick={() =>
+                    handleAccept(
+                      user.uid,
+                      user.email,
+                      `${user.firstName} ${user.lastName}`
+                    )
+                  }
+                  className="mt-2 lg:mt-0 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded"
+                  disabled={updating[user.uid] === "accept"}
+                >
+                  {updating[user.uid] === "accept" ? (
+                    <div className="loader ease-linear rounded-full border-4 border-t-4 border-white h-6 w-6"></div>
+                  ) : (
+                    "Accept"
+                  )}
+                </button>
+  
+                <button
+                  onClick={() => handleDecline(user.uid)}
+                  className="mt-2 lg:mt-0 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded"
+                  disabled={updating[user.uid] === "decline"}
+                >
+                  {updating[user.uid] === "decline" ? (
+                    <div className="loader ease-linear rounded-full border-4 border-t-4 border-white h-6 w-6"></div>
+                  ) : (
+                    "Decline"
+                  )}
+                </button>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleAccept(user.uid, user.email, `${user.firstName} ${user.lastName}`)}
-                className="mt-2 lg:mt-0 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded"
-                disabled={updating[user.uid] === 'accept'}
-              >
-                {updating[user.uid] === 'accept' ? (
-                  <div className="loader ease-linear rounded-full border-4 border-t-4 border-white h-6 w-6"></div>
-                ) : (
-                  "Accept"
-                )}
-              </button>
-              <button
-                onClick={() => handleDecline(user.uid)}
-                className="mt-2 lg:mt-0 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded"
-                disabled={updating[user.uid] === 'decline'}
-              >
-                {updating[user.uid] === 'decline' ? (
-                  <div className="loader ease-linear rounded-full border-4 border-t-4 border-white h-6 w-6"></div>
-                ) : (
-                  "Decline"
-                )}
-              </button>
-            </div>
-          </div>
-        ))
+          );
+        })
       ) : (
         <div className="text-center py-10">
           <p className="text-lg text-gray-500">No pending requests.</p>
-          <p className="text-sm text-gray-400">There are currently no users with pending requests.</p>
+          <p className="text-sm text-gray-400">
+            There are currently no users with pending requests.
+          </p>
         </div>
       )}
     </div>
   );
+  
+  
 };
 
 export default Requests;

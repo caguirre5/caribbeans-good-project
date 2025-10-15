@@ -1,5 +1,5 @@
 import { doc, getDoc, getFirestore } from 'firebase/firestore';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 // añade este import (ajusta la ruta a tu proyecto)
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -45,7 +45,7 @@ type CreateOrderBody = {
   customerName: string | null;
   customerEmail: string | null;
   items: OrderItem[];
-  deliveryMethod: 'economy' | 'express' | 'saturday';
+  deliveryMethod: 'pickup' | 'economy' | 'express' | 'saturday';
   preferredDeliveryDate: string | null; // ISO string
   address?: string | null;
   notes?: string | null;
@@ -56,8 +56,6 @@ type BuiltRules = { rules: RuleWithTariff[] };
 type QuoteStatus = 'ok' | 'poa' | 'no_match' | 'need_postcode' | 'flat';
 
 const BAG_KG = 24 as const;
-
-
 
 function computeDeliveryQuote(params: {
   totalKg: number;
@@ -173,6 +171,18 @@ function computeDeliveryQuote(params: {
   };
 }
 
+const addDays = (date: Date, days: number) => {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+};
+
+const toLocalYMD = (d: Date) => {
+  const tzOffsetMs = d.getTimezoneOffset() * 60_000;
+  const local = new Date(d.getTime() - tzOffsetMs);
+  return local.toISOString().slice(0, 10); // YYYY-MM-DD
+};
+
 type PlaceOrderFormProps = {
   onClose?: () => void;
 };
@@ -220,16 +230,20 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
 
   const [hunchouenData, setHunchouenData] = useState<DonationsData>({ donations: 0, kilograms: 0 });
 
-  const DONATION_BAG_KG = 24
+  const [dateError, setDateError] = useState<string>("");
+
+  const DONATION_BAG_KG = 24;
+
+  const minDateStr = toLocalYMD(addDays(new Date(), 3));
+  const todayStr   = toLocalYMD(new Date());  
+
+  const formRef = useRef<HTMLDivElement>(null);
 
   const isAtLeast3DaysFromToday = (dateStr: string) => {
     if (!dateStr) return false;
-    const chosen = new Date(dateStr);
-    if (isNaN(chosen.getTime())) return false;
-    const now = new Date();
-    const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
-    return chosen.getTime() >= now.getTime() + threeDaysMs;
+    return dateStr >= minDateStr;  // compara YYYY-MM-DD
   };
+  
 
   const ConfirmSummary: React.FC = () => {
     const subtotal = coffeeSelections.reduce((acc, it) => acc + it.amount * 24 * it.price, 0);
@@ -332,6 +346,20 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
       </>
     );
   };
+
+  useEffect(() => {
+    // Bloquea el scroll del contenedor principal cuando un sub-modal está abierto
+    const el = formRef.current;
+    if (!el) return;
+
+    if (showStockPanel || showConfirm) {
+      el.classList.add('overflow-hidden');
+    } else {
+      el.classList.remove('overflow-hidden');
+    }
+
+    return () => el.classList.remove('overflow-hidden');
+  }, [showStockPanel, showConfirm]);
   
   useEffect(() => {
     const SHEET_ID_TARIFF = "1BZljN3v4Skt9ANzL6M4MyBhm8X80Qe9kgU8_Hh0wU9E";
@@ -451,14 +479,19 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
     customerEmail: string | null,
     selections: CoffeeSelection[],
     deliveryDateISO: string,
-    deliveryMethod: 'economy' | 'express' | 'saturday'
+    deliveryMethod: 'pickup' | 'economy' | 'express' | 'saturday' 
   ) => {
     const BAG_KG = 24;
     const subtotal = selections.reduce((acc, it) => acc + it.amount * BAG_KG * it.price, 0);
     const totalBags = selections.reduce((acc, it) => acc + it.amount, 0);
     const DELIVERY_COSTS = { economy: 75, express: 95, saturday: 100 } as const;
-    const deliveryFee = subtotal >= 300 || totalBags >= 15 ? 0 : DELIVERY_COSTS[deliveryMethod];
+    const deliveryFee =
+    deliveryMethod === 'pickup'
+      ? 0
+      : (subtotal >= 300 || totalBags >= 15 ? 0 : DELIVERY_COSTS[deliveryMethod]);
     const total = subtotal + deliveryFee;
+
+    const methodLabel = deliveryMethod === 'pickup' ? 'pickup' : deliveryMethod;
   
     const itemsRows = selections.map(it => `
       <tr>
@@ -492,7 +525,7 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
           </p>
 
           <p style="margin:0 0 8px;"><b>Customer:</b> ${customerName || '(No name)'} — ${customerEmail || ''}</p>
-          <p style="margin:0 0 16px;"><b>Preferred delivery:</b> ${dateTxt} · <b>Method:</b> ${deliveryMethod}</p>
+          <p style="margin:0 0 16px;"><p><b>Preferred delivery:</b> ${dateTxt} · <b>Method:</b> ${methodLabel}</p>
 
           <table cellspacing="0" cellpadding="0" style="border-collapse:collapse; width:100%; margin:12px 0;">
             <thead>
@@ -565,7 +598,7 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
         customerName: currentUser?.displayName ?? null,
         customerEmail: currentUser?.email ?? null,
         items,
-        deliveryMethod: deliverySpeed,
+        deliveryMethod: shippingMode === 'pickup' ? 'pickup' : deliverySpeed,
         // envía ISO; el backend ya convierte a Date()
         preferredDeliveryDate: deliveryDate ? new Date(deliveryDate).toISOString() : null,
         address: fullAddress,
@@ -600,7 +633,7 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
           currentUser?.email ?? null,
           coffeeSelections,
           new Date(deliveryDate).toISOString(),
-          deliverySpeed
+          shippingMode === 'pickup' ? 'pickup' : deliverySpeed
         );
 
         const emailRes = await fetch(
@@ -691,13 +724,34 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
     }
   };
   
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value; // "YYYY-MM-DD"
+    setDeliveryDate(value);
+    setDateError("");
+  
+    // Solo validamos reglas especiales si es DELIVERY
+    if (shippingMode === 'delivery') {
+      if (value && value < minDateStr) {
+        setDateError("Please choose a date at least 3 days from today.");
+        return;
+      }
+      if (value) {
+        const dow = new Date(value).getDay(); // 0 = Sunday
+        if (dow === 0) {
+          setDateError("We don’t deliver on Sundays. Please choose another date.");
+          return;
+        }
+      }
+    }
+  };
+  
   
   const handleCloseAll = () => {
     setShowConfirm(false);  // cierra el modal de confirmación interno
     onClose?.();            // cierra el modal pequeño del padre
   };
   
-  
+
 
   // helper: detectar si un label "Variety (Farm)" es Hunchouen
   const isHunchouen = (label: string) => label.toLowerCase().includes("hunchouen");
@@ -710,515 +764,577 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
   const cartHunchKg = cartHunchBags * DONATION_BAG_KG;
   const cartDonation = cartHunchKg * hunchouenData.donations;
 
-  // ❌ Elimina estas líneas de “preview”:
-  // const previewHunchKg = isHunchouen(selectedVariety) ? amount * DONATION_BAG_KG : 0;
-  // const previewDonation = previewHunchouenKg * hunchouenData.donations;
-  // const totalHunchKgToShow = cartHunchKg + previewHunchKg;
-  // const totalDonationToShow = cartDonation + previewDonation;
-
   // ✅ En su lugar usa solo carrito:
   const totalHunchKgToShow = cartHunchKg;
   const totalDonationToShow = cartDonation;
 
 
   return (
-    <div className="relative">
-    <form onSubmit={openConfirm} className="max-w-3xl mx-auto bg-white p-6 rounded shadow space-y-6">
-      <div className="flex items-start justify-between gap-3">
-        <h2 className="text-xl font-bold">
-          Place Your Coffee Order
-        </h2>
-        
-        <button
-          type="button"
-          onClick={() => setShowStockPanel(!showStockPanel)}
-          className="text-sm bg-gray-200 px-3 py-1 rounded hover:bg-gray-300"
-        >
-          {showStockPanel ? "Hide Stock" : "View Stock"}
-        </button>
-
-        {totalDonationToShow > 0 && (
-          <div
-            className="md:sticky md:top-4 shrink-0
-                      bg-yellow-50 border-2 border-yellow-400 text-yellow-900
-                      rounded-xl shadow px-4 py-3 flex items-start gap-3"
-            aria-live="polite"
-          >
-            <span className="text-2xl">🌱</span>
-            <div className="text-left text-sm md:text-base">
-              <p className="font-bold">You’re supporting MAIA</p>
-              <p>
-                Hunchouen items:&nbsp;
-                <span className="font-semibold">{totalHunchKgToShow}</span> kg
-              </p>
-              <p>
-                Estimated donation:&nbsp;
-                <span className="font-extrabold">£{totalDonationToShow.toFixed(2)}</span>
-                &nbsp;(<span>£{hunchouenData.donations.toFixed(2)}</span>/kg)
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-
-
-      {/* Select variety */}
-      <div>
-        <label className="block font-medium mb-1">Select Coffee</label>
-        <select
-          value={selectedVariety}
-          onChange={handleVarietySelect}
-          className="w-full border px-3 py-2 rounded"
-        >
-          <option value="">-- Select a coffee --</option>
-          {sheetData.map((item, i) => (
-            <option key={i} value={`${item.Variety} (${item.Farm})`}>
-              {item.Variety} ({item.Farm})
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Bags and price */}
-      <div className="grid grid-cols-3 gap-4">
-        <div>
-          <label className="block font-medium mb-1">Bags (24kg each)</label>
-          <input
-            type="number"
-            value={amount}
-            onChange={(e) => {
-              const val = parseInt(e.target.value);
-              if (stockAvailable !== null && val > stockAvailable) {
-                alert(`Only ${stockAvailable} bags available.`);
-                return;
-              }
-              setAmount(val);
-            }}
-            className="w-full border px-3 py-2 rounded"
-          />
-          {stockAvailable !== null && (
-            <p className="text-xs text-gray-500 mt-1">
-              Available: {stockAvailable} bags
-            </p>
-          )}
-        </div>
-
-        <div>
-          <label className="block font-medium mb-1">Unit Price (£/kg)</label>
-          <input
-            type="number"
-            value={price}
-            readOnly
-            className="w-full border bg-gray-100 px-3 py-2 rounded text-gray-700"
-          />
-        </div>
-
-        <div className="flex items-end">
+    <div className="relative" ref={formRef}>
+      <form onSubmit={openConfirm} className="max-w-3xl mx-auto bg-white p-6 rounded shadow space-y-6">
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="text-xl font-bold">
+            Place Your Coffee Order
+          </h2>
+          
           <button
             type="button"
-            onClick={handleAddItem}
-            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 w-full"
+            onClick={() => setShowStockPanel(!showStockPanel)}
+            className="text-sm font-medium px-4 py-2 rounded-lg 
+                      bg-[#044421] text-white shadow-sm
+                      hover:bg-[#06603a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#044421]
+                      transition-all duration-200"
           >
-            Add Coffee
+            {showStockPanel ? "Hide Stock" : "View Stock"}
           </button>
-        </div>
-      </div>
 
-      {/* Selected items */}
-      <div>
-        <h4 className="font-semibold mb-2">Selected Coffees</h4>
-        {coffeeSelections.length === 0 ? (
-          <p className="text-sm text-gray-500 italic">No items yet.</p>
-        ) : (
-          <ul className="space-y-2">
-            {coffeeSelections.map((item, idx) => (
-              <li key={idx} className="bg-gray-50 px-4 py-2 border rounded relative text-sm">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setCoffeeSelections(prev => prev.filter((_, i) => i !== idx))
-                  }
-                  className="absolute top-1 right-2 text-gray-500 hover:text-red-600 text-sm font-bold"
-                >
-                  ×
-                </button>
-                <div className="font-semibold">{item.variety}</div>
-                <div className="text-gray-700 text-sm mt-1">
-                  {item.amount} bags × £{item.price} = £{(item.amount * 30 * item.price).toFixed(2)}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
 
-      {/* Delivery section */}
-      <div className="space-y-4">
-        <div>
-          <label className="block font-medium mb-2">Fulfilment</label>
-
-          <div className="flex gap-4">
-            <label className="inline-flex items-center gap-2">
-              <input
-                type="radio"
-                name="shippingMode"
-                value="pickup"
-                checked={shippingMode === 'pickup'}
-                onChange={() => setShippingMode('pickup')}
-              />
-              <span>Pick up (FREE)</span>
-            </label>
-
-            <label className="inline-flex items-center gap-2">
-              <input
-                type="radio"
-                name="shippingMode"
-                value="delivery"
-                checked={shippingMode === 'delivery'}
-                onChange={() => setShippingMode('delivery')}
-              />
-              <span>Delivery</span>
-            </label>
-          </div>
-
-          <p className="text-xs text-gray-500 mt-1">
-            Pick up is always available. If you choose Delivery, shipping may be free over 300&nbsp;kg, otherwise fees apply.
-          </p>
-        </div>
-
-        {/* Fecha siempre visible (ajústalo si quieres que solo aplique en delivery) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block font-medium mb-1">Preferred Delivery Date</label>
-            <input
-              type="date"
-              value={deliveryDate}
-              onChange={(e) => setDeliveryDate(e.target.value)}
-              className="w-full border px-3 py-2 rounded"
-            />
-            <p className="text-xs text-gray-500 mt-1">Must be at least 3 days from today</p>
-          </div>
-
-          {/* Método de envío solo si es delivery */}
-          {shippingMode === 'delivery' && (
-            <div>
-              <label className="block font-medium mb-1">Delivery Method</label>
-              <select
-                value={deliverySpeed}
-                onChange={(e) => setDeliverySpeed(e.target.value as DeliverySpeed)}
-                className="w-full border px-3 py-2 rounded"
-              >
-                <option value="economy">Economy (£75)</option>
-                <option value="express">Express (+£20)</option>
-                <option value="saturday">Saturday (+£25)</option>
-              </select>
+          {totalDonationToShow > 0 && (
+            <div
+              className="md:sticky md:top-4 shrink-0
+                        bg-yellow-50 border-2 border-yellow-400 text-yellow-900
+                        rounded-xl shadow px-4 py-3 flex items-start gap-3"
+              aria-live="polite"
+            >
+              <span className="text-2xl">🌱</span>
+              <div className="text-left text-sm md:text-base">
+                <p className="font-bold">You’re supporting MAIA</p>
+                <p>
+                  Hunchouen items:&nbsp;
+                  <span className="font-semibold">{totalHunchKgToShow}</span> kg
+                </p>
+                <p>
+                  Estimated donation:&nbsp;
+                  <span className="font-extrabold">£{totalDonationToShow.toFixed(2)}</span>
+                  &nbsp;(<span>£{hunchouenData.donations.toFixed(2)}</span>/kg)
+                </p>
+              </div>
             </div>
           )}
         </div>
 
-        {shippingMode === 'pickup' && (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 md:p-5 text-emerald-900">
-            <div className="flex items-center gap-3 mb-3">
-              <span className="text-2xl">📍</span>
-              <h4 className="text-base md:text-lg font-semibold">Pick up locations &amp; hours</h4>
-            </div>
 
-            <div className="grid md:grid-cols-2 gap-4">
-              {/* Loom Coffeehouse */}
-              <label
-                onClick={() => setPickupLocation('loom')}
-                className={`rounded-lg bg-white/70 border p-4 shadow-sm cursor-pointer transition ${
-                  pickupLocation === 'loom'
-                    ? 'border-emerald-400 ring-2 ring-emerald-200'
-                    : 'border-emerald-100 hover:border-emerald-300'
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <input
-                    type="radio"
-                    name="pickupLocation"
-                    className="mt-1"
-                    checked={pickupLocation === 'loom'}
-                    onChange={() => setPickupLocation('loom')}
-                  />
-                  <div>
-                    <p className="font-semibold">Loom Coffeehouse</p>
-                    <p className="mt-1 text-sm leading-relaxed">
-                      128 Maryhill Road, Glasgow. G20 7QS
-                    </p>
-                    <div className="mt-3 text-sm">
-                      <p>Tuesday – Friday <span className="text-gray-600">(8 am – 2 pm)</span></p>
-                      <p>Saturday <span className="text-gray-600">(9 am – 3 pm)</span></p>
-                      <p>Sunday <span className="text-gray-600">(10 am – 2 pm)</span></p>
-                    </div>
+        {/* Select variety */}
+        <div>
+          <label className="block font-medium mb-1">Select Coffee</label>
+          <select
+            value={selectedVariety}
+            onChange={handleVarietySelect}
+            className="w-full border px-3 py-2 rounded"
+          >
+            <option value="">-- Select a coffee --</option>
+            {sheetData.map((item, i) => (
+              <option key={i} value={`${item.Variety} (${item.Farm})`}>
+                {item.Variety} ({item.Farm})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Bags and price */}
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <label className="block font-medium mb-1">Bags (24kg each)</label>
+            <input
+              type="number"
+              value={amount}
+              onChange={(e) => {
+                const val = parseInt(e.target.value);
+                if (stockAvailable !== null && val > stockAvailable) {
+                  alert(`Only ${stockAvailable} bags available.`);
+                  return;
+                }
+                setAmount(val);
+              }}
+              className="w-full border px-3 py-2 rounded"
+            />
+            {stockAvailable !== null && (
+              <p className="text-xs text-gray-500 mt-1">
+                Available: {stockAvailable} bags
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="block font-medium mb-1">Unit Price (£/kg)</label>
+            <input
+              type="number"
+              value={price}
+              readOnly
+              className="w-full border bg-gray-100 px-3 py-2 rounded text-gray-700"
+            />
+          </div>
+
+          <div className="flex items-end">
+            <button
+              type="button"
+              onClick={handleAddItem}
+              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 w-full"
+            >
+              Add Coffee
+            </button>
+          </div>
+        </div>
+
+        {/* Selected items */}
+        <div>
+          <h4 className="font-semibold mb-2">Selected Coffees</h4>
+          {coffeeSelections.length === 0 ? (
+            <p className="text-sm text-gray-500 italic">No items yet.</p>
+          ) : (
+            <ul className="space-y-2">
+              {coffeeSelections.map((item, idx) => (
+                <li key={idx} className="bg-gray-50 px-4 py-2 border rounded relative text-sm">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCoffeeSelections(prev => prev.filter((_, i) => i !== idx))
+                    }
+                    className="absolute top-1 right-2 text-gray-500 hover:text-red-600 text-sm font-bold"
+                  >
+                    ×
+                  </button>
+                  <div className="font-semibold">{item.variety}</div>
+                  <div className="text-gray-700 text-sm mt-1">
+                    {item.amount} bags × £{item.price} = £{(item.amount * 30 * item.price).toFixed(2)}
                   </div>
-                </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* Delivery section */}
+        <div className="space-y-4">
+          <div>
+            <label className="block font-medium mb-2">Fulfilment</label>
+
+            <div className="flex gap-4">
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="shippingMode"
+                  value="pickup"
+                  checked={shippingMode === 'pickup'}
+                  onChange={() => setShippingMode('pickup')}
+                />
+                <span>Pick up (FREE)</span>
               </label>
 
-              {/* Caribbean Goods */}
-              <label
-                onClick={() => setPickupLocation('cg')}
-                className={`rounded-lg bg-white/70 border p-4 shadow-sm cursor-pointer transition ${
-                  pickupLocation === 'cg'
-                    ? 'border-emerald-400 ring-2 ring-emerald-200'
-                    : 'border-emerald-100 hover:border-emerald-300'
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <input
-                    type="radio"
-                    name="pickupLocation"
-                    className="mt-1"
-                    checked={pickupLocation === 'cg'}
-                    onChange={() => setPickupLocation('cg')}
-                  />
-                  <div>
-                    <p className="font-semibold">Caribbean Goods</p>
-                    <p className="mt-1 text-sm leading-relaxed">
-                      Safestore Self Storage Glasgow Central<br />
-                      9 Canal St. G4 0AD
-                    </p>
-                    <div className="mt-3 text-sm">
-                      <p>Mon–Saturday <span className="text-gray-600">(8 am – 6 pm)</span></p>
-                      <p>Sunday <span className="text-gray-600">(10 am – 4 pm)</span></p>
-                    </div>
-                  </div>
-                </div>
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="shippingMode"
+                  value="delivery"
+                  checked={shippingMode === 'delivery'}
+                  onChange={() => setShippingMode('delivery')}
+                />
+                <span>Delivery</span>
               </label>
             </div>
 
-            <p className="mt-4 text-xs text-emerald-800/80">
-              Tip: Tell us which location you prefer in the notes, or we’ll follow up by email.
+            <p className="text-xs text-gray-500 mt-1">
+              Pick up is always available. If you choose Delivery, shipping may be free over 300&nbsp;kg, otherwise fees apply.
             </p>
           </div>
-        )}
 
-
-        {/* Address solo si es delivery */}
-        {shippingMode === 'delivery' && (
-          <div className="grid grid-cols-1 gap-4">
-            {/* Address lines */}
+          {/* Fecha siempre visible (ajústalo si quieres que solo aplique en delivery) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Preferred Delivery Date (reemplaza tu bloque actual) */}
             <div>
-              <label className="block font-medium mb-1">Delivery Address</label>
+              <label className="block font-medium mb-1">{shippingMode === 'delivery' ? 'Preferred Delivery Date' : 'Preferred Pickup Date'}</label>
               <input
-                value={addrLine1}
-                onChange={(e) => setAddrLine1(e.target.value)}
-                placeholder="Address line 1 (street and number)"
-                className="w-full border px-3 py-2 rounded mb-2"
+                type="date"
+                value={deliveryDate}
+                onChange={handleDateChange}
+                // En Delivery: mínimo hoy+3; en Pickup: desde hoy
+                min={shippingMode === 'delivery' ? minDateStr : todayStr}
+                className={
+                  "w-full border px-3 py-2 rounded " +
+                  (dateError ? "border-red-400 focus:border-red-500" : "")
+                }
               />
-              <input
-                value={addrLine2}
-                onChange={(e) => setAddrLine2(e.target.value)}
-                placeholder="Address line 2 (optional)"
-                className="w-full border px-3 py-2 rounded"
-              />
+              {/* Disclaimer: solo en Delivery */}
+              {shippingMode === 'delivery' ? (
+                <p className="text-xs text-gray-500 mt-1">
+                  Must be at least 3 days from today. No deliveries on Sundays.
+                </p>
+              ) : (
+                <p className="text-xs text-gray-500 mt-1">
+                </p>
+              )}
+              {dateError && <p className="text-xs text-red-600 mt-1">{dateError}</p>}
             </div>
 
-            {/* City / Region / Country */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block font-medium mb-1">City</label>
-                <input
-                  value={addrCity}
-                  onChange={(e) => setAddrCity(e.target.value)}
-                  placeholder="e.g. Glasgow"
-                  className="w-full border px-3 py-2 rounded"
-                />
-              </div>
 
+
+            {/* Método de envío solo si es delivery */}
+            {shippingMode === 'delivery' && (
               <div>
-                <label className="block font-medium mb-1">Region</label>
+                <label className="block font-medium mb-1">Delivery Method</label>
                 <select
-                  value={addrRegion}
-                  onChange={(e) => setAddrRegion(e.target.value as any)}
+                  value={deliverySpeed}
+                  onChange={(e) => setDeliverySpeed(e.target.value as DeliverySpeed)}
                   className="w-full border px-3 py-2 rounded"
                 >
-                  <option value="England & Wales">England & Wales</option>
-                  <option value="Scotland">Scotland</option>
+                  <option value="economy">Economy (£85)</option>
+                  <option value="express">Express (+£20)</option>
+                  <option value="saturday">Saturday (+£25)</option>
                 </select>
               </div>
+            )}
+          </div>
 
+          {shippingMode === 'pickup' && (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 md:p-5 text-emerald-900">
+              <div className="flex items-center gap-3 mb-3">
+                <span className="text-2xl">📍</span>
+                <h4 className="text-base md:text-lg font-semibold">Pick up locations &amp; hours</h4>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                {/* Loom Coffeehouse */}
+                <label
+                  onClick={() => setPickupLocation('loom')}
+                  className={`rounded-lg bg-white/70 border p-4 shadow-sm cursor-pointer transition ${
+                    pickupLocation === 'loom'
+                      ? 'border-emerald-400 ring-2 ring-emerald-200'
+                      : 'border-emerald-100 hover:border-emerald-300'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="radio"
+                      name="pickupLocation"
+                      className="mt-1"
+                      checked={pickupLocation === 'loom'}
+                      onChange={() => setPickupLocation('loom')}
+                    />
+                    <div>
+                      <p className="font-semibold">Loom Coffeehouse</p>
+                      <p className="mt-1 text-sm leading-relaxed">
+                        128 Maryhill Road, Glasgow. G20 7QS
+                      </p>
+                      <div className="mt-3 text-sm">
+                        <p>Tuesday – Friday <span className="text-gray-600">(8 am – 2 pm)</span></p>
+                        <p>Saturday <span className="text-gray-600">(9 am – 3 pm)</span></p>
+                        <p>Sunday <span className="text-gray-600">(10 am – 2 pm)</span></p>
+                      </div>
+                    </div>
+                  </div>
+                </label>
+
+                {/* Caribbean Goods */}
+                <label
+                  onClick={() => setPickupLocation('cg')}
+                  className={`rounded-lg bg-white/70 border p-4 shadow-sm cursor-pointer transition ${
+                    pickupLocation === 'cg'
+                      ? 'border-emerald-400 ring-2 ring-emerald-200'
+                      : 'border-emerald-100 hover:border-emerald-300'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="radio"
+                      name="pickupLocation"
+                      className="mt-1"
+                      checked={pickupLocation === 'cg'}
+                      onChange={() => setPickupLocation('cg')}
+                    />
+                    <div>
+                      <p className="font-semibold">Caribbean Goods</p>
+                      <p className="mt-1 text-sm leading-relaxed">
+                        Safestore Self Storage Glasgow Central<br />
+                        9 Canal St. G4 0AD
+                      </p>
+                      <div className="mt-3 text-sm">
+                        <p>Mon–Saturday <span className="text-gray-600">(8 am – 6 pm)</span></p>
+                        <p>Sunday <span className="text-gray-600">(10 am – 4 pm)</span></p>
+                      </div>
+                    </div>
+                  </div>
+                </label>
+              </div>
+
+              <p className="mt-4 text-xs text-emerald-800/80">
+                Tip: Tell us which location you prefer in the notes, or we’ll follow up by email.
+              </p>
+            </div>
+          )}
+
+
+          {/* Address solo si es delivery */}
+          {shippingMode === 'delivery' && (
+            <div className="grid grid-cols-1 gap-4">
+              {/* Address lines */}
               <div>
-                <label className="block font-medium mb-1">Country</label>
+                <label className="block font-medium mb-1">Delivery Address</label>
                 <input
-                  value={addrCountry}
-                  disabled
-                  className="w-full border px-3 py-2 rounded bg-gray-100 text-gray-700"
+                  value={addrLine1}
+                  onChange={(e) => setAddrLine1(e.target.value)}
+                  placeholder="Address line 1 (street and number)"
+                  className="w-full border px-3 py-2 rounded mb-2"
+                />
+                <input
+                  value={addrLine2}
+                  onChange={(e) => setAddrLine2(e.target.value)}
+                  placeholder="Address line 2 (optional)"
+                  className="w-full border px-3 py-2 rounded"
                 />
               </div>
+
+              {/* City / Region / Country */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block font-medium mb-1">City</label>
+                  <input
+                    value={addrCity}
+                    onChange={(e) => setAddrCity(e.target.value)}
+                    placeholder="e.g. Glasgow"
+                    className="w-full border px-3 py-2 rounded"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-medium mb-1">Region</label>
+                  <select
+                    value={addrRegion}
+                    onChange={(e) => setAddrRegion(e.target.value as any)}
+                    className="w-full border px-3 py-2 rounded"
+                  >
+                    <option value="England & Wales">England & Wales</option>
+                    <option value="Scotland">Scotland</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-medium mb-1">Country</label>
+                  <input
+                    value={addrCountry}
+                    disabled
+                    className="w-full border px-3 py-2 rounded bg-gray-100 text-gray-700"
+                  />
+                </div>
+              </div>
+
+              {/* 👇 Bajo esto deja tu bloque actual de Postcode SIN CAMBIOS */}
+              <div> 
+                <label className="block font-medium mb-1">Postcode</label> 
+                <input type="text" value={postcode} onChange={(e) => setPostcode(e.target.value)} placeholder="e.g. OX20, NE30, CA" className="w-full border px-3 py-2 rounded" /> 
+              </div>
             </div>
-
-            {/* 👇 Bajo esto deja tu bloque actual de Postcode SIN CAMBIOS */}
-            <div> 
-              <label className="block font-medium mb-1">Postcode</label> 
-              <input type="text" value={postcode} onChange={(e) => setPostcode(e.target.value)} placeholder="e.g. OX20, NE30, CA" className="w-full border px-3 py-2 rounded" /> 
-            </div>
-          </div>
-        )}
+          )}
 
 
 
-      </div>
+        </div>
 
-      <div>
-        <label className="block font-medium mb-1">Notes (optional)</label>
-        <textarea
-          value={noteText}
-          onChange={(e) => setNoteText(e.target.value)}
-          rows={3}
-          placeholder={shippingMode === 'pickup'
-            ? "Anything we should know for pickup?"
-            : "Anything we should know for delivery?"}
-          className="w-full border px-3 py-2 rounded"
-        />
-      </div>
+        <div>
+          <label className="block font-medium mb-1">Notes (optional)</label>
+          <textarea
+            value={noteText}
+            onChange={(e) => setNoteText(e.target.value)}
+            rows={3}
+            placeholder={shippingMode === 'pickup'
+              ? "Anything we should know for pickup?"
+              : "Anything we should know for delivery?"}
+            className="w-full border px-3 py-2 rounded"
+          />
+        </div>
 
 
 
-      {/* Totals */}
-      {(() => {
-        const totalBags = coffeeSelections.reduce((acc, item) => acc + item.amount, 0);
-        const totalKg = totalBags * BAG_KG;
-        const subtotal = coffeeSelections.reduce((acc, item) => acc + item.amount * BAG_KG * item.price, 0);
+        {/* Totals */}
+        {(() => {
+          const totalBags = coffeeSelections.reduce((acc, item) => acc + item.amount, 0);
+          const totalKg = totalBags * BAG_KG;
+          const subtotal = coffeeSelections.reduce((acc, item) => acc + item.amount * BAG_KG * item.price, 0);
 
-        const quote = computeDeliveryQuote({
-          totalKg,
-          mode: shippingMode,
-          speed: deliverySpeed,
-          postcode,
-          rules: tariffRules.rules,
-        });
+          const quote = computeDeliveryQuote({
+            totalKg,
+            mode: shippingMode,
+            speed: deliverySpeed,
+            postcode,
+            rules: tariffRules.rules,
+          });
 
-        const total = subtotal + quote.fee;
+          const total = subtotal + quote.fee;
 
-        // condiciones para habilitar el submit:
-        // - pickup siempre ok
-        // - delivery:
-        //   * ≤300 kg -> flat -> ok
-        //   * >300 kg -> solo ok si status === 'ok'
-        const canSubmit =
-          shippingMode === 'pickup' ||
-          (shippingMode === 'delivery' && (
-            totalKg <= 300 ? true : (quote.status === 'ok')
-          ));
+          // condiciones para habilitar el submit:
+          // - pickup siempre ok
+          // - delivery:
+          //   * ≤300 kg -> flat -> ok
+          //   * >300 kg -> solo ok si status === 'ok'
+          const canSubmit =
+            shippingMode === 'pickup' ||
+            (shippingMode === 'delivery' && (
+              totalKg <= 300 ? true : (quote.status === 'ok')
+            ));
 
-        return (
-          <>
-            {/* Mensajes UX claros */}
-            {shippingMode === 'delivery' && (
-              <div
+          return (
+            <>
+              {/* Mensajes UX claros */}
+              {shippingMode === 'delivery' && (
+                <div
+                  className={
+                    "rounded-lg border px-3 py-2 mb-3 text-sm " +
+                    (quote.status === 'ok' || quote.status === 'flat'
+                      ? "border-green-200 bg-green-50 text-green-800"
+                      : quote.status === 'poa'
+                        ? "border-amber-200 bg-amber-50 text-amber-800"
+                        : "border-red-200 bg-red-50 text-red-800")
+                  }
+                >
+                  {quote.status === 'poa' && (
+                    <p>
+                      <strong>POA (Price On Application):</strong> {quote.message}
+                    </p>
+                  )}
+                  {quote.status === 'no_match' && (
+                    <p>
+                      <strong>Postcode not covered:</strong> {quote.message}
+                    </p>
+                  )}
+                  {quote.status === 'need_postcode' && (
+                    <p>
+                      <strong>Postcode required:</strong> {quote.message}
+                    </p>
+                  )}
+                  {(quote.status === 'ok' || quote.status === 'flat') && (
+                    <p>{quote.message}</p>
+                  )}
+                </div>
+              )}
+
+              <div className="bg-gray-100 p-4 rounded space-y-1 text-sm">
+                <p><strong>Total bags:</strong> {totalBags}</p>
+                <p><strong>Total kg:</strong> {totalKg}</p>
+                <p><strong>Subtotal:</strong> £{subtotal.toFixed(2)}</p>
+                <p><strong>Delivery fee:</strong> £{quote.fee.toFixed(2)}</p>
+                <p className="text-lg font-bold">Total: £{total.toFixed(2)}</p>
+              </div>
+
+              {/* Botón con estado deshabilitado si no se puede cotizar correctamente */}
+              <button
+                type="submit"
+                disabled={
+                  !canSubmit ||
+                  coffeeSelections.length === 0 ||
+                  (shippingMode === 'delivery' && !isAtLeast3DaysFromToday(deliveryDate)) ||
+                  !!dateError
+                }
                 className={
-                  "rounded-lg border px-3 py-2 mb-3 text-sm " +
-                  (quote.status === 'ok' || quote.status === 'flat'
-                    ? "border-green-200 bg-green-50 text-green-800"
-                    : quote.status === 'poa'
-                      ? "border-amber-200 bg-amber-50 text-amber-800"
-                      : "border-red-200 bg-red-50 text-red-800")
+                  "mt-4 px-6 py-2 rounded text-white " +
+                  (
+                    !canSubmit ||
+                    coffeeSelections.length === 0 ||
+                    (shippingMode === 'delivery' && !isAtLeast3DaysFromToday(deliveryDate)) ||
+                    !!dateError
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700"
+                  )
                 }
               >
-                {quote.status === 'poa' && (
-                  <p>
-                    <strong>POA (Price On Application):</strong> {quote.message}
-                  </p>
-                )}
-                {quote.status === 'no_match' && (
-                  <p>
-                    <strong>Postcode not covered:</strong> {quote.message}
-                  </p>
-                )}
-                {quote.status === 'need_postcode' && (
-                  <p>
-                    <strong>Postcode required:</strong> {quote.message}
-                  </p>
-                )}
-                {(quote.status === 'ok' || quote.status === 'flat') && (
-                  <p>{quote.message}</p>
-                )}
-              </div>
-            )}
+                Submit Order
+              </button>
 
-            <div className="bg-gray-100 p-4 rounded space-y-1 text-sm">
-              <p><strong>Total bags:</strong> {totalBags}</p>
-              <p><strong>Total kg:</strong> {totalKg}</p>
-              <p><strong>Subtotal:</strong> £{subtotal.toFixed(2)}</p>
-              <p><strong>Delivery fee:</strong> £{quote.fee.toFixed(2)}</p>
-              <p className="text-lg font-bold">Total: £{total.toFixed(2)}</p>
-            </div>
-
-            {/* Botón con estado deshabilitado si no se puede cotizar correctamente */}
-            <button
-              type="submit"
-              disabled={!canSubmit || coffeeSelections.length === 0 || !isAtLeast3DaysFromToday(deliveryDate)}
-              title={
-                !canSubmit
-                  ? (
-                      quote.status === 'poa'
-                        ? 'POA: we’ll contact you with a quote.'
-                        : quote.status === 'no_match'
-                          ? 'Postcode not covered in our tariff zones.'
-                          : quote.status === 'need_postcode'
-                            ? 'Enter your postcode to apply the tariff.'
-                            : ''
-                    )
-                  : ''
-              }              
-              className={
-                "mt-4 px-6 py-2 rounded text-white " +
-                ( (!canSubmit || coffeeSelections.length === 0 || !isAtLeast3DaysFromToday(deliveryDate))
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-blue-600 hover:bg-blue-700"
-                )
-              }
-            >
-              Submit Order
-            </button>
-          </>
-        );
-      })()}
+            </>
+          );
+        })()}
 
 
 
 
-      {/* <button
-        type="submit"
-        className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 mt-4"
-      >
-        Submit Order
-      </button> */}
-    </form>
+        {/* <button
+          type="submit"
+          className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 mt-4"
+        >
+          Submit Order
+        </button> */}
+      </form>
 
     {/* PANEL LATERAL */}
-    {showStockPanel && (
-        <div className="fixed top-0 right-0 w-full md:w-96 h-full bg-white border-l shadow-xl p-4 overflow-y-auto z-50">
-          <h3 className="text-lg font-bold mb-4">Available Coffees</h3>
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="border p-2 text-left">Farm</th>
-                <th className="border p-2 text-left">Variety</th>
-                <th className="border p-2 text-left">Process</th>
-                <th className="border p-2 text-right">Price</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sheetData.map((item, i) => (
-                <tr key={i} className="hover:bg-gray-50">
-                  <td className="border p-2">{item.Farm}</td>
-                  <td className="border p-2">{item.Variety}</td>
-                  <td className="border p-2">{item.Process}</td>
-                  <td className="border p-2 text-right">{item.Price}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <button
-            onClick={() => setShowStockPanel(false)}
-            className="mt-4 w-full bg-red-500 text-white py-2 rounded hover:bg-red-600"
+      {showStockPanel && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4"
+          onClick={() => setShowStockPanel(false)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[80vh] overflow-y-auto overscroll-contain"
+            onClick={(e) => e.stopPropagation()} // evita cerrar al hacer click dentro
+            role="dialog"
+            aria-modal="true"
+            aria-label="Available Coffees"
           >
-            Close
-          </button>
+            <div className="p-5 border-b flex items-center justify-between sticky top-0 bg-white">
+              <h3 className="text-lg font-semibold">Available Coffees</h3>
+              <button
+                onClick={() => setShowStockPanel(false)}
+                className="text-gray-500 hover:text-gray-700 text-xl leading-none"
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="p-5">
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="border p-2 text-left">Farm</th>
+                      <th className="border p-2 text-left">Variety</th>
+                      {/* <th className="border p-2 text-left">Process</th> */}
+                      <th className="border p-2 text-right">24kg bags</th>
+                      <th className="border p-2 text-right">Price</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sheetData.map((item, i) => {
+                      const stockBags = parseInt(item['30 KG Sacks'] as unknown as string) || 0; // usamos tu columna
+                      return (
+                        <tr key={i} className="hover:bg-gray-50">
+                          <td className="border p-2">{item.Farm}</td>
+                          <td className="border p-2">{item.Variety}</td>
+                          {/* <td className="border p-2">{item.Process}</td> */}
+                          <td className="border p-2 text-right">{stockBags}</td>
+                          <td className="border p-2 text-right">{item.Price}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Disclaimer / link a Prices & Availability */}
+              <div className="mt-4 text-xs text-gray-600">
+                For full details (process, tasting notes, etc.), click{" "}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowStockPanel(false);           // cierra este modal
+                    window.dispatchEvent(new Event('openCoffeeCharts')); // navega a Prices
+                  }}
+                  className="underline text-emerald-700 hover:text-emerald-800"
+                >
+                  Prices & Availability
+                </button>.
+              </div>
+
+
+              <div className="mt-5 flex justify-end">
+                <button
+                  onClick={() => setShowStockPanel(false)}
+                  className="bg-emerald-600 text-white px-4 py-2 rounded hover:bg-emerald-700"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
+
 
       {showConfirm && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">

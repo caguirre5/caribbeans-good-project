@@ -41,6 +41,12 @@ const PortalHome: React.FC = () => {
     window.addEventListener('openPlaceOrder', handler);
     return () => window.removeEventListener('openPlaceOrder', handler);
   }, []);
+
+  useEffect(() => {
+    const handler = () => setActiveTab('coffee-charts');
+    window.addEventListener('openCoffeeCharts', handler);
+    return () => window.removeEventListener('openCoffeeCharts', handler);
+  }, []);  
   
 
   const renderContent = () => {
