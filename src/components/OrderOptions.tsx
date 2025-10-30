@@ -665,16 +665,19 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
 
       // 2b) Notificar al admin (texto simple, sin HTML)
       try {
-        const adminEmail = "caguirre.dt@gmail.com"; // cambia si usas otro
-
-        // arma un resumen básico de ítems (máx. 5 líneas)
+        const adminEmails = [
+          "caguirre.dt@gmail.com",
+          "info@caribbeangoods.co.uk",
+        ];
+      
+        // Arma un resumen básico de ítems (máx. 5 líneas)
         const lines = body.items
           .slice(0, 5)
           .map(
             (it) => `• ${it.bags} bags — ${it.varietyName} @ £${it.unitPricePerKg}/kg`
           )
           .join("\n");
-
+      
         const message =
           `A new order has been created and is pending approval.\n\n` +
           `Order ID: ${data?.orderId || "(unknown)"}\n` +
@@ -683,19 +686,30 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
           `Method: ${body.deliveryMethod}\n\n` +
           `Items:\n${lines}${body.items.length > 5 ? `\n(+${body.items.length - 5} more)` : ""}\n\n` +
           `Please review and approve in the admin dashboard.`;
-
-        await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/email/sendEmailMessage`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" }, // esta ruta no requiere token
-          body: JSON.stringify({
-            recipientEmail: adminEmail,
-            subject: "New order pending approval",
-            message,
-          }),
-        });
+      
+        // Enviar el correo a todos los admins en paralelo
+        await Promise.all(
+          adminEmails.map(async (email) => {
+            try {
+              await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/email/sendEmailMessage`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  recipientEmail: email,
+                  subject: "New order pending approval",
+                  message,
+                }),
+              });
+              console.log(`✅ Email sent to ${email}`);
+            } catch (err) {
+              console.error(`❌ Failed to send email to ${email}:`, err);
+            }
+          })
+        );
       } catch (e) {
-        console.error("Admin simple email failed:", e);
+        console.error("Admin email dispatch failed:", e);
       }
+      
   
       // Limpia el formulario si quieres
       setCoffeeSelections([]);
@@ -896,7 +910,7 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
                   </button>
                   <div className="font-semibold">{item.variety}</div>
                   <div className="text-gray-700 text-sm mt-1">
-                    {item.amount} bags × £{item.price} = £{(item.amount * 30 * item.price).toFixed(2)}
+                    {item.amount} bags × £{item.price} = £{(item.amount * BAG_KG * item.price).toFixed(2)}
                   </div>
                 </li>
               ))}
@@ -1104,6 +1118,7 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
                   >
                     <option value="England & Wales">England & Wales</option>
                     <option value="Scotland">Scotland</option>
+                    <option value="Northern Ireland">Northern Ireland</option>
                   </select>
                 </div>
 

@@ -66,6 +66,22 @@ const initialFormState: Replacements = {
   FREQUENCY: ''
 };
 
+// Helpers para YYYY-MM y sumar meses
+const toYYYYMM = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+
+const addMonths = (base: Date, months: number) =>
+  new Date(base.getFullYear(), base.getMonth() + months, 1);
+
+// Rangos permitidos (start entre +3 y +6 meses desde hoy)
+const TODAY = new Date();
+const MIN_START = addMonths(TODAY, 1);
+const MAX_START = addMonths(TODAY, 4);
+
+const MIN_START_STR = toYYYYMM(MIN_START);
+const MAX_START_STR = toYYYYMM(MAX_START);
+
+
 const ContractForm: React.FC<Props> = ({ currentUser }) => {
   const [formData, setFormData] = useState<Replacements>(initialFormState);
   const [loading, setLoading] = useState(false);
@@ -195,6 +211,17 @@ const [coffeeSelections, setCoffeeSelections] = useState<CoffeeSelection[]>([]);
       return;
     }
 
+    if (!startDate || startDate < MIN_START_STR || startDate > MAX_START_STR) {
+      setLoading(false);
+      setMessage("Please choose a start month between 3 and 6 months from now.");
+      return;
+    }
+  
+    if (!endDate || endDate < startDate) {
+      setLoading(false);
+      setMessage("End month must be the same or after the start month.");
+      return;
+    }
 
     const todayUK = new Date().toLocaleDateString('en-GB', {
       day: 'numeric',
@@ -228,7 +255,7 @@ const [coffeeSelections, setCoffeeSelections] = useState<CoffeeSelection[]>([]);
     };
     
 
-    console.log(replacementsToSend)
+    // console.log(replacementsToSend)
 
     try {
       const token = await currentUser?.getIdToken();
@@ -247,6 +274,74 @@ const [coffeeSelections, setCoffeeSelections] = useState<CoffeeSelection[]>([]);
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Error generating contract');
 
+      try {
+        const totalAmountNumber = coffeeSelections.reduce(
+          (acc, item) => acc + item.amount * 24 * item.price,
+          0
+        );
+        const totalKgNumber = coffeeSelections.reduce(
+          (acc, item) => acc + item.amount * 24,
+          0
+        );
+  
+        const simpleContractPayload = {
+          name: formData.NAME,
+          email: formData.EMAIL,
+          status: 'pending',              // o 'completed' si quieres
+          userId: currentUser?.uid,       // recomendado
+          details: {
+            customer: {
+              entity: formData.CUSTOMERCOMPANYNAME,
+              city: formData.CITY,
+              companyNumber: formData.COMPNUMBER,
+              officeAddress: formData.REGISTEREDOFFICE,
+              fullName: formData.NAME,
+              phone: formData.NUMBER,
+              email: formData.EMAIL,
+            },
+            reservation: {
+              startMonth: startDate,   // "YYYY-MM"
+              endMonth: endDate,       // "YYYY-MM"
+              months: formData.MONTHS,
+              month1: formData.MONTH1,
+              year1: formData.YEAR1,
+              month2: formData.MONTH2,
+              year2: formData.YEAR2,
+              frequency: formData.FREQUENCY,
+              generatedAtUK: todayUK,
+            },
+            selections: coffeeSelections.map((s) => ({
+              variety: s.variety,
+              bags: s.amount,                // 24kg cada una
+              unitPricePerKg: s.price,
+              lineKg: s.amount * 24,
+              lineSubtotal: s.amount * 24 * s.price,
+            })),
+            totals: {
+              totalKg: totalKgNumber,
+              totalAmountGBP: Number(totalAmountNumber.toFixed(2)),
+              pricePerBagKg: 24,
+            },
+            // snapshot opcional de lo enviado al docx
+            replacementsSnapshot: replacementsToSend,
+          },
+        };
+  
+        await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/api/contracts/addSimple`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify(simpleContractPayload),
+        }).catch((e) => {
+          console.error('Failed to create Firestore contract:', e);
+        });
+      } catch (e) {
+        console.error('Simple contract creation failed:', e);
+        // no bloqueamos el éxito del DOCX
+      }
+
       setMessage(result.message || 'Contract succesfully generated');
       setSuccess(true);
 
@@ -256,6 +351,9 @@ const [coffeeSelections, setCoffeeSelections] = useState<CoffeeSelection[]>([]);
     } finally {
       setLoading(false);
     }
+
+
+
   };
 
   const calculateReservationPeriod = (start: string, end: string) => {
@@ -623,9 +721,21 @@ const [coffeeSelections, setCoffeeSelections] = useState<CoffeeSelection[]>([]);
             <input
               type="month"
               value={startDate}
+              min={MIN_START_STR}
+              max={MAX_START_STR}
               onChange={(e) => {
-                setStartDate(e.target.value);
-                calculateReservationPeriod(e.target.value, endDate);
+                // clamp al rango permitido
+                let v = e.target.value;
+                if (v && v < MIN_START_STR) v = MIN_START_STR;
+                if (v && v > MAX_START_STR) v = MAX_START_STR;
+
+                setStartDate(v);
+
+                // si endDate quedó antes del nuevo start, corrígelo
+                if (endDate && v && endDate < v) {
+                  setEndDate(v);
+                }
+                calculateReservationPeriod(v, endDate);
               }}
               className="w-full border border-gray-300 rounded px-3 py-2"
             />
@@ -636,14 +746,26 @@ const [coffeeSelections, setCoffeeSelections] = useState<CoffeeSelection[]>([]);
             <input
               type="month"
               value={endDate}
+              min={(() => {
+                const now = new Date();
+                now.setMonth(now.getMonth() + 1); // bloquea el mes actual y los pasados
+                return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+              })()}
               onChange={(e) => {
-                setEndDate(e.target.value);
-                calculateReservationPeriod(startDate, e.target.value);
+                let v = e.target.value;
+                // evita que el usuario elija antes del start (si hay)
+                if (startDate && v < startDate) v = startDate;
+                setEndDate(v);
+                calculateReservationPeriod(startDate, v);
               }}
               className="w-full border border-gray-300 rounded px-3 py-2"
             />
           </div>
         </div>
+
+        <p className="text-xs text-gray-500 mt-1">
+          You can start your reservation between <b>{MIN_START_STR}</b> and <b>{MAX_START_STR}</b>.
+        </p>
 
         <div className="mt-4">
           <label className="block font-medium mb-1">Total Duration (in months)</label>
