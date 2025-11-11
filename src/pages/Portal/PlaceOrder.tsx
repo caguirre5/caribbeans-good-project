@@ -47,8 +47,8 @@ const PlaceOrder: React.FC = () => {
           <div className="flex justify-center mb-4">
             <img src={OrderIcon} alt="Order Icon" className="text-[#cf583a] w-20 h-20 lg:w-28 lg:h-28" />
           </div>
-          <h3 className="text-md font-semibold mb-2">Order now</h3>
-          <p className="text-sm">Send your order details via email and get started right away.</p>
+          <h3 className="text-md font-semibold mb-2">Buy Coffee Now</h3>
+          <p className="text-sm">Order coffee that’s ready for dispatch today.</p>
         </div>
 
         {/* Botón de Reserve Coffee */}
@@ -59,8 +59,8 @@ const PlaceOrder: React.FC = () => {
           <div className="flex justify-center mb-4">
             <img src={ReserveIcon} alt="Reserve Icon" className="text-[#cf583a] w-20 h-20 lg:w-28 lg:h-28" />
           </div>
-          <h3 className="text-md font-semibold mb-2">Reserve coffee</h3>
-          <p className="text-sm">Order coffee now from top providers and get it delivered.</p>
+          <h3 className="text-md font-semibold mb-2">Coffee Reservation</h3>
+          <p className="text-sm">Plan ahead and schedule your coffee deliveries over time.</p>
         </div>
       </div>
 
@@ -225,7 +225,7 @@ const PlaceOrder: React.FC = () => {
                       </tr>
                       <tr className="hover:bg-white/[0.04]">
                         <td className="px-4 py-3">2–13 bags</td>
-                        <td className="px-4 py-3 font-semibold">£75.00</td>
+                        <td className="px-4 py-3 font-semibold">£85.00</td>
                       </tr>
                       <tr className="hover:bg-white/[0.04]">
                         <td className="px-4 py-3">14+ bags</td>

@@ -32,9 +32,30 @@ interface Order {
 const currencyFmt = (value: number, currency: string) =>
   new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(value);
 
+function friendlyStatus(o: Order) {
+  if (o.status !== "handoff") return o.status;
+  const isPickup = o.deliveryMethod === "pickup";
+  return isPickup ? "Ready for pickup" : "On the way";
+}
+
+function prettyStatus(status?: string | null, deliveryMethod?: string | null): string {
+  const st = (status ?? "").toLowerCase().trim();
+  if (st !== "handoff") return status ?? "";
+
+  const mode = (deliveryMethod ?? "").toLowerCase().trim();
+  return mode === "pickup" ? "Ready for pickup" : "On the way";
+}
+
+
+const labelForEmail = (o: Order, st: string) => {
+  if (st !== "handoff") return st;
+  return (o.deliveryMethod === "pickup") ? "Ready for pickup" : "On the way";
+};
+
 const statusColors: Record<string, string> = {
   pending: "bg-orange-100 text-orange-700 border-orange-300",
   processing: "bg-green-100 text-green-700 border-green-300",
+  handoff: "bg-indigo-100 text-indigo-700 border-indigo-300",
   completed: "bg-gray-100 text-gray-700 border-gray-300",
   cancelled: "bg-red-100 text-red-700 border-red-300",
 };
@@ -59,7 +80,7 @@ const OrdersList: React.FC = () => {
 
   // ── estados de filtros / orden / búsqueda ───────────────────────────────
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"" | "pending" | "processing" | "completed" | "cancelled">("");
+  const [statusFilter, setStatusFilter] = useState<"" | "pending" | "processing" | "handoff" | "completed" | "cancelled">("");
   const [sortBy, setSortBy] = useState<"date_desc" | "date_asc" | "total_desc" | "total_asc">("date_desc");
   
   const [showEmailModal, setShowEmailModal] = useState(false);
@@ -68,7 +89,7 @@ const OrdersList: React.FC = () => {
 
   // Modal de cambio de status
   const [statusModalOpen, setStatusModalOpen] = useState(false);
-  const [statusToApply, setStatusToApply] = useState<"" | "pending" | "processing" | "completed" | "cancelled">("");
+  const [statusToApply, setStatusToApply] = useState<"" | "pending" | "processing" | "handoff" | "completed" | "cancelled">("");
   const [statusConfirm, setStatusConfirm] = useState(false);
   const [statusSubmitting, setStatusSubmitting] = useState(false);
 
@@ -261,6 +282,7 @@ Thank you,`
     const orderId = selectedOrder.id;
     const orderLabel = selectedOrder.orderNoShort || selectedOrder.id;
     const recipientEmail = selectedOrder.customerEmail || "";
+
   
     try {
       setStatusSubmitting(true);
@@ -273,8 +295,8 @@ Thank you,`
         try {
           const auth = getAuth();
           const token = await auth.currentUser?.getIdToken();
-          const subject = `Your order status is now ${statusToApply}`;
-          const html = buildOrderStatusEmailHTML(orderLabel, statusToApply);
+          const subject = `Your order status is now ${labelForEmail(selectedOrder, statusToApply)}`;
+          const html = buildOrderStatusEmailHTML(orderLabel, labelForEmail(selectedOrder, statusToApply));
   
           const res = await fetch(
             `${import.meta.env.VITE_FULL_ENDPOINT}/email/sendCustomEmail`,
@@ -426,7 +448,7 @@ Thank you,`
               statusColors[o.status] || "bg-gray-100 text-gray-700 border-gray-300"
             }`}
           >
-            {o.status}
+            {friendlyStatus(o)}
           </span>
         </div>
 
@@ -447,6 +469,7 @@ Thank you,`
           >
             <option value="pending">Pending</option>
             <option value="processing">Processing</option>
+            <option value="handoff">{prettyStatus("handoff",o.deliveryMethod)}</option>
             <option value="completed">Completed</option>
             <option value="cancelled">Cancelled</option>
           </select>
@@ -655,11 +678,11 @@ Thank you,`
                 </p>
                 <div className="flex items-center gap-2">
                   <span className="capitalize px-2 py-1 rounded-full border text-xs">
-                    {selectedOrder.status}
+                    {friendlyStatus(selectedOrder)}
                   </span>
                   <span className="text-gray-400">→</span>
                   <span className="capitalize px-2 py-1 rounded-full border text-xs">
-                    {statusToApply || "—"}
+                    {prettyStatus(statusToApply, selectedOrder.deliveryMethod) || "—"}
                   </span>
                 </div>
 
@@ -742,6 +765,7 @@ Thank you,`
             <option value="">All statuses</option>
             <option value="pending">Pending</option>
             <option value="processing">Processing</option>
+            <option value="handoff">Handoff</option>
             <option value="completed">Completed</option>
             <option value="cancelled">Cancelled</option>
           </select>
@@ -802,7 +826,7 @@ Thank you,`
                       statusColors[o.status] || "bg-gray-100 text-gray-700 border-gray-300"
                     }`}
                   >
-                    {o.status}
+                    {friendlyStatus(o)}
                   </span>
                 </p>
 

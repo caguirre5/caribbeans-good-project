@@ -38,6 +38,8 @@ interface Contract {
     lineKg?: number;
     unitPricePerKg?: number;
     lineSubtotal?: number;
+    remainingBags?: number;
+    remainingKg?: number;
   }> | null;
   totals?: {
     pricePerBagKg?: number;
@@ -68,10 +70,17 @@ const parseMaybeNumber = (v: any): number | undefined => {
   return undefined;
 };
 
+// helpers ya tienes fmtNum; agrega clamp01
+const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
+
+
 
 type View = 'list' | 'detail' | 'upload';
 
 const ContractsList: React.FC = () => {
+  // toggle para unidad
+  const [unitView, setUnitView] = useState<'bags' | 'kg'>('bags');
+
   const { currentUser } = useAuth();
 
   // vistas
@@ -672,6 +681,133 @@ const ContractsList: React.FC = () => {
                   </div>
                 </div>
               )}
+
+              {/* ===== Dispatch tracking (por variedad) ===== */}
+              {selections.length > 0 && (
+                <div className="mt-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-semibold">Dispatch tracking</h3>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs uppercase tracking-wide text-gray-600">View as</span>
+                      <div className="border rounded overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => setUnitView('bags')}
+                          className={`px-3 py-1 text-sm ${unitView === 'bags' ? 'bg-[#044421] text-white' : 'bg-white text-[#044421]'}`}
+                        >
+                          Bags
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setUnitView('kg')}
+                          className={`px-3 py-1 text-sm border-l ${unitView === 'kg' ? 'bg-[#044421] text-white' : 'bg-white text-[#044421]'}`}
+                        >
+                          KG
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Totales rápidos (globales) */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                    <div className="border rounded p-3">
+                      <p className="text-xs uppercase text-gray-600">Total bags (all varieties)</p>
+                      <p className="text-base font-medium">
+                        {fmtNum(selections.reduce((acc, it) => acc + (parseMaybeNumber(it.bags) ?? 0), 0))}
+                      </p>
+                    </div>
+                    <div className="border rounded p-3">
+                      <p className="text-xs uppercase text-gray-600">Total KG (all varieties)</p>
+                      <p className="text-base font-medium">
+                        {fmtNum(selections.reduce((acc, it) => {
+                          const kg = parseMaybeNumber(it.lineKg);
+                          const bags = parseMaybeNumber(it.bags);
+                          return acc + (kg ?? ((bags ?? 0) * 24));
+                        }, 0))}
+                      </p>
+                    </div>
+                    {totals?.totalAmountGBP != null && (
+                      <div className="border rounded p-3">
+                        <p className="text-xs uppercase text-gray-600">Total amount (GBP)</p>
+                        <p className="text-base font-medium">£{Number(totals.totalAmountGBP).toFixed(2)}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Tabla por variedad con barra de FALTANTE en verde */}
+                  <div className="overflow-x-auto border rounded">
+                    <table className="min-w-full text-sm">
+                      <thead className="bg-gray-50">
+                        <tr className="text-left">
+                          <th className="px-3 py-2 font-semibold">Variety</th>
+                          <th className="px-3 py-2 font-semibold">
+                            {unitView === 'bags' ? 'Total bags' : 'Total KG'}
+                          </th>
+                          <th className="px-3 py-2 font-semibold">
+                            {unitView === 'bags' ? 'Remaining bags' : 'Remaining KG'}
+                          </th>
+                          <th className="px-3 py-2 font-semibold">Remaining %</th>
+                          <th className="px-3 py-2 font-semibold w-64">Progress (remaining)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selections.map((it, idx) => {
+                          const totalBags = parseMaybeNumber(it.bags) ?? 0;
+                          const totalKg = parseMaybeNumber(it.lineKg) ?? (totalBags * 24);
+
+                          const remBags = parseMaybeNumber(it.remainingBags) ?? totalBags;
+                          const remKg = parseMaybeNumber(it.remainingKg) ?? totalKg;
+
+                          const total = unitView === 'bags' ? totalBags : totalKg;
+                          const remaining = unitView === 'bags' ? remBags : remKg;
+
+                          const pctRemaining = total > 0 ? clamp01(remaining / total) : 0;
+                          const pctRemainingLabel = Math.round(pctRemaining * 100);
+
+                          return (
+                            <tr key={idx} className="border-t align-middle">
+                              <td className="px-3 py-3 font-medium">{it.variety || '(Variety)'}</td>
+                              <td className="px-3 py-3">{fmtNum(total)}</td>
+                              <td className="px-3 py-3">{fmtNum(remaining)}</td>
+                              <td className="px-3 py-3">{pctRemainingLabel}%</td>
+                              <td className="px-3 py-3">
+                                <div className="w-full bg-gray-200 rounded h-2.5">
+                                  <div
+                                    className="h-2.5 rounded"
+                                    style={{
+                                      width: `${pctRemaining * 100}%`,
+                                      backgroundColor: '#16a34a', // verde
+                                      transition: 'width 300ms ease',
+                                    }}
+                                    aria-label={`Remaining ${pctRemainingLabel}%`}
+                                  />
+                                </div>
+                                <p className="text-[11px] text-gray-500 mt-1">
+                                  {unitView === 'bags'
+                                    ? `Completed: ${fmtNum(total - remaining)} / ${fmtNum(total)} bags`
+                                    : `Completed: ${fmtNum(total - remaining)} / ${fmtNum(total)} kg`}
+                                </p>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        {selections.length === 0 && (
+                          <tr>
+                            <td colSpan={5} className="px-3 py-4 text-center text-gray-500">
+                              No line items found for this contract.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <p className="text-[11px] text-gray-500 mt-2">
+                    The green bar shows how much is <b>remaining</b> to be dispatched per variety.
+                  </p>
+                </div>
+              )}
+
 
             </div>
           );

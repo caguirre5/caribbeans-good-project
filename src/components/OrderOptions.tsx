@@ -839,7 +839,7 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
             <option value="">-- Select a coffee --</option>
             {sheetData.map((item, i) => (
               <option key={i} value={`${item.Variety} (${item.Farm})`}>
-                {item.Variety} ({item.Farm})
+                {item.Variety} ({item.Farm}) - {item.Process}
               </option>
             ))}
           </select>

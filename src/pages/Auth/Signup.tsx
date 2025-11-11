@@ -208,7 +208,7 @@ const Signup: React.FC = () => {
         }
       }
 
-      navigate('/'); 
+      navigate('/Portal'); 
     } catch (err: any) {
       setError(err.message);
     }

@@ -316,6 +316,9 @@ const [coffeeSelections, setCoffeeSelections] = useState<CoffeeSelection[]>([]);
               unitPricePerKg: s.price,
               lineKg: s.amount * 24,
               lineSubtotal: s.amount * 24 * s.price,
+
+              remainingBags: s.amount,             // al inicio igual al total
+              remainingKg: s.amount * 24,          // al inicio igual al total en kg
             })),
             totals: {
               totalKg: totalKgNumber,
@@ -341,6 +344,50 @@ const [coffeeSelections, setCoffeeSelections] = useState<CoffeeSelection[]>([]);
         console.error('Simple contract creation failed:', e);
         // no bloqueamos el éxito del DOCX
       }
+
+
+
+      try {
+        const adminEmails = [
+          "caguirre.dt@gmail.com",
+          "info@caribbeangoods.co.uk",
+        ];
+      
+        const customerName = formData.NAME || "(No name)";
+        const customerEmail = formData.EMAIL || "(No email)";
+        const totalAmount = coffeeSelections
+          .reduce((acc, item) => acc + item.amount * 24 * item.price, 0)
+          .toFixed(2);
+      
+        const message = 
+          `A new contract has been created and sent to the customer.\n\n` +
+          `Customer: ${customerName}\n` +
+          `Email: ${customerEmail}\n` +
+          `Total: £${totalAmount}\n\n` +
+          `Please review it in the admin dashboard.`;
+      
+        await Promise.all(
+          adminEmails.map(async (email) => {
+            try {
+              await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/email/sendEmailMessage`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  recipientEmail: email,
+                  subject: "New Contract Created",
+                  message,
+                }),
+              });
+              console.log(`✅ Email sent to ${email}`);
+            } catch (err) {
+              console.error(`❌ Failed to send email to ${email}:`, err);
+            }
+          })
+        );
+      } catch (e) {
+        console.error("Admin email dispatch failed:", e);
+      }
+      
 
       setMessage(result.message || 'Contract succesfully generated');
       setSuccess(true);
@@ -553,7 +600,7 @@ const [coffeeSelections, setCoffeeSelections] = useState<CoffeeSelection[]>([]);
               <option value="">-- Select a coffee --</option>
               {sheetData.map((item, i) => (
                 <option key={i} value={`${item.Variety} (${item.Farm})`}>
-                  {item.Variety} ({item.Farm})
+                  {item.Variety} ({item.Farm}) - {item.Process}
                 </option>
               ))}
             </select>

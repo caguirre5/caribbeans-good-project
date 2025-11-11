@@ -88,45 +88,68 @@ const Header: React.FC<HeaderProp> = () => {
                     <li className="my-5 lg:mr-8 last:mr-0"><a className="font-semibold hover:text-[#e99c18]" href="/Subscribe" onClick={() => redirectTo("/Subscribe")}>Subscribe</a></li>
                     {/* <li className="my-5 lg:mr-8 last:mr-0"><a className="font-semibold hover:text-[#e99c18]" href="/ICEHome" onClick={() => redirectTo("/ICEHome")}>ICX</a></li> */}
 
-                    {!currentUser ? (  // Si no hay usuario autenticado, muestra el botón de login
+                    {!currentUser ? (
+                    // Si no hay usuario autenticado, muestra el botón de login
+                    <button
+                        onClick={handleLogin}
+                        className="border-[#044421] border hover:bg-[#044421] text-[#044421] hover:text-white font-bold py-2 px-4 rounded"
+                    >
+                        Access Roasters Portal
+                    </button>
+                    ) : (
+                    // Si hay usuario autenticado, muestra botón destacado + menú de usuario
+                    <div className="flex items-center gap-3" ref={dropdownRef}>
                         <button
-                            onClick={handleLogin}
-                            className="border-[#044421] border hover:bg-[#044421] text-[#044421] hover:text-white font-bold py-2 px-4 rounded"
+                        onClick={() => {
+                            redirectTo("/Portal");
+                            // si tienes menuOpen en el scope y quieres cerrar el menú móvil:
+                            // setMenuOpen(false);
+                        }}
+                        className="bg-[#e99c18] hover:bg-[#c98311] text-white font-bold py-2 px-4 rounded shadow focus:outline-none focus:ring-2 focus:ring-[#e99c18]/50"
+                        aria-label="Go to portal"
                         >
-                            Log In
+                        Go to portal
                         </button>
-                    ) : (  // Si hay usuario autenticado, muestra el menú de usuario
-                        <div className="relative" ref={dropdownRef}>
-                            <li 
-                                className="my-5 last:mr-0 w-[40px] h-[40px] rounded-full bg-[#044421] flex items-center justify-center text-white cursor-pointer" 
-                                onClick={() => setDropdownOpen(!dropdownOpen)}
-                            >
-                                {currentUser?.photoURL ? (
-                                    <img 
-                                        src={currentUser.photoURL} 
-                                        alt="Profile" 
-                                        className="w-full h-full rounded-full object-cover"
-                                        onError={(e) => {
-                                            e.currentTarget.style.display = 'none'; // Esconde la imagen si no se carga
-                                            e.currentTarget.parentElement!.textContent = firstLetter; // Muestra la primera letra
-                                        }}
-                                    />
-                                ) : (
-                                    <span>{firstLetter}</span> // Si no hay URL, muestra la primera letra
-                                )}
-                            </li>
-                            {dropdownOpen && (
-                                <ul className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg py-1 z-50 text-[#044421]">
-                                    <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/Portal")}>Portal Home</li>
-                                    <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/Portal")}>Roasters Forum</li>
-                                    <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/MyOrders")}>My Orders</li>
-                                    {/* <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/Portal")}>My Subscriptions</li> */}
-                                    <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/MyAccount")}>My Account</li>
-                                    <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer border-t border-gray-200" onClick={handleLogout}>Log Out</li>
-                                </ul>
+
+                        <div className="relative">
+                        <li
+                            className="my-5 last:mr-0 w-[40px] h-[40px] rounded-full bg-[#044421] flex items-center justify-center text-white cursor-pointer"
+                            onClick={() => setDropdownOpen(!dropdownOpen)}
+                            tabIndex={0}
+                            aria-haspopup="menu"
+                            aria-expanded={dropdownOpen}
+                        >
+                            {currentUser?.photoURL ? (
+                            <img
+                                src={currentUser.photoURL}
+                                alt="Profile"
+                                className="w-full h-full rounded-full object-cover"
+                                onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.parentElement!.textContent = firstLetter;
+                                }}
+                            />
+                            ) : (
+                            <span>{firstLetter}</span>
                             )}
+                        </li>
+
+                        {dropdownOpen && (
+                            <ul
+                            className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg py-1 z-50 text-[#044421]"
+                            role="menu"
+                            >
+                            <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/Portal")}>Portal Home</li>
+                            <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/Portal")}>Roasters Forum</li>
+                            <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/MyOrders")}>My Orders</li>
+                            <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/MyAccount")}>My Account</li>
+                            <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer border-t border-gray-200" onClick={handleLogout}>Log Out</li>
+                            </ul>
+                        )}
                         </div>
+                    </div>
                     )}
+
                 </ul>
             </div>
         </div>

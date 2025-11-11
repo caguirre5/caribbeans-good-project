@@ -29,6 +29,8 @@ const UserList: React.FC = () => {
 
   const { currentUser } = useAuth();
 
+  const [activeSort, setActiveSort] = useState<"lastLogin_desc" | "lastLogin_asc">("lastLogin_desc");
+
   const fetchUsers = async () => {
     setLoading(true);
     setError(null);
@@ -140,7 +142,22 @@ const UserList: React.FC = () => {
     }
   };
 
-  const filteredActive = filteredUsers.filter((u) => u.isActive === true);
+  const filteredActive = filteredUsers
+  .filter((u) => u.isActive === true)
+  .sort((a, b) => {
+    // si no hay lastLogin, lo mandamos al final
+    const aTs = a.lastLogin ? new Date(a.lastLogin).getTime() : 0;
+    const bTs = b.lastLogin ? new Date(b.lastLogin).getTime() : 0;
+
+    if (activeSort === "lastLogin_desc") {
+      // más reciente primero
+      return bTs - aTs;
+    } else {
+      // más antiguo primero
+      return aTs - bTs;
+    }
+  });
+
   const filteredUnverified = filteredUsers.filter(
     (u) => u.emailVerified === false
   );
@@ -172,14 +189,27 @@ const UserList: React.FC = () => {
       </div>
 
       {/* Search and refresh */}
-      <div className="flex justify-between items-center mb-4">
-        <input
-          type="text"
-          placeholder="Search users..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="border border-gray-300 px-2 py-1 rounded-md text-sm"
-        />
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-4">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            placeholder="Search users..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="border border-gray-300 px-2 py-1 rounded-md text-sm"
+          />
+          {activeTab === "active" && (
+            <select
+              value={activeSort}
+              onChange={(e) => setActiveSort(e.target.value as any)}
+              className="border border-gray-300 px-2 py-1 rounded-md text-sm"
+            >
+              <option value="lastLogin_desc">Last login (newest)</option>
+              <option value="lastLogin_asc">Last login (oldest)</option>
+            </select>
+          )}
+        </div>
+
         <button
           onClick={fetchUsers}
           className="text-gray-500 hover:text-gray-700"
@@ -187,6 +217,7 @@ const UserList: React.FC = () => {
           <FontAwesomeIcon icon={faSyncAlt} className="h-5 w-5" />
         </button>
       </div>
+
 
       {/* User lists */}
       {loading ? (

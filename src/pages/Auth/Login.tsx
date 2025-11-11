@@ -71,7 +71,7 @@ const Login: React.FC = () => {
           }
         }
       
-        navigate("/");
+        navigate("/Portal");
       }
        else {
         setError("Please verify your email before logging in. Look for an email with a verification link — check your inbox, spam, and promotions folders.");
@@ -155,7 +155,7 @@ const Login: React.FC = () => {
         }
       }
       // console.log("Google Sign-in successful and user saved to Firestore");
-      navigate('/'); // Navega al dashboard o home después del login con Google
+      navigate('/Portal'); // Navega al dashboard o home después del login con Google
     } catch (err: any) {
       setError(err.message);
     }
