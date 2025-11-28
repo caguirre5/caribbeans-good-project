@@ -49,6 +49,7 @@ type CreateOrderBody = {
   preferredDeliveryDate: string | null; // ISO string
   address?: string | null;
   notes?: string | null;
+  phone?: string | null;   // 👈 NUEVO
 };
 
 type BuiltRules = { rules: RuleWithTariff[] };
@@ -77,6 +78,15 @@ function computeDeliveryQuote(params: {
       status: 'ok' as QuoteStatus,
       fee: 0,
       message: 'Pick up — no delivery fee.',
+    };
+  }
+
+  // 🔹 NUEVA REGLA: 1 sola bolsa -> £42.5
+  if (mode === 'delivery' && totalKg === 24) {
+    return {
+      status: 'flat' as QuoteStatus,
+      fee: 42.5,
+      message: 'Flat delivery fee for a single 24kg bag.',
     };
   }
 
@@ -232,6 +242,8 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
 
   const [dateError, setDateError] = useState<string>("");
 
+  const [phone, setPhone] = useState('');
+
   const DONATION_BAG_KG = 24;
 
   const minDateStr = toLocalYMD(addDays(new Date(), 3));
@@ -283,6 +295,7 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
                     {addrLine1}{addrLine2 ? `, ${addrLine2}` : ''}, {addrCity}, {addrRegion}, {postcode}, {addrCountry}
                   </span>
                 </p>
+                <p>Phone: <span className="font-medium">{phone}</span></p>
               </>
             ) : (
               <>
@@ -485,10 +498,20 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
     const subtotal = selections.reduce((acc, it) => acc + it.amount * BAG_KG * it.price, 0);
     const totalBags = selections.reduce((acc, it) => acc + it.amount, 0);
     const DELIVERY_COSTS = { economy: 75, express: 95, saturday: 100 } as const;
-    const deliveryFee =
-    deliveryMethod === 'pickup'
-      ? 0
-      : (subtotal >= 300 || totalBags >= 15 ? 0 : DELIVERY_COSTS[deliveryMethod]);
+    
+    let deliveryFee = 0;
+    
+    if (deliveryMethod === 'pickup') {
+      deliveryFee = 0;
+    } else if (subtotal >= 300 || totalBags >= 15) {
+      // envío gratis por monto o cantidad
+      deliveryFee = 0;
+    } else if (totalBags === 1) {
+      // 🔹 NUEVA REGLA: 1 sola bolsa
+      deliveryFee = 42.5;
+    } else {
+      deliveryFee = DELIVERY_COSTS[deliveryMethod];
+    }
     const total = subtotal + deliveryFee;
 
     const methodLabel = deliveryMethod === 'pickup' ? 'pickup' : deliveryMethod;
@@ -564,6 +587,10 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
         alert('Please complete Address line 1, City and Postcode.');
         return;
       }
+      if (!phone.trim()) {
+        alert('Please add a contact phone for delivery.');
+        return;
+      }
     }    
     setSubmitStatus('idle');
     setSubmitError('');
@@ -599,11 +626,12 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
         customerEmail: currentUser?.email ?? null,
         items,
         deliveryMethod: shippingMode === 'pickup' ? 'pickup' : deliverySpeed,
-        // envía ISO; el backend ya convierte a Date()
         preferredDeliveryDate: deliveryDate ? new Date(deliveryDate).toISOString() : null,
         address: fullAddress,
         notes: composedNotes,
+        phone: shippingMode === 'delivery' ? phone.trim() || null : null,  // 👈 NUEVO
       };
+          
   
       const token = await currentUser?.getIdToken();
       const resp = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/orders/orders/generate`, {
@@ -668,6 +696,7 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
         const adminEmails = [
           "caguirre.dt@gmail.com",
           "info@caribbeangoods.co.uk",
+          "touillonoceane@gmail.com",
         ];
       
         // Arma un resumen básico de ítems (máx. 5 líneas)
@@ -992,12 +1021,29 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
                   className="w-full border px-3 py-2 rounded"
                 >
                   <option value="economy">Economy (£85)</option>
-                  <option value="express">Express (+£20)</option>
-                  <option value="saturday">Saturday (+£25)</option>
+                  <option value="express">Express £85 (+£20)</option>
+                  <option value="saturday">Saturday £85 (+£25)</option>
                 </select>
               </div>
             )}
+
+
+
           </div>
+          
+          {shippingMode === 'delivery' && (
+            <div className="mt-4 bg-yellow-100 border-l-4 border-yellow-500 p-3 rounded">
+              <p className="text-sm text-yellow-800 font-medium">
+                ⚠️ Important delivery notice:
+              </p>
+              <p className="text-sm text-yellow-700 mt-1">
+                If no one is available to receive the delivery and it is returned to the 
+                warehouse, a re-delivery fee of <span className="font-semibold">75%</span> 
+                of the original delivery cost will be applied.
+              </p>
+            </div>
+          )}
+
 
           {shippingMode === 'pickup' && (
             <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 md:p-5 text-emerald-900">
@@ -1130,12 +1176,29 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
                     className="w-full border px-3 py-2 rounded bg-gray-100 text-gray-700"
                   />
                 </div>
+                
               </div>
 
               {/* 👇 Bajo esto deja tu bloque actual de Postcode SIN CAMBIOS */}
               <div> 
                 <label className="block font-medium mb-1">Postcode</label> 
                 <input type="text" value={postcode} onChange={(e) => setPostcode(e.target.value)} placeholder="e.g. OX20, NE30, CA" className="w-full border px-3 py-2 rounded" /> 
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div>
+                  <label className="block font-medium mb-1">Contact phone</label>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="e.g. 07123 456789"
+                    className="w-full border px-3 py-2 rounded"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Required for delivery so the courier can contact you if needed.
+                  </p>
+                </div>
               </div>
             </div>
           )}

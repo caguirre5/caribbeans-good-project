@@ -15,19 +15,21 @@ interface OrderItem {
 }
 
 interface Order {
-  id: string; // Firestore doc id (interno)
-  orderNoShort?: string | null; // ← NUEVO número legible (p.ej. "25-0007")
+  id: string;
+  orderNoShort?: string | null;
   customerName: string | null;
   customerEmail: string | null;
   createdAt: Date | null;
   status: string;
-  totals: { total: number; currency: string; deliveryFee: number;  };
+  totals: { total: number; currency: string; deliveryFee: number; };
   items: OrderItem[];
   deliveryMethod?: 'economy' | 'express' | 'saturday' | string | null;
   address?: string | null;
   notes?: string | null;
   preferredDeliveryDate?: Date | null;
+  phone?: string | null;    
 }
+
 
 const currencyFmt = (value: number, currency: string) =>
   new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(value);
@@ -196,6 +198,7 @@ const OrdersList: React.FC = () => {
           address: data.address ?? null,
           notes: data.notes ?? null,
           preferredDeliveryDate: toMaybeDate(data.preferredDeliveryDate),
+          phone: data.phone ?? null, 
         });
       });
       setOrders(loaded);
@@ -255,20 +258,23 @@ const OrdersList: React.FC = () => {
     const contact = o.customerName
       ? `${o.customerName}${o.customerEmail ? ` (${o.customerEmail})` : ""}`
       : (o.customerEmail || "");
+    const phone = o.phone || "";
+
 
     return (
-`Dear WArmstrong,
-
-I would like to coordinate a new pallet delivery.
-${timingLine}${service}
-Weight ${totalKg} kg
-
-From: ${fromAddress}
-To: ${toAddress}
-Contact: ${contact}
-
-Thank you,`
-    ).trim();
+      `Dear WArmstrong,
+      
+      I would like to coordinate a new pallet delivery.
+      ${timingLine}${service}
+      Weight ${totalKg} kg
+      
+      From: ${fromAddress}
+      To: ${toAddress}
+      Contact: ${contact}${phone ? ` — Phone: ${phone}` : ""}
+      
+      Thank you,`
+      ).trim();
+      
   };
 
   // abrir modal y preparar texto
@@ -487,6 +493,11 @@ Thank you,`
               >
                 {o.customerEmail}
               </a>
+            )}
+            {o.phone && (
+              <p className="text-sm text-gray-700 mt-1">
+                Phone: <span className="font-medium">{o.phone}</span>
+              </p>
             )}
           </div>
 

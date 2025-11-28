@@ -10,6 +10,7 @@ import CartShoppingIcon from '../../assets/Icons/order2.svg';
 // import CommentsIcon from '../../assets/Icons/roastersforum2.svg';
 import UserIcon from '../../assets/Icons/myaccount1.svg';
 import GetInTouch from '../../assets/Icons/getintouch1.svg';
+import UserHomeDashboard from './UserHomeDashboard';
 // import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 // import { faChevronDown } from '@fortawesome/free-solid-svg-icons';
 
@@ -17,7 +18,7 @@ const menuContent = [
   {
     icon: TableListIcon,
     id: "coffee-charts",
-    title: "Coffee chart",
+    title: "Prices & availability",
     description: "Have a look at what we have available in stock and place an order."
   },
   {
@@ -86,17 +87,19 @@ const Portal: React.FC<PortalProps> = ({ setActiveTab }) => {
           className="text-2xl lg:text-3xl font-bold mb-0 text-center"
           style={{ fontFamily: "KingsThing" }}
         >
-          Welcome to the
+          Welcome to
         </h2>
         <h1
           className="text-4xl lg:text-6xl font-bold mb-4 text-center"
           style={{ fontFamily: "KingsThing" }}
         >
-          Roasters Portal
+          your dashboard
         </h1>
         <p className="text-sm text-center px-8 lg:px-0 mb-4  w-[260px]">
           We are delighted to welcome you to the brand new Roasters Portal! 
         </p>
+
+        <UserHomeDashboard/>
 
         {/* === Grid de los íconos DENTRO DEL MAIN === */}
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 w-full lg:px-[15%] bg-transparent justify-items-center place-items-center content-center  lg:gap-4 lg:p-10">

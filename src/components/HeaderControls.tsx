@@ -108,7 +108,7 @@ const Header: React.FC<HeaderProp> = () => {
                         className="bg-[#e99c18] hover:bg-[#c98311] text-white font-bold py-2 px-4 rounded shadow focus:outline-none focus:ring-2 focus:ring-[#e99c18]/50"
                         aria-label="Go to portal"
                         >
-                        Go to portal
+                        Go to my dashboard
                         </button>
 
                         <div className="relative">
@@ -140,7 +140,7 @@ const Header: React.FC<HeaderProp> = () => {
                             role="menu"
                             >
                             <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/Portal")}>Portal Home</li>
-                            <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/Portal")}>Roasters Forum</li>
+                            {/* <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/Portal")}>Roasters Forum</li> */}
                             <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/MyOrders")}>My Orders</li>
                             <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => redirectTo("/MyAccount")}>My Account</li>
                             <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer border-t border-gray-200" onClick={handleLogout}>Log Out</li>
