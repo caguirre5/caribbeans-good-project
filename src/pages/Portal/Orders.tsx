@@ -5,7 +5,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import Header from "../../components/HeaderControls";
 import Footer from "../../components/Footer";
 import OrdersTab, { Order } from "./OrdersTab";
-import ContractsTab, { Contract } from "./ContractsTab";
+import ContractsTab from "./ContractsTab";
 
 const toMaybeDate = (v: any): Date | null =>
   (v as Timestamp)?.toDate?.() ?? (v ? new Date(v) : null);
@@ -15,9 +15,7 @@ const MyOrders: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<"orders" | "contracts">("orders");
   const [orders, setOrders] = useState<Order[]>([]);
-  const [contracts, setContracts] = useState<Contract[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
-  const [loadingContracts, setLoadingContracts] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -62,33 +60,6 @@ const MyOrders: React.FC = () => {
       // El admin los crea y los relaciona por email => consultamos por email del usuario
       if (!currentUser.email) return;
 
-      setLoadingContracts(true);
-      try {
-        const db = getFirestore();
-        // normaliza a minúsculas por si acaso
-        const email = currentUser.email.toLowerCase();
-        const cq = query(collection(db, "contracts"), where("email", "==", email));
-        const csnap = await getDocs(cq);
-
-        const clist: Contract[] = csnap.docs.map((d) => {
-          const data: any = d.data();
-          return {
-            id: d.id,
-            name: data.name ?? "",
-            email: data.email ?? "",
-            s3Url: data.s3Url ?? "",
-            fileKey: data.fileKey ?? "",
-            status: data.status ?? "pending",
-            createdAt: toMaybeDate(data.createdAt),
-            updatedAt: toMaybeDate(data.updatedAt),
-          };
-        });
-
-        clist.sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
-        setContracts(clist);
-      } finally {
-        setLoadingContracts(false);
-      }
     })();
   }, [currentUser]);
 
@@ -128,7 +99,7 @@ const MyOrders: React.FC = () => {
         )}
 
         {activeTab === "contracts" && (
-          <ContractsTab contracts={contracts} loading={loadingContracts} />
+          <ContractsTab />
         )}
       </div>
 

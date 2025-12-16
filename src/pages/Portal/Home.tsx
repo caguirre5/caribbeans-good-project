@@ -9,12 +9,18 @@ import Portal from './Portal';
 import Dashboard from './AdminSection/Admin';
 import { useAuth } from '../../contexts/AuthContext';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebase/firebase'; 
+import { db } from '../../firebase/firebase';
+
+// 👇 nuevo import
+import SampleForm from '../../components/SampleForm';
 
 const PortalHome: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('home');
   const { currentUser } = useAuth();
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
+
+  // 👇 controla el modal de samples
+  const [showSampleModal, setShowSampleModal] = useState(false);
 
   useEffect(() => {
     const fetchUserRoles = async () => {
@@ -132,6 +138,68 @@ const PortalHome: React.FC = () => {
           {renderContent()}
         </div>
       </div>
+
+      {/* 🔘 BOTÓN FLOTANTE REQUEST SAMPLE */}
+      <button
+        type="button"
+        onClick={() => setShowSampleModal(true)}
+        className="
+          fixed 
+          bottom-4 
+          right-4 
+          z-40 
+          flex 
+          items-center 
+          gap-2 
+          px-4 
+          py-3 
+          rounded-full 
+          bg-[#044421] 
+          text-white 
+          shadow-lg 
+          hover:bg-[#06603a]
+          focus:outline-none 
+          focus:ring-2 
+          focus:ring-offset-2 
+          focus:ring-[#044421]
+          text-sm 
+          sm:text-base
+        "
+      >
+        <span className="text-lg">📦</span>
+        <span className="font-semibold hidden sm:inline">Request samples</span>
+        <span className="font-semibold sm:hidden">Samples</span>
+      </button>
+
+      {/* 🧊 MODAL CON EL SAMPLE FORM */}
+      {showSampleModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            {/* Header modal */}
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-semibold">
+                Request coffee samples
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowSampleModal(false)}
+                className="text-gray-500 hover:text-gray-700 text-xl leading-none"
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Contenido modal */}
+            <div className="p-4">
+              {/* Si tu SampleForm acepta onClose, puedes pasarla como prop */}
+              {/* <SampleForm onClose={() => setShowSampleModal(false)} /> */}
+              <SampleForm />
+            </div>
+          </div>
+        </div>
+      )}
+
       <Footer />
     </div>
   );

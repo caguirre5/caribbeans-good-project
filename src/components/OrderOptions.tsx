@@ -181,9 +181,18 @@ function computeDeliveryQuote(params: {
   };
 }
 
-const addDays = (date: Date, days: number) => {
+const addBusinessDays = (date: Date, businessDays: number) => {
   const d = new Date(date);
-  d.setDate(d.getDate() + days);
+  let added = 0;
+
+  while (added < businessDays) {
+    d.setDate(d.getDate() + 1);
+    const dow = d.getDay(); // 0 = Sun, 6 = Sat
+    if (dow !== 0 && dow !== 6) {
+      added++;
+    }
+  }
+
   return d;
 };
 
@@ -246,8 +255,8 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
 
   const DONATION_BAG_KG = 24;
 
-  const minDateStr = toLocalYMD(addDays(new Date(), 3));
-  const todayStr   = toLocalYMD(new Date());  
+  // 👉 ahora son 3 *business days* desde hoy
+  const minDateStr = toLocalYMD(addBusinessDays(new Date(), 3));
 
   const formRef = useRef<HTMLDivElement>(null);
 
@@ -769,25 +778,35 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
   
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value; // "YYYY-MM-DD"
-    setDeliveryDate(value);
+
+    // limpia error previo
     setDateError("");
-  
-    // Solo validamos reglas especiales si es DELIVERY
-    if (shippingMode === 'delivery') {
-      if (value && value < minDateStr) {
-        setDateError("Please choose a date at least 3 days from today.");
-        return;
-      }
-      if (value) {
-        const dow = new Date(value).getDay(); // 0 = Sunday
-        if (dow === 0) {
-          setDateError("We don’t deliver on Sundays. Please choose another date.");
-          return;
-        }
-      }
+
+    // si no hay valor, permite limpiar
+    if (!value) {
+      setDeliveryDate("");
+      return;
     }
+
+    // ✅ Min 3 business days (para pickup y delivery)
+    if (value < minDateStr) {
+      setDateError("Please choose a date at least 3 working days from today.");
+      setDeliveryDate(""); // 👈 revierte
+      return;
+    }
+
+    // ✅ Bloquear fin de semana (para pickup y delivery)
+    const dow = new Date(`${value}T00:00:00`).getDay(); // 0=Sun, 6=Sat
+    if (dow === 0 || dow === 6) {
+      setDateError("Weekends are not available. Please choose a weekday (Mon–Fri).");
+      setDeliveryDate(""); // 👈 revierte
+      return;
+    }
+
+    // ✅ OK
+    setDeliveryDate(value);
   };
-  
+
   
   const handleCloseAll = () => {
     setShowConfirm(false);  // cierra el modal de confirmación interno
@@ -991,7 +1010,7 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
                 value={deliveryDate}
                 onChange={handleDateChange}
                 // En Delivery: mínimo hoy+3; en Pickup: desde hoy
-                min={shippingMode === 'delivery' ? minDateStr : todayStr}
+                min={minDateStr}
                 className={
                   "w-full border px-3 py-2 rounded " +
                   (dateError ? "border-red-400 focus:border-red-500" : "")

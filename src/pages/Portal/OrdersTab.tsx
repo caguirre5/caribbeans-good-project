@@ -13,19 +13,20 @@ type OrderItem = {
 };
 
 export type Order = {
-  id: string; // Firestore doc id (interno)
-  orderNoShort?: string | null; // ← número legible (p.ej. "25-0007")
-  customerName: string | null;
-  customerEmail: string | null;
-  createdAt: Date | null;
-  status: "pending" | "processing" | "completed" | "cancelled" | string;
-  totals: { total: number; currency: string; deliveryFee?: number }; // deliveryFee opcional (lo recalculamos)
-  items: OrderItem[];
-  deliveryMethod?: "pickup" | "economy" | "express" | "saturday" | string | null;
-  address?: string | null;
+  id: string;
+  orderNoShort?: string | null;
+  customerName?: string | null;
+  customerEmail?: string | null;
+  createdAt: Date | null;     // ✅ Date
+  status: string;
+  totals: { total: number; currency: string; deliveryFee: number };
+  items: any[];
+  deliveryMethod?: any;
+  address?: any;
   notes?: string | null;
-  preferredDeliveryDate?: Date | null;
+  preferredDeliveryDate?: Date | null; // ✅ Date
 };
+
 
 const currencyFmt = (v: number, c: string) =>
   new Intl.NumberFormat("en-GB", { style: "currency", currency: c }).format(v);
