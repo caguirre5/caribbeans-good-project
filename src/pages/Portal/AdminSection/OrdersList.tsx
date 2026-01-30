@@ -28,6 +28,7 @@ interface Order {
   notes?: string | null;
   preferredDeliveryDate?: Date | null;
   phone?: string | null;    
+  trackingNumber?: string | null;
 }
 
 
@@ -97,79 +98,95 @@ const OrdersList: React.FC = () => {
 
   const searchDebounced = useDebounced(search, 250);
 
-  const buildOrderStatusEmailHTML = (orderLabel: string, newStatus: string) => `
-  <html>
-    <body style="margin:0;padding:0;background:#f6f8fa;">
-      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f6f8fa;">
-        <tr>
-          <td align="center" style="padding:24px 12px;">
-            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:620px;background:#ffffff;border:1px solid #eaecef;border-radius:8px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:#111;">
-              <tr>
-                <td style="padding:20px 24px 12px;">
-                  <h1 style="margin:0;font-size:18px;line-height:1.3;color:#111;">Your order status has changed</h1>
-                  <p style="margin:8px 0 0;font-size:14px;line-height:1.6;color:#444;">
-                    We wanted to let you know your order <b>#${orderLabel}</b> has been updated.
-                  </p>
-                </td>
-              </tr>
-  
-              <tr>
-                <td style="padding:12px 24px;">
-                  <div style="height:1px;background:#eaecef;"></div>
-                </td>
-              </tr>
-  
-              <tr>
-                <td style="padding:0 24px 4px;">
-                  <p style="margin:0 0 10px;font-size:14px;line-height:1.6;color:#444;">
-                    <b>New status:</b>
-                    <span style="
-                      display:inline-block;
-                      margin-left:6px;
-                      padding:2px 8px;
-                      font-size:12px;
-                      line-height:1.6;
-                      border:1px solid #dfe2e6;
-                      border-radius:999px;
-                      text-transform:capitalize;
-                      background:#f3f4f6;
-                      color:#111;
-                    ">
-                      ${newStatus}
-                    </span>
-                  </p>
-                </td>
-              </tr>
-  
-              <tr>
-                <td style="padding:0 24px 16px;">
-                  <p style="margin:0 0 8px;font-size:14px;line-height:1.6;color:#444;">
-                    You can review your order any time in <b>My Orders</b>.
-                  </p>
-                  <p style="margin:0;font-size:14px;line-height:1.6;color:#444;">
-                    If you have any questions, simply reply to this email and our team will get back to you.
-                  </p>
-                </td>
-              </tr>
-  
-              <tr>
-                <td style="padding:16px 24px 20px;">
-                  <p style="margin:0;font-size:13px;line-height:1.6;color:#666;">
-                    — The Caribbean Goods Team
-                  </p>
-                </td>
-              </tr>
-            </table>
-  
-            <p style="margin:12px 0 0;font-size:12px;line-height:1.6;color:#8a8f98;font-family:Arial,Helvetica,sans-serif;">
-              This message was sent regarding order #${orderLabel}.
-            </p>
-          </td>
-        </tr>
-      </table>
-    </body>
-  </html>
-  `;
+  const [trackingNumber, setTrackingNumber] = useState("");
+
+  const isOnTheWayChange =
+  statusToApply === "handoff" &&
+  (selectedOrder?.deliveryMethod ?? "").toLowerCase().trim() !== "pickup";
+
+
+const buildOrderStatusEmailHTML = (orderLabel: string, newStatus: string, tracking?: string) => `
+<html>
+  <body style="margin:0;padding:0;background:#f6f8fa;">
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f6f8fa;">
+      <tr>
+        <td align="center" style="padding:24px 12px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:620px;background:#ffffff;border:1px solid #eaecef;border-radius:8px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:#111;">
+            <tr>
+              <td style="padding:20px 24px 12px;">
+                <h1 style="margin:0;font-size:18px;line-height:1.3;color:#111;">Your order status has changed</h1>
+                <p style="margin:8px 0 0;font-size:14px;line-height:1.6;color:#444;">
+                  We wanted to let you know your order <b>#${orderLabel}</b> has been updated.
+                </p>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:12px 24px;">
+                <div style="height:1px;background:#eaecef;"></div>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:0 24px 4px;">
+                <p style="margin:0 0 10px;font-size:14px;line-height:1.6;color:#444;">
+                  <b>New status:</b>
+                  <span style="
+                    display:inline-block;
+                    margin-left:6px;
+                    padding:2px 8px;
+                    font-size:12px;
+                    line-height:1.6;
+                    border:1px solid #dfe2e6;
+                    border-radius:999px;
+                    text-transform:capitalize;
+                    background:#f3f4f6;
+                    color:#111;
+                  ">
+                    ${newStatus}
+                  </span>
+                </p>
+
+                ${
+                  tracking
+                    ? `<p style="margin:0 0 10px;font-size:14px;line-height:1.6;color:#444;">
+                        <b>Tracking number:</b> <span style="font-family:monospace;">${tracking}</span>
+                      </p>`
+                    : ``
+                }
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:0 24px 16px;">
+                <p style="margin:0 0 8px;font-size:14px;line-height:1.6;color:#444;">
+                  You can review your order any time in <b>My Orders</b>.
+                </p>
+                <p style="margin:0;font-size:14px;line-height:1.6;color:#444;">
+                  If you have any questions, simply reply to this email and our team will get back to you.
+                </p>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:16px 24px 20px;">
+                <p style="margin:0;font-size:13px;line-height:1.6;color:#666;">
+                  — Caribbean Goods Team
+                </p>
+              </td>
+            </tr>
+          </table>
+
+          <p style="margin:12px 0 0;font-size:12px;line-height:1.6;color:#8a8f98;font-family:Arial,Helvetica,sans-serif;">
+            This message was sent regarding order #${orderLabel}.
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
+`;
+
   
 
   useEffect(() => {
@@ -294,16 +311,28 @@ const OrdersList: React.FC = () => {
       setStatusSubmitting(true);
   
       // 1) Actualizar estado en backend (ya tienes updateStatus)
-      await updateStatus(orderId, statusToApply);
+      await updateStatus(
+        orderId,
+        statusToApply,
+        isOnTheWayChange ? { trackingNumber: trackingNumber.trim() } : undefined
+      );
+
   
       // 2) Enviar correo al cliente (si hay email)
       if (recipientEmail) {
         try {
           const auth = getAuth();
           const token = await auth.currentUser?.getIdToken();
-          const subject = `Your order status is now ${labelForEmail(selectedOrder, statusToApply)}`;
-          const html = buildOrderStatusEmailHTML(orderLabel, labelForEmail(selectedOrder, statusToApply));
-  
+          const newStatusLabel = labelForEmail(selectedOrder, statusToApply);
+          const trackingToSend = isOnTheWayChange ? trackingNumber.trim() : "";
+          const subject = `Your order status is now ${newStatusLabel}`;
+          const html = buildOrderStatusEmailHTML(
+            orderLabel,
+            newStatusLabel,
+            trackingToSend || undefined
+          );
+
+
           const res = await fetch(
             `${import.meta.env.VITE_FULL_ENDPOINT}/email/sendCustomEmail`,
             {
@@ -340,7 +369,7 @@ const OrdersList: React.FC = () => {
   };
   
 
-  const updateStatus = async (orderId: string, newStatus: string) => {
+  const updateStatus = async (orderId: string, newStatus: string, extra?: { trackingNumber?: string }) => {
     try {
       setUpdating(true);
       const auth = getAuth();
@@ -354,14 +383,19 @@ const OrdersList: React.FC = () => {
             "Content-Type": "application/json",
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
-          body: JSON.stringify({ status: newStatus }),
+          body: JSON.stringify({ status: newStatus, ...(extra ?? {}) }),
         }
       );
       if (!res.ok) throw new Error("Failed to update status");
       const data = await res.json();
 
       setOrders((prev) =>
-        prev.map((o) => (o.id === orderId ? { ...o, status: data.newStatus } : o))
+        prev.map((o) =>
+          o.id === orderId
+            ? { ...o, status: data.newStatus, ...(isOnTheWayChange ? { trackingNumber: trackingNumber.trim() } : {}) }
+            : o
+        )
+
       );
       if (selectedOrder?.id === orderId) {
         setSelectedOrder({ ...selectedOrder, status: data.newStatus });
@@ -469,6 +503,9 @@ const OrdersList: React.FC = () => {
             onChange={(e) => {
               setStatusToApply(e.target.value as any);
               setStatusConfirm(false);
+
+              setTrackingNumber("");
+
               setStatusModalOpen(true);
             }}
             className="border rounded px-2 py-1 text-sm"
@@ -709,6 +746,23 @@ const OrdersList: React.FC = () => {
                   />
                   <span>I understand and want to proceed.</span>
                 </label>
+
+                {isOnTheWayChange && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-700">
+                      Tracking number (required for “On the way”)
+                    </label>
+                    <input
+                      value={trackingNumber}
+                      onChange={(e) => setTrackingNumber(e.target.value)}
+                      placeholder="e.g. WAX123456789GB"
+                      className="w-full border rounded px-3 py-2 text-sm"
+                    />
+                    <p className="text-xs text-gray-500">
+                      This will be included in the email sent to the customer.
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="px-5 py-4 border-t flex justify-end gap-2">
@@ -725,7 +779,11 @@ const OrdersList: React.FC = () => {
                 </button>
                 <button
                   className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 text-sm disabled:opacity-50"
-                  disabled={!statusConfirm || statusSubmitting}
+                  disabled={
+                    !statusConfirm ||
+                    statusSubmitting ||
+                    (isOnTheWayChange && !trackingNumber.trim())
+                  }
                   onClick={confirmStatusChange}
                 >
                   {statusSubmitting ? "Updating…" : "Confirm"}

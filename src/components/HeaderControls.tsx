@@ -66,12 +66,12 @@ const Header: React.FC<HeaderProp> = () => {
 
     return (
         <div className="absolute w-full flex justify-between items-center px-4 lg:px-12">
-            <div className="flex lg:flex-1 items-center lg:justify-start h-20">
+            <div className="flex  items-center lg:justify-start h-20">
+                {/* Logo header, lateral izquierdo solo en mobil */}
                 <img src={Logo} alt="" className="lg:hidden h-10 cursor-pointer" onClick={() => redirectTo("/")} />
-                <p className="text-xl text-[#044421] font-bold cursor-pointer" onClick={() => redirectTo("/")}>Caribbean Goods</p>
-            </div>
-            <div className="lg:flex items-center justify-center hidden">
-                <img src={Logo} alt="" className="lg:h-20 cursor-pointer" onClick={() => redirectTo("/")} />
+                <img src={Logo} alt="" className="hidden lg:block lg:h-14 cursor-pointer" onClick={() => redirectTo("/")} />
+                {/* Letras solo en desktop */}
+                <p className=" text-xl text-[#044421] font-bold cursor-pointer" onClick={() => redirectTo("/")}>Caribbean Goods</p>
             </div>
             <div className={`flex lg:flex-1 lg:flex items-center justify-end`}>
                 <FontAwesomeIcon 

@@ -44,4 +44,3 @@ const Files: React.FC = () => {
 
 export default Files;
 
-// Similar para los otros componentes: CoffeeCharts, PlaceOrder, MyAccount, Files

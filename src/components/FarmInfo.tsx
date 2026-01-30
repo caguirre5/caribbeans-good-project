@@ -97,7 +97,8 @@ const FarmInfo: React.FC<FarmInfoProps> = ({ data, setActive }) => {
   }, [selectedImage]);
 
   return (
-    <div className="py-12 w-full justify-center items-center">
+    <div className=" py-2 w-full justify-center items-center">
+      {/* <div className="h-2 w-full bg-red"/> */}
       <div className="mx-auto grid grid-cols-1 lg:grid-cols-3 items-start">
         <div className="col-span-1 p-7 rounded-xl shadow-lg">
           <div className="mt-6 text-left space-y-4">
@@ -110,11 +111,11 @@ const FarmInfo: React.FC<FarmInfoProps> = ({ data, setActive }) => {
               <span className="ml-2 text-[#044421]">{data.altitude}</span>
             </div>
           </div>
-          <div className="mt-6">
+          <div className="mt-6 relative z-0">
             <MapContainer
               center={[15.877539, -90.368891]}
               zoom={7}
-              style={{ height: '60vh', width: '100%' }}
+              style={{ height: '60vh', width: '100%'  }}
               scrollWheelZoom={false}
             >
               <TileLayer

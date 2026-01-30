@@ -6,17 +6,18 @@ import ProjectsList from './ProjectsList';
 import ContractsDashboard from './ContractDashboard';
 import TeamMembersDashboard from './TeamDashboard';
 import OrdersList from './OrdersList';
+import GroupsManager from './Groups';
 
 const Dashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'users' | 'requests' | 'orders' | 'projects' | 'contracts' | 'teammembers'>('users'); // Agrega 'orders' como una opción
+  const [activeTab, setActiveTab] = useState<'users' | 'requests' | 'orders' | 'projects' | 'groups' | 'contracts' | 'teammembers'>('users'); // Agrega 'orders' como una opción
 
   return (
     <div 
-      className=" w-[80%] "
+      className=" mr-10"
       style={{ minHeight: 'calc(100vh - 15rem)' }}
     >
       <div className="text-center text-4xl font-bold py-4" style={{ fontFamily: "KingsThing", color: "#044421" }}>
-        DASHBOARD
+        Admin panel
       </div>
       <div className="flex bg-gray-100">
         {/* Sidebar con las pestañas */}
@@ -44,6 +45,12 @@ const Dashboard: React.FC = () => {
             onClick={() => setActiveTab('projects')}
           >
             Projects
+          </button>
+          <button
+            className={`block w-full text-left px-4 py-2 ${activeTab === 'groups' ? 'bg-gray-300' : ''}`} // Nueva pestaña
+            onClick={() => setActiveTab('groups')}
+          >
+            Groups
           </button>
           <button
             className={`block w-full text-left px-4 py-2 ${activeTab === 'contracts' ? 'bg-gray-300' : ''}`} // Nueva pestaña
@@ -77,6 +84,8 @@ const Dashboard: React.FC = () => {
           {activeTab === 'contracts' && <ContractsDashboard />} 
           {activeTab === 'teammembers' && <TeamMembersDashboard />} 
           {activeTab === 'orders' && <OrdersList />} 
+          
+          {activeTab === 'groups' && <GroupsManager />} 
         </div>
       </div>
     </div>

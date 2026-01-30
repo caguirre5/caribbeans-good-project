@@ -36,6 +36,7 @@ interface SheetData {
   '30 KG Sacks': string;
   Price: string;
   '12 bags Bundle + 1 Free': string;
+  Group?: string;
 }
 
 interface CoffeeSelection {
@@ -96,15 +97,16 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
 
   const [errors, setErrors] = useState<{ [K in keyof Replacements]?: boolean }>({});
 
+  const [userGroups, setUserGroups] = useState<string[]>([]);
   
-const [coffeeSelections, setCoffeeSelections] = useState<CoffeeSelection[]>([]);
+  const [coffeeSelections, setCoffeeSelections] = useState<CoffeeSelection[]>([]);
 
   const pricePerKgValue = 24
 
   useEffect(() => {
     const SHEET_ID = '1ee9mykWz7RPDuerdYphfTqNRmDaJQ6sNomhyppCt2mE'; // Reemplaza con el ID de tu hoja de cálculo
     const API_KEY = 'AIzaSyCFEBX2kLtYtyCBFrcCY4YN_uutqqQPC-k'; // Reemplaza con tu clave de API
-    const RANGE = 'Sheet1!A:G'; // Asegúrate de que el rango cubra todas las columnas
+    const RANGE = 'Sheet1!A:G';
   
     const fetchSheetData = async () => {
       try {
@@ -112,16 +114,18 @@ const [coffeeSelections, setCoffeeSelections] = useState<CoffeeSelection[]>([]);
         const response = await axios.get(url);
         const rows = response.data.values;
   
-        const formatted = rows.slice(1).map((row: string[]) => ({
-          Farm: row[0],
-          Variety: row[1],
-          Process: row[2],
-          'Our Tasting Notes': row[3],
-          '30 KG Sacks': row[4],
-          Price: row[5],
-          '12 bags Bundle + 1 Free': row[6],
+        const formatted: SheetData[] = rows.slice(1).map((row: string[]) => ({
+          Farm: row[0] || "",
+          Variety: row[1] || "",
+          Process: row[2] || "",
+          'Our Tasting Notes': row[3] || "",
+          '30 KG Sacks': row[4] || "",      // <- aquí cae "24 Kg bags"
+          Price: row[5] || "",              // <- aquí cae "Price per KG"
+          '12 bags Bundle + 1 Free': "",    // <- si no existe en tu sheet, déjalo vacío
+          Group: (row[6] || "").trim(),
         }));
-  
+
+          
         setSheetData(formatted);
       } catch (error) {
         console.error('Error loading sheet data:', error);
@@ -131,7 +135,38 @@ const [coffeeSelections, setCoffeeSelections] = useState<CoffeeSelection[]>([]);
     fetchSheetData();
   }, []);
   
-  
+  useEffect(() => {
+    const fetchUserGroups = async () => {
+      try {
+        if (!currentUser?.uid) {
+          setUserGroups([]);
+          return;
+        }
+
+        const userRef = doc(db, "users", currentUser.uid);
+        const snap = await getDoc(userRef);
+
+        if (!snap.exists()) {
+          setUserGroups([]);
+          return;
+        }
+
+        const raw = snap.data()?.groups;
+
+        const groups = Array.isArray(raw)
+          ? raw.map((g: any) => String(g).trim()).filter(Boolean)
+          : [];
+
+        setUserGroups(groups);
+      } catch (e) {
+        console.error("Error fetching user groups:", e);
+        setUserGroups([]);
+      }
+    };
+
+    fetchUserGroups();
+  }, [currentUser?.uid]);
+
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -165,14 +200,27 @@ const [coffeeSelections, setCoffeeSelections] = useState<CoffeeSelection[]>([]);
     fetchUserData();
   }, [currentUser]);
 
+  const norm = (s: any) => String(s ?? "").trim().toLowerCase();
+
+  const visibleSheetData = sheetData.filter((item) => {
+    const g = norm(item.Group);
+    if (!g) return true; // si no tiene group, es público
+    return userGroups.some((ug) => norm(ug) === g);
+  });
+
+
   const handleVarietySelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selected = sheetData.find(item => `${item.Variety} (${item.Farm})` === e.target.value);
+    const selected = visibleSheetData.find(
+      item => `${item.Variety} (${item.Farm})` === e.target.value
+    );
+
     if (selected) {
-      const pricePerKg = parseFloat(selected.Price.replace('£', '').trim());
-      const availableSacks = parseInt(selected['30 KG Sacks']);
-  
-      setStockAvailable(availableSacks);
-  
+      const pricePerKg = parseFloat(String(selected.Price).replace('£', '').trim()) || 0;
+      const availableBags = parseInt(String(selected["30 KG Sacks"]), 10) || 0;
+
+
+      setStockAvailable(availableBags);
+
       setFormData((prev) => ({
         ...prev,
         VARIETY: e.target.value,
@@ -180,7 +228,7 @@ const [coffeeSelections, setCoffeeSelections] = useState<CoffeeSelection[]>([]);
       }));
     }
   };
-  
+
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const amount = parseInt(e.target.value);
     if (stockAvailable !== null && amount > stockAvailable) {
@@ -518,7 +566,7 @@ const [coffeeSelections, setCoffeeSelections] = useState<CoffeeSelection[]>([]);
           </div>
 
           <div>
-            <label className="block font-medium mb-1">Company Number</label>
+            <label className="block font-medium mb-1">Registration Company Number</label>
             <input
               type="text"
               name="COMPNUMBER"
@@ -574,6 +622,7 @@ const [coffeeSelections, setCoffeeSelections] = useState<CoffeeSelection[]>([]);
               name="EMAIL"
               value={formData.EMAIL}
               onChange={handleChange}
+              disabled
               required
               className="w-full border border-gray-300 rounded px-3 py-2"
             />
@@ -591,6 +640,7 @@ const [coffeeSelections, setCoffeeSelections] = useState<CoffeeSelection[]>([]);
           {/* Select Variety (ocupa 2 columnas) */}
           <div className="col-span-2">
             <label className="block font-medium mb-1">Select a coffee</label>
+
             <select
               name="VARIETY"
               value={formData.VARIETY}
@@ -598,13 +648,28 @@ const [coffeeSelections, setCoffeeSelections] = useState<CoffeeSelection[]>([]);
               className="w-full border border-gray-300 rounded px-3 py-2"
             >
               <option value="">-- Select a coffee --</option>
-              {sheetData.map((item, i) => (
-                <option key={i} value={`${item.Variety} (${item.Farm})`}>
-                  {item.Variety} ({item.Farm}) - {item.Process}
-                </option>
-              ))}
+
+                {visibleSheetData.map((item, i) => {
+                  const stockBags = parseInt(item["30 KG Sacks"] as any, 10) || 0;
+                  const isSoldOut = stockBags <= 0;
+
+                  const value = `${item.Variety} (${item.Farm})`;
+
+                  return (
+                    <option key={i} value={value} disabled={isSoldOut}>
+                      {item.Variety} ({item.Farm}) - {item.Process}
+                      {isSoldOut ? " — SOLD OUT" : ""}
+                    </option>
+                  );
+                })}
+
             </select>
+
+            <p className="text-xs text-gray-500 mt-1">
+              Sold out coffees are shown as “SOLD OUT” and cannot be selected.
+            </p>
           </div>
+
 
           {/* Bags + Unit Price */}
           <div>

@@ -20,6 +20,7 @@ interface SheetData {
   '30 KG Sacks': string;
   Price: string;
   '12 bags Bundle + 1 Free': string;
+  Group?: string;
 }
 
 interface CoffeeSelection {
@@ -253,6 +254,8 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
 
   const [phone, setPhone] = useState('');
 
+  const [userGroups, setUserGroups] = useState<string[]>([]);
+
   const DONATION_BAG_KG = 24;
 
   // 👉 ahora son 3 *business days* desde hoy
@@ -386,7 +389,7 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
   useEffect(() => {
     const SHEET_ID_TARIFF = "1BZljN3v4Skt9ANzL6M4MyBhm8X80Qe9kgU8_Hh0wU9E";
     const API_KEY = "AIzaSyCFEBX2kLtYtyCBFrcCY4YN_uutqqQPC-k";
-    const RANGE = "Sheet1!A:F"; // A:F = 6 columnas: Zone | Postcode | Eco Half | Eco Full | ND Half | ND Full
+    const RANGE = "Sheet1!A:G"; // A:F = 6 columnas: Zone | Postcode | Eco Half | Eco Full | ND Half | ND Full
   
     async function fetchTariffs() {
       try {
@@ -418,7 +421,42 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
   
     fetchTariffs();
   }, []);
-  
+
+  useEffect(() => {
+    const fetchUserGroups = async () => {
+      try {
+        if (!currentUser?.uid) {
+          setUserGroups([]);
+          return;
+        }
+
+        const db = getFirestore();
+        const userRef = doc(db, "users", currentUser.uid);
+        const snap = await getDoc(userRef);
+
+        if (!snap.exists()) {
+          setUserGroups([]);
+          return;
+        }
+
+        const data = snap.data();
+        const raw = data?.groups;
+
+        const groups = Array.isArray(raw)
+          ? raw.map((g: any) => String(g).trim()).filter(Boolean)
+          : [];
+
+        setUserGroups(groups);
+      } catch (e) {
+        console.error("Error fetching user groups:", e);
+        setUserGroups([]);
+      }
+    };
+
+    fetchUserGroups();
+  }, [currentUser?.uid]);
+
+    
 
   useEffect(() => {
     const SHEET_ID = '1ee9mykWz7RPDuerdYphfTqNRmDaJQ6sNomhyppCt2mE';
@@ -433,13 +471,14 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
         const rows = data.values;
 
         const formatted = rows.slice(1).map((row: string[]) => ({
-          Farm: row[0],
-          Variety: row[1],
-          Process: row[2],
-          'Our Tasting Notes': row[3],
-          '30 KG Sacks': row[4],
-          Price: row[5],
-          '12 bags Bundle + 1 Free': row[6],
+          Farm: row[0] || "",
+          Variety: row[1] || "",
+          Process: row[2] || "",
+          'Our Tasting Notes': row[3] || "",
+          '30 KG Sacks': row[4] || "",
+          Price: row[5] || "",
+          '12 bags Bundle + 1 Free': row[6] || "",
+          Group: (row[6] || "").trim(), // 👈 NUEVO
         }));
 
         const fetchHunchouenData = async () => {
@@ -469,11 +508,24 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
     fetchSheetData();
   }, []);
 
+  const norm = (s: any) => String(s ?? "").trim().toLowerCase();
+
+  const visibleSheetData = sheetData.filter((item) => {
+    const g = norm(item.Group);
+    if (!g) return true;
+    return userGroups.some((ug) => norm(ug) === g);
+  });
+
+    
+
   const handleVarietySelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
     setSelectedVariety(value);
 
-    const selected = sheetData.find(item => `${item.Variety} (${item.Farm})` === value);
+    const selected = visibleSheetData.find(
+      item => `${item.Variety} (${item.Farm})` === value
+    );
+
     if (selected) {
       const parsedPrice = parseFloat(selected.Price.replace('£', '').trim());
       const parsedStock = parseInt(selected['30 KG Sacks']);
@@ -580,7 +632,7 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
           <p style="margin-top:18px;">
             Thanks again for choosing <b>Caribbean Goods</b>. If you have any questions, just reply to this email.
           </p>
-          <p>— The Caribbean Goods Team</p>
+          <p>— Caribbean Goods Team</p>
         </body>
       </html>
       `;
@@ -885,11 +937,19 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
             className="w-full border px-3 py-2 rounded"
           >
             <option value="">-- Select a coffee --</option>
-            {sheetData.map((item, i) => (
-              <option key={i} value={`${item.Variety} (${item.Farm})`}>
-                {item.Variety} ({item.Farm}) - {item.Process}
-              </option>
-            ))}
+
+            {visibleSheetData.map((item, i) => {
+              const stockBags = parseInt(item['30 KG Sacks'] as any) || 0;
+              const label = `${item.Variety} (${item.Farm})`;
+              const isSoldOut = stockBags <= 0;
+
+              return (
+                <option key={i} value={label} disabled={isSoldOut}>
+                  {label} {isSoldOut ? '— SOLD OUT' : ''} {item.Process ? `- ${item.Process}` : ''}
+                </option>
+              );
+            })}
+
           </select>
         </div>
 
@@ -1387,18 +1447,18 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {sheetData.map((item, i) => {
-                      const stockBags = parseInt(item['30 KG Sacks'] as unknown as string) || 0; // usamos tu columna
+                    {visibleSheetData.map((item, i) => {
+                      const stockBags = parseInt(item['30 KG Sacks'] as unknown as string) || 0;
                       return (
                         <tr key={i} className="hover:bg-gray-50">
                           <td className="border p-2">{item.Farm}</td>
                           <td className="border p-2">{item.Variety}</td>
-                          {/* <td className="border p-2">{item.Process}</td> */}
                           <td className="border p-2 text-right">{stockBags}</td>
                           <td className="border p-2 text-right">{item.Price}</td>
                         </tr>
                       );
                     })}
+
                   </tbody>
                 </table>
               </div>

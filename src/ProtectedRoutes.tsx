@@ -85,7 +85,7 @@ const ProtectedRoutes: React.FC = () => {
             <br />
             Cheers,
             <br /><br/>
-            The Caribbean Goods Team 🌴
+            Caribbean Goods Team 🌴
           </p>
           <Link to="/" className="inline-block">
             <button className="px-6 py-2 mt-4 text-white bg-[#044421] hover:bg-[#033914] rounded-full">

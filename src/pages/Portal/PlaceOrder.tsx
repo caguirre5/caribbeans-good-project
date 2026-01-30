@@ -59,7 +59,7 @@ const PlaceOrder: React.FC = () => {
           <div className="flex justify-center mb-4">
             <img src={ReserveIcon} alt="Reserve Icon" className="text-[#cf583a] w-20 h-20 lg:w-28 lg:h-28" />
           </div>
-          <h3 className="text-md font-semibold mb-2">Coffee Reservation</h3>
+          <h3 className="text-md font-semibold mb-2">Contract Coffee</h3>
           <p className="text-sm">Plan ahead and schedule your coffee deliveries over time.</p>
         </div>
       </div>
@@ -155,15 +155,12 @@ const PlaceOrder: React.FC = () => {
                         Open in Maps
                       </a>
                     </div>
-                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
+                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                       <p className="rounded-lg bg-black/10 px-3 py-2">
-                        <span className="text-white/70">Tue–Fri:</span> 8am–2pm
+                        <span className="text-white/70">Mon–Sat:</span> 8am–2pm
                       </p>
                       <p className="rounded-lg bg-black/10 px-3 py-2">
-                        <span className="text-white/70">Saturday:</span> 9am–3pm
-                      </p>
-                      <p className="rounded-lg bg-black/10 px-3 py-2">
-                        <span className="text-white/70">Sunday:</span> 10am–2pm
+                        <span className="text-white/70">Sunday:</span> 9am–3pm
                       </p>
                     </div>
                   </div>

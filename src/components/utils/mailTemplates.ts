@@ -37,7 +37,7 @@ export const buildStatusEmailHTML = (
                   <p style="margin:0;font-size:14px;line-height:1.6;color:#444;">If you have questions, just reply to this email.</p>
                 </td>
               </tr>
-              <tr><td style="padding:16px 24px 20px;"><p style="margin:0;font-size:13px;line-height:1.6;color:#666;">— The Caribbean Goods Team</p></td></tr>
+              <tr><td style="padding:16px 24px 20px;"><p style="margin:0;font-size:13px;line-height:1.6;color:#666;">— Caribbean Goods Team</p></td></tr>
             </table>
             <p style="margin:12px 0 0;font-size:12px;line-height:1.6;color:#8a8f98;font-family:Arial,Helvetica,sans-serif;">
               This message was sent regarding contract #${contractNo}.

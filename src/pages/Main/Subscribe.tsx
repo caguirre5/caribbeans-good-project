@@ -23,12 +23,11 @@ const Subscribe: React.FC = () => {
                                 margin: '0 auto',
                                 maxWidth: '100%',
                                 border: 'none',
-                                borderRadius:"10px",
-                                backgroundColor:"red"
+                                borderRadius:"10px"
                             }}
                             title="Brevo Form"
                             className="w-[600px] h-[830px] lg:h-[600px] rounded-none lg:rounded-xl"
-                        ></iframe>\
+                        ></iframe>
                 </div>
             </div>
             <Footer/>

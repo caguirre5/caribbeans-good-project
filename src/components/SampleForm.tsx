@@ -17,6 +17,7 @@ interface SampleSelection {
 }
 
 type SubmitStatus = "idle" | "submitting" | "success" | "error";
+type SampleFormType = "Green" | "Roasted";
 
 const SampleForm: React.FC = () => {
   const { currentUser } = useAuth();
@@ -45,6 +46,8 @@ const SampleForm: React.FC = () => {
   // Estado de envío
   const [status, setStatus] = useState<SubmitStatus>("idle");
   const [errorMessage, setErrorMessage] = useState<string>("");
+  
+  const [sampleType, setSampleType] = useState<SampleFormType>("Green");
 
   const MAX_SAMPLE_BAGS = 6;
 
@@ -202,6 +205,12 @@ const SampleForm: React.FC = () => {
               : ""
           }
 
+          <h3 style="margin:16px 0 8px;">Sample type</h3>
+          <p style="margin:0 0 8px;">
+            <b>Requested as:</b> ${sampleType}
+          </p>
+
+
           <h3 style="margin:16px 0 8px;">Samples requested</h3>
           <table cellspacing="0" cellpadding="0" style="border-collapse:collapse; width:100%; margin:12px 0;">
             <thead>
@@ -267,6 +276,11 @@ const SampleForm: React.FC = () => {
               : ""
           }
 
+          <h3 style="margin:16px 0 8px;">Sample type</h3>
+          <p style="margin:0 0 8px;">
+            <b>Requested as:</b> ${sampleType}
+          </p>
+
           <h3 style="margin:16px 0 8px;">Samples you requested</h3>
           <table cellspacing="0" cellpadding="0" style="border-collapse:collapse; width:100%; margin:12px 0;">
             <thead>
@@ -287,7 +301,7 @@ const SampleForm: React.FC = () => {
             If you need to adjust anything, just reply to this email and we’ll be happy to help.
           </p>
 
-          <p style="margin-top:24px;">— The Caribbean Goods Team</p>
+          <p style="margin-top:24px;">— Caribbean Goods Team</p>
         </body>
       </html>
     `;
@@ -384,12 +398,14 @@ const SampleForm: React.FC = () => {
       }
 
       setStatus("success");
+      
 
       // Limpiar selección (puedes dejar datos del cliente si quieres)
       setSelections([]);
       setSelectedVariety("");
       setAmount(1);
       setStockAvailable(null);
+      setSampleType("Green");
       setNotes("");
     } catch (err: any) {
       console.error("Sample request error:", err);
@@ -410,6 +426,23 @@ const SampleForm: React.FC = () => {
 
       {/* Select coffee */}
       <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Sample type */}
+        <div>
+          <label className="block font-medium mb-1">Sample type</label>
+          <select
+            value={sampleType}
+            onChange={(e) => setSampleType(e.target.value as SampleFormType)}
+            className="w-full border px-3 py-2 rounded"
+          >
+            <option value="Green">Green</option>
+            <option value="Roasted">Roasted</option>
+          </select>
+          <p className="text-xs text-gray-500 mt-1">
+            Choose whether you want green or roasted samples.
+          </p>
+        </div>
+
+
         <div>
           <label className="block font-medium mb-1">Select coffee</label>
           <select

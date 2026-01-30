@@ -220,7 +220,7 @@ const ResourceLibrary: React.FC<ResourceLibraryProps> = ({ setActiveTab }) => {
   if (selectedFarm) {
     console.log('selected farm: ', selectedFarm)
     return (
-      <div className="w-[90%] lg:w-[70%] flex flex-col items-center text-[#044421]">
+      <div className="mx-4 lg:mx-10 mt-6 flex flex-col items-center text-[#044421]">
         <button onClick={() => setSelectedFarm(null)} className="self-start mb-4 text-[#044421] underline">Back to all farms</button>
         <FarmInfo data={selectedFarm} setActive={setActiveTab} />
       </div>
@@ -229,7 +229,7 @@ const ResourceLibrary: React.FC<ResourceLibraryProps> = ({ setActiveTab }) => {
 
   return (
     <div 
-      className='flex flex-col items-center text-[#044421]'
+      className='flex flex-col items-center mt-8 text-[#044421]'
       style={{ minHeight: 'calc(100vh - 15rem)' }}
     >
       <h1 className="text-2xl font-bold mb-4 text-center" style={{ fontFamily: "KingsThing" }}>Resource Library</h1>

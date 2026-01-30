@@ -1,169 +1,158 @@
-import React, { useState, useEffect } from 'react';
-import ResourceLibrary from './ResourceLibrary';
-import CoffeeCharts from './CoffeeCharts';
-import PlaceOrder from './PlaceOrder';
-import Header from '../../components/HeaderControls';
-import Footer from '../../components/Footer';
-import Portal from './Portal';
-// import Files from './Files';
-import Dashboard from './AdminSection/Admin';
-import { useAuth } from '../../contexts/AuthContext';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebase/firebase';
+import React, { useState, useEffect } from "react";
+import ResourceLibrary from "./ResourceLibrary";
+import CoffeeCharts from "./CoffeeCharts";
+import PlaceOrder from "./PlaceOrder";
+import Portal from "./Portal"; // (si quieres que "home" siga usando el dashboard overview)
+import Dashboard from "./AdminSection/Admin";
 
-// 👇 nuevo import
-import SampleForm from '../../components/SampleForm';
+import Header from "../../components/HeaderControls";
+import Footer from "../../components/Footer";
+import SampleForm from "../../components/SampleForm";
+
+import { useAuth } from "../../contexts/AuthContext";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../../firebase/firebase";
+
+// Icons
+import TableListIcon from "../../assets/Icons/coffeechart1.svg";
+import FolderOpenIcon from "../../assets/Icons/gallery2.svg";
+import CartShoppingIcon from "../../assets/Icons/order2.svg";
+import UserIcon from "../../assets/Icons/myaccount1.svg";
+import GetInTouchIcon from "../../assets/Icons/getintouch1.svg";
+import PortalSidebar from "../../components/PortalSidebar";
+import MyOrders from "./Orders";
+import Profile from '../../components/Profile';
+
+type MenuItem = {
+  icon: string;
+  id: string;
+  title: string;
+  description: string;
+  mode: "tab" | "route";
+  to?: string;
+};
 
 const PortalHome: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<string>('home');
   const { currentUser } = useAuth();
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
-  // 👇 controla el modal de samples
+  const [activeTab, setActiveTab] = useState<string>("home");
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [showSampleModal, setShowSampleModal] = useState(false);
 
   useEffect(() => {
     const fetchUserRoles = async () => {
-      if (currentUser) {
-        try {
-          const userRef = doc(db, "users", currentUser.uid);
-          const userSnap = await getDoc(userRef);
-          
-          if (userSnap.exists()) {
-            const userData = userSnap.data();
-            setIsAdmin(userData?.roles?.includes('admin') || false);
-          }
-        } catch (error) {
-          console.error('Error fetching user roles:', error);
+      if (!currentUser) return;
+      try {
+        const userRef = doc(db, "users", currentUser.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          setIsAdmin(userData?.roles?.includes("admin") || false);
         }
+      } catch (error) {
+        console.error("Error fetching user roles:", error);
       }
     };
-
     fetchUserRoles();
   }, [currentUser]);
 
+  // eventos externos
   useEffect(() => {
-    const handler = () => setActiveTab('place-order');
-    window.addEventListener('openPlaceOrder', handler);
-    return () => window.removeEventListener('openPlaceOrder', handler);
+    const handler = () => setActiveTab("place-order");
+    window.addEventListener("openPlaceOrder", handler);
+    return () => window.removeEventListener("openPlaceOrder", handler);
   }, []);
 
   useEffect(() => {
-    const handler = () => setActiveTab('coffee-charts');
-    window.addEventListener('openCoffeeCharts', handler);
-    return () => window.removeEventListener('openCoffeeCharts', handler);
-  }, []);  
-  
+    const handler = () => setActiveTab("coffee-charts");
+    window.addEventListener("openCoffeeCharts", handler);
+    return () => window.removeEventListener("openCoffeeCharts", handler);
+  }, []);
 
-  const renderContent = () => {
+  const menuItems: MenuItem[] = [
+    // ✅ HOME (tab)
+    {
+      icon: TableListIcon, // si tienes un icono de "home", cámbialo aquí
+      id: "home",
+      title: "My dashboard",
+      description: "Overview, seasonality & updates.",
+      mode: "tab",
+    },
+    { icon: TableListIcon, id: "coffee-charts", title: "Prices & availability", description: "See stock and place an order.", mode: "tab" },
+    { icon: FolderOpenIcon, id: "resource-library", title: "Farm information", description: "Photos, videos and farm resources.", mode: "tab" },
+    { icon: CartShoppingIcon, id: "place-order", title: "Order now", description: "Place your order — we reply in 24h.", mode: "tab" },
+
+    { icon: UserIcon, id: "my-account", title: "My account", description: "Personal information.", mode: "tab" },
+
+    { icon: GetInTouchIcon, id: "my-orders", title: "My Orders", description: "See all your orders.", mode: "tab" },
+
+    ...(isAdmin
+      ? [{ icon: TableListIcon, id: "admin", title: "Admin", description: "Manage users and contracts.", mode: "tab" as const }]
+      : []),
+  ];
+
+  const handleSidebarClick = (item: MenuItem) => {
+    setActiveTab(item.id);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+
+
+  const renderCenter = () => {
     switch (activeTab) {
-      case 'resource-library':
+      case "home":
+        return <Portal setActiveTab={setActiveTab} />;
+      case "resource-library":
         return <ResourceLibrary setActiveTab={setActiveTab} />;
-      case 'coffee-charts':
+      case "coffee-charts":
         return <CoffeeCharts />;
-      case 'place-order':
+      case "place-order":
         return <PlaceOrder />;
-      // case 'services':
-      //   return <Files />;
-      case 'admin':
-        return isAdmin ? <Dashboard /> : null; // Solo renderiza el Dashboard si es admin
+      case "my-orders":
+        return <MyOrders />;
+      case "my-account":
+        return <Profile />;
+      case "admin":
+        return isAdmin ? <Dashboard /> : null;
       default:
         return <Portal setActiveTab={setActiveTab} />;
     }
   };
 
+
+
   return (
     <div className="w-full">
       <Header />
-      <div className={`flex flex-col items-center justify-center mt-20`}>
-        {/* Dropdown para móviles */}
-        <div className="w-full flex justify-center py-4 border-b bg-[#c9d3c0] lg:hidden">
-          <select
-            value={activeTab}
-            onChange={(e) => setActiveTab(e.target.value)}
-            className="bg-[#c9d3c0] text-gray-700 p-2 rounded-md"
-          >
-            <option value="home">Portal Home</option>
-            <option value="resource-library">Resource Library</option>
-            <option value="coffee-charts">Prices & Availability</option>
-            <option value="place-order">Place an Order</option>
-            {/* <option value="services">Services</option> */}
-            {isAdmin && <option value="admin">Users</option>}
-          </select>
-        </div>
 
-        {/* Navbar para pantallas grandes */}
-        <nav className="hidden w-full justify-center space-x-6 h-14 border-b bg-[#c9d3c0] lg:flex">
-          <button
-            onClick={() => setActiveTab('home')}
-            className={activeTab === 'home' ? 'text-[#044421] font-semibold border-t-2 border-[#044421]' : 'text-[#044421]'}
-          >
-            Portal Home
-          </button>
-          <button
-            onClick={() => setActiveTab('resource-library')}
-            className={activeTab === 'resource-library' ? 'text-[#044421] font-semibold border-t-2 border-[#044421]' : 'text-[#044421]'}
-          >
-            Farm information
-          </button>
-          <button
-            onClick={() => setActiveTab('coffee-charts')}
-            className={activeTab === 'coffee-charts' ? 'text-[#044421] font-semibold border-t-2 border-[#044421]' : 'text-[#044421]'}
-          >
-            Prices & Availability
-          </button>
-          <button
-            onClick={() => setActiveTab('place-order')}
-            className={activeTab === 'place-order' ? 'text-[#044421] font-semibold border-t-2 border-[#044421]' : 'text-[#044421]'}
-          >
-            Place an Order
-          </button>
-          {/* <button
-            onClick={() => setActiveTab('services')}
-            className={activeTab === 'services' ? 'text-[#044421] font-semibold border-t-2 border-[#044421]' : 'text-[#044421]'}
-          >
-            Services
-          </button> */}
-          {isAdmin && (
-            <button
-              onClick={() => setActiveTab('admin')}
-              className={activeTab === 'admin' ? 'text-[#044421] font-semibold border-t-2 border-[#044421]' : 'text-[#044421]'}
-            >
-              Admin
-            </button>
-          )}
-        </nav>
+      <nav className="mt-20 hidden w-full justify-center space-x-6 h-4 border-b bg-[#c9d3c0] lg:flex"/>
 
-        <div className="w-full mt-8 lg:mt-8 mb-[80px] flex justify-center">
-          {renderContent()}
-        </div>
+      <div className=" w-full flex flex-col lg:flex-row">
+        {/* ✅ Sidebar SIEMPRE visible en desktop */}
+        <PortalSidebar
+          items={menuItems}
+          activeId={activeTab}
+          onItemClick={handleSidebarClick}
+        />
+
+
+        {/* Center content */}
+        <main className="flex-1 w-full bg-[#f6faf7]">
+          
+
+          <div className="w-full mb-[80px]">{renderCenter()}</div>
+        </main>
       </div>
 
-      {/* 🔘 BOTÓN FLOTANTE REQUEST SAMPLE */}
+      {/* Botón samples + modal */}
       <button
         type="button"
         onClick={() => setShowSampleModal(true)}
         className="
-          fixed 
-          bottom-4 
-          right-4 
-          z-40 
-          flex 
-          items-center 
-          gap-2 
-          px-4 
-          py-3 
-          rounded-full 
-          bg-[#044421] 
-          text-white 
-          shadow-lg 
-          hover:bg-[#06603a]
-          focus:outline-none 
-          focus:ring-2 
-          focus:ring-offset-2 
-          focus:ring-[#044421]
-          text-sm 
-          sm:text-base
+          fixed bottom-4 right-4 z-40 flex items-center gap-2 px-4 py-3
+          rounded-full bg-[#044421] text-white shadow-lg hover:bg-[#06603a]
+          focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#044421]
+          text-sm sm:text-base
         "
       >
         <span className="text-lg">📦</span>
@@ -171,15 +160,11 @@ const PortalHome: React.FC = () => {
         <span className="font-semibold sm:hidden">Samples</span>
       </button>
 
-      {/* 🧊 MODAL CON EL SAMPLE FORM */}
       {showSampleModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            {/* Header modal */}
             <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="text-lg font-semibold">
-                Request coffee samples
-              </h3>
+              <h3 className="text-lg font-semibold">Request coffee samples</h3>
               <button
                 type="button"
                 onClick={() => setShowSampleModal(false)}
@@ -189,11 +174,7 @@ const PortalHome: React.FC = () => {
                 ×
               </button>
             </div>
-
-            {/* Contenido modal */}
             <div className="p-4">
-              {/* Si tu SampleForm acepta onClose, puedes pasarla como prop */}
-              {/* <SampleForm onClose={() => setShowSampleModal(false)} /> */}
               <SampleForm />
             </div>
           </div>

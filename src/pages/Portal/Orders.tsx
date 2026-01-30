@@ -2,8 +2,6 @@
 import React, { useEffect, useState } from "react";
 import { collection, getDocs, getFirestore, query, where, Timestamp } from "firebase/firestore";
 import { useAuth } from "../../contexts/AuthContext";
-import Header from "../../components/HeaderControls";
-import Footer from "../../components/Footer";
 import OrdersTab, { Order } from "./OrdersTab";
 import ContractsTab from "./ContractsTab";
 
@@ -65,9 +63,8 @@ const MyOrders: React.FC = () => {
 
   return (
     <div>
-      <Header />
 
-      <div className="p-4 my-20 mx-4 pb-20 lg:mx-40">
+      <div className="p-4 ">
         <h1 className="text-2xl font-bold mb-4">My Orders</h1>
 
         {/* Tabs */}
@@ -103,7 +100,6 @@ const MyOrders: React.FC = () => {
         )}
       </div>
 
-      <Footer />
     </div>
   );
 };
