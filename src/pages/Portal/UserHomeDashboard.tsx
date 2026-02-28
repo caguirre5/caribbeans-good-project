@@ -144,11 +144,6 @@ const UserHomeDashboard: React.FC = () => {
         }
 
         const token = await currentUser.getIdToken();
-        console.log('[DASHBOARD] currentUser:', {
-          uid: currentUser.uid,
-          email: currentUser.email,
-        });
-        console.log('[DASHBOARD] token present?', !!token);
 
         if (!token) {
           setError('You need to be logged in to see your dashboard.');
@@ -157,8 +152,7 @@ const UserHomeDashboard: React.FC = () => {
         }
 
         const baseUrl = import.meta.env.VITE_FULL_ENDPOINT;
-        console.log('[DASHBOARD] VITE_FULL_ENDPOINT:', baseUrl);
-
+        
         if (!baseUrl) {
           console.error('[DASHBOARD] VITE_FULL_ENDPOINT is undefined');
           setError('Configuration error: API endpoint is not set.');
@@ -173,8 +167,7 @@ const UserHomeDashboard: React.FC = () => {
 
         // ---- FETCH CONTRACTS STATS ----
         const contractsUrl = `${baseUrl}/stats/user/contracts-stats`;
-        console.log('[DASHBOARD] Fetching contracts stats from:', contractsUrl);
-
+        
         try {
           const resContracts = await fetch(contractsUrl, {
             headers: {
@@ -182,8 +175,7 @@ const UserHomeDashboard: React.FC = () => {
             },
           });
 
-          console.log('[DASHBOARD] Contracts response status:', resContracts.status);
-
+          
           if (!resContracts.ok) {
             const txt = await resContracts.text().catch(() => '');
             console.error(
@@ -194,7 +186,6 @@ const UserHomeDashboard: React.FC = () => {
             localError = `Contracts stats failed (${resContracts.status})`;
           } else {
             const data: ContractsApiResponse = await resContracts.json();
-            console.log('[DASHBOARD] Contracts stats data:', data);
             localContractsStats = data.stats;
           }
         } catch (err) {
@@ -204,7 +195,6 @@ const UserHomeDashboard: React.FC = () => {
 
         // ---- FETCH ORDERS STATS ----
         const ordersUrl = `${baseUrl}/orderStats/orders/stats/me`;
-        console.log('[DASHBOARD] Fetching orders stats from:', ordersUrl);
 
         try {
           const resOrders = await fetch(ordersUrl, {
@@ -212,8 +202,6 @@ const UserHomeDashboard: React.FC = () => {
               Authorization: `Bearer ${token}`,
             },
           });
-
-          console.log('[DASHBOARD] Orders response status:', resOrders.status);
 
           if (!resOrders.ok) {
             const txt = await resOrders.text().catch(() => '');
@@ -227,7 +215,6 @@ const UserHomeDashboard: React.FC = () => {
               : `Orders stats failed (${resOrders.status})`;
           } else {
             const data: OrdersStatsResponse = await resOrders.json();
-            console.log('[DASHBOARD] Orders stats data:', data);
             localOrdersStats = data;
           }
         } catch (err) {

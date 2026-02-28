@@ -11,7 +11,6 @@ import { useAuth } from "../../../../contexts/AuthContext";
 import { AnimatePresence, motion } from "framer-motion";
 import ContractLoader from "./Contracts"; // <-- ajusta la ruta si difiere
 
-// arriba en ContractsList.tsx
 import {
   buildStatusEmailHTML,
   buildDispatchEmailHTML,
@@ -31,22 +30,28 @@ interface DispatchHistoryEntry {
     | { seconds?: number; nanoseconds?: number }
     | { _seconds?: number; _nanoseconds?: number }
     | null;
+
+  // ✅ NEW: dispatch metadata (optional, depends on backend persisting it)
+  dispatchId?: string | null;
+  deliveryPostcode?: string | null;
+  consignmentNumber?: string | null;
+  referenceNumber?: string | null;
+
   lines?: DispatchHistoryLine[];
 }
 
 interface Contract {
   id: string;
   contractNo?: string | null;
-  name: string;
-  email: string;
-  s3Url: string;
-  fileKey: string;
+  name?: string | null;
+  email?: string | null;
+  s3Url?: string | null;
+  fileKey?: string | null;
   status: "pending" | "active" | "completed" | "cancelled" | string;
   createdAt:
     | { seconds: number; nanoseconds: number }
     | { _seconds: number; _nanoseconds: number }
     | null;
-  // NUEVO (opcionales)
   details?: Record<string, any> | null;
   customer?: { fullName?: string; email?: string } | null;
   replacementsSnapshot?: Record<string, any> | null;
@@ -106,36 +111,39 @@ const parseMaybeNumber = (v: any): number | undefined => {
   return undefined;
 };
 
-// helpers ya tienes fmtNum; agrega clamp01
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 
 type View = "list" | "detail" | "upload";
 
-const ContractsList: React.FC = () => {
-  // toggle para unidad
-  const [unitView, setUnitView] = useState<"bags" | "kg">("bags");
+// ✅ NEW: simple, recognizable dispatch id (5 chars)
+const generateDispatchId = (len = 5) => {
+  // avoids ambiguous chars: 0 O I 1
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let out = "";
+  for (let i = 0; i < len; i++) {
+    out += alphabet[Math.floor(Math.random() * alphabet.length)];
+  }
+  return out;
+};
 
+const ContractsList: React.FC = () => {
+  const [unitView, setUnitView] = useState<"bags" | "kg">("bags");
   const { currentUser } = useAuth();
 
-  // vistas
   const [activeView, setActiveView] = useState<View>("list");
 
-  // data
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // list controls
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<
     "" | "pending" | "active" | "completed" | "cancelled"
   >("");
   const [sortBy, setSortBy] = useState<"date_desc" | "date_asc">("date_desc");
 
-  // selected
   const [selected, setSelected] = useState<Contract | null>(null);
   const [updating, setUpdating] = useState(false);
 
-  // delete
   const [contractToDelete, setContractToDelete] = useState<Contract | null>(
     null
   );
@@ -143,7 +151,6 @@ const ContractsList: React.FC = () => {
   const [confirmText, setConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
 
-  // status modal
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [statusToApply, setStatusToApply] = useState<
     "" | "active" | "completed" | "cancelled"
@@ -155,6 +162,7 @@ const ContractsList: React.FC = () => {
   const [dispatchInputs, setDispatchInputs] = useState<Record<string, string>>(
     {}
   );
+
   // batch
   const [dispatchModalOpen, setDispatchModalOpen] = useState(false);
   const [dispatchConfirmChecked, setDispatchConfirmChecked] = useState(false);
@@ -162,6 +170,18 @@ const ContractsList: React.FC = () => {
     { index: number; bags: number; variety?: string }[]
   >([]);
   const [dispatchSubmitting, setDispatchSubmitting] = useState(false);
+
+  // ✅ NEW: dispatch metadata fields
+  const [dispatchId, setDispatchId] = useState("");
+  const [deliveryPostcode, setDeliveryPostcode] = useState("");
+  const [consignmentNumber, setConsignmentNumber] = useState("");
+  const [referenceNumber, setReferenceNumber] = useState("");
+  const [dispatchMetaError, setDispatchMetaError] = useState<string | null>(null);
+
+  // ✅ NEW: toggles to enable/disable optional fields
+  const [enableDeliveryPostcode, setEnableDeliveryPostcode] = useState(false);
+  const [enableConsignmentNumber, setEnableConsignmentNumber] = useState(false);
+  const [enableReferenceNumber, setEnableReferenceNumber] = useState(false);
 
   useEffect(() => {
     const fetchContracts = async () => {
@@ -210,15 +230,17 @@ const ContractsList: React.FC = () => {
 
     const term = search.trim().toLowerCase();
     if (term) {
-      list = list.filter(
-        (c) =>
-          (c.contractNo || "").toLowerCase().includes(term) ||
-          c.name.toLowerCase().includes(term) ||
-          c.email.toLowerCase().includes(term) ||
-          c.fileKey.toLowerCase().includes(term) ||
-          c.id.toLowerCase().includes(term)
+      const low = (v: any) => (v == null ? "" : String(v)).toLowerCase();
+
+      list = list.filter((c) =>
+        low(c.contractNo).includes(term) ||
+        low(c.name).includes(term) ||
+        low(c.email).includes(term) ||
+        low(c.fileKey).includes(term) ||
+        low(c.id).includes(term)
       );
     }
+
 
     if (statusFilter) {
       list = list.filter((c) => c.status === statusFilter);
@@ -244,18 +266,26 @@ const ContractsList: React.FC = () => {
       const token = await currentUser?.getIdToken();
 
       // 1) delete from S3
-      const s3Response = await fetch(
-        `${import.meta.env.VITE_FULL_ENDPOINT}/s3/deleteContractFile`,
-        {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ fileKey: contractToDelete.fileKey }),
+      if (contractToDelete.fileKey) {
+        const s3Response = await fetch(
+          `${import.meta.env.VITE_FULL_ENDPOINT}/s3/deleteContractFile`,
+          {
+            method: "DELETE",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ fileKey: contractToDelete.fileKey }),
+          }
+        );
+
+        if (!s3Response.ok) {
+          const txt = await s3Response.text().catch(() => "");
+          throw new Error(txt || "Failed to delete from S3");
         }
-      );
-      if (!s3Response.ok) throw new Error("Failed to delete from S3");
+      } else {
+        console.log("No fileKey: skipping S3 deletion");
+      }
 
       // 2) delete from Firestore
       const firestoreResponse = await fetch(
@@ -269,9 +299,7 @@ const ContractsList: React.FC = () => {
         throw new Error("Failed to delete from Firestore");
 
       // 3) local
-      setContracts((prev) =>
-        prev.filter((c) => c.id !== contractToDelete.id)
-      );
+      setContracts((prev) => prev.filter((c) => c.id !== contractToDelete.id));
       if (selected?.id === contractToDelete.id) {
         setSelected(null);
         setActiveView("list");
@@ -310,26 +338,23 @@ const ContractsList: React.FC = () => {
           statusTarget.contractNo || statusTarget.id
         } status has changed`;
         const html = buildStatusEmailHTML(
-          statusTarget.name,
+          statusTarget.name ?? null,
           statusTarget.contractNo || statusTarget.id,
           statusToApply
         );
 
-        await fetch(
-          `${import.meta.env.VITE_FULL_ENDPOINT}/email/sendCustomEmail`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-            body: JSON.stringify({
-              recipientEmail: statusTarget.email,
-              subject,
-              html,
-            }),
-          }
-        );
+        await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/email/sendCustomEmail`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            recipientEmail: statusTarget.email,
+            subject,
+            html,
+          }),
+        });
       } catch (e) {
         console.error("Email send error:", e);
       }
@@ -361,9 +386,7 @@ const ContractsList: React.FC = () => {
       const data = await res.json();
 
       setContracts((prev) =>
-        prev.map((c) =>
-          c.id === id ? { ...c, status: data.newStatus ?? newStatus } : c
-        )
+        prev.map((c) => (c.id === id ? { ...c, status: data.newStatus ?? newStatus } : c))
       );
       if (selected?.id === id) {
         setSelected({ ...selected, status: data.newStatus ?? newStatus });
@@ -376,10 +399,7 @@ const ContractsList: React.FC = () => {
     }
   };
 
-  const sendDispatchEmail = async (
-    contract: Contract,
-    lines: DispatchEmailLine[] // 👈 AQUÍ el tipo correcto
-  ) => {
+  const sendDispatchEmail = async (contract: Contract, lines: DispatchEmailLine[]) => {
     try {
       const token = await currentUser?.getIdToken();
       if (!token) return;
@@ -390,33 +410,34 @@ const ContractsList: React.FC = () => {
         year: "numeric",
       });
 
-      // ya no hace falta remapear, las líneas YA son DispatchEmailLine
       const subject = `Dispatch confirmation for contract #${
         contract.contractNo || contract.id
       }`;
 
+      // ✅ NEW: pass dispatchId + meta to template (cast to any to avoid TS mismatch)
       const html = buildDispatchEmailHTML({
         customerName: contract.name,
         contractNo: contract.contractNo || contract.id,
         dispatchDateUK,
-        lines, // 👈 se manda tal cual
-      });
+        lines,
+        dispatchId,
+        deliveryPostcode: enableDeliveryPostcode ? deliveryPostcode.trim() : undefined,
+        consignmentNumber: enableConsignmentNumber ? consignmentNumber.trim() : undefined,
+        referenceNumber: enableReferenceNumber ? referenceNumber.trim() : undefined,
+      } as any);
 
-      await fetch(
-        `${import.meta.env.VITE_FULL_ENDPOINT}/email/sendCustomEmail`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            recipientEmail: contract.email,
-            subject,
-            html,
-          }),
-        }
-      );
+      await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/email/sendCustomEmail`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          recipientEmail: contract.email,
+          subject,
+          html,
+        }),
+      });
     } catch (err) {
       console.error("Error sending dispatch email:", err);
     }
@@ -437,17 +458,14 @@ const ContractsList: React.FC = () => {
 
       if (!bags || bags <= 0) return;
 
-      // remaining actual (si no existe, usamos total bags como fallback)
       const remainingBags =
-        parseMaybeNumber(it.remainingBags) ??
-        parseMaybeNumber(it.bags) ??
-        0;
+        parseMaybeNumber(it.remainingBags) ?? parseMaybeNumber(it.bags) ?? 0;
 
       if (bags > remainingBags) {
         errors.push(
           `${it.variety || `line ${idx + 1}`}: trying to dispatch ${bags} bags but only ${remainingBags} remaining`
         );
-        return; // no lo agregamos a planned
+        return;
       }
 
       planned.push({ index: idx, bags, variety: it.variety });
@@ -455,21 +473,31 @@ const ContractsList: React.FC = () => {
 
     if (errors.length) {
       alert(
-        "Some dispatch quantities exceed the remaining bags:\n\n" +
-          errors.join("\n")
+        "Some dispatch quantities exceed the remaining bags:\n\n" + errors.join("\n")
       );
       return;
     }
 
     if (!planned.length) {
-      alert(
-        "Please enter at least one valid dispatch quantity (bags) before continuing."
-      );
+      alert("Please enter at least one valid dispatch quantity (bags) before continuing.");
       return;
     }
 
+    // ✅ NEW: prepare meta fields each time you open modal
     setPendingDispatches(planned);
     setDispatchConfirmChecked(false);
+    setDispatchSubmitting(false);
+
+    setDispatchId(generateDispatchId(5));
+    setDeliveryPostcode("");
+    setConsignmentNumber("");
+    setReferenceNumber("");
+    setDispatchMetaError(null);
+
+    setEnableDeliveryPostcode(false);
+    setEnableConsignmentNumber(false);
+    setEnableReferenceNumber(false);
+
     setDispatchModalOpen(true);
   };
 
@@ -477,10 +505,38 @@ const ContractsList: React.FC = () => {
     if (!selected) return;
     if (!pendingDispatches.length) return;
 
+    // ✅ NEW: validate meta
+    const dp = deliveryPostcode.trim();
+    const cn = consignmentNumber.trim();
+    const rn = referenceNumber.trim();
+
+    const missing: string[] = [];
+    if (enableDeliveryPostcode && !dp) missing.push("Delivery postcode");
+    if (enableConsignmentNumber && !cn) missing.push("Consignment number");
+    if (enableReferenceNumber && !rn) missing.push("Reference number");
+
+    if (missing.length) {
+      setDispatchMetaError(`Please fill in: ${missing.join(", ")}.`);
+      return;
+    }
+
     try {
       setDispatchSubmitting(true);
+      setDispatchMetaError(null);
+
       const token = await currentUser?.getIdToken();
       let updatedContract: any = selected;
+
+      const dispatchPayload: any = {
+        dispatchId,
+        lines: pendingDispatches.map((item) => ({
+          selectionIndex: item.index,
+          bagsToDispatch: item.bags,
+        })),
+        ...(enableDeliveryPostcode ? { deliveryPostcode: dp } : {}),
+        ...(enableConsignmentNumber ? { consignmentNumber: cn } : {}),
+        ...(enableReferenceNumber ? { referenceNumber: rn } : {}),
+      };
 
       const res = await fetch(
         `${import.meta.env.VITE_FULL_ENDPOINT}/orders/contracts/${selected.id}/dispatch`,
@@ -490,12 +546,9 @@ const ContractsList: React.FC = () => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({
-            lines: pendingDispatches.map((item) => ({
-              selectionIndex: item.index,
-              bagsToDispatch: item.bags,
-            })),
-          }),
+
+
+          body: JSON.stringify(dispatchPayload),
         }
       );
 
@@ -507,51 +560,42 @@ const ContractsList: React.FC = () => {
       const payload = await res.json();
       updatedContract = payload.contract ?? payload;
 
-      // Actualizamos estado con la versión final
       setContracts((prev) =>
         prev.map((c) => (c.id === updatedContract.id ? updatedContract : c))
       );
       setSelected(updatedContract);
 
-      // 👉 construir líneas para el correo usando el contrato ya actualizado
       const selections = updatedContract?.details?.selections || [];
 
-      const emailLines: DispatchEmailLine[] = pendingDispatches.map(
-        (item) => {
-          const sel = selections[item.index] || {};
-          const kgPerBag = 24;
+      const emailLines: DispatchEmailLine[] = pendingDispatches.map((item) => {
+        const sel = selections[item.index] || {};
+        const kgPerBag = 24;
 
-          const dispatchedBags = item.bags;
-          const totalKg = dispatchedBags * kgPerBag;
+        const dispatchedBags = item.bags;
+        const totalKg = dispatchedBags * kgPerBag;
 
-          // remaining DESPUÉS de aplicar el dispatch
-          const remainingBagsNum =
-            parseMaybeNumber(sel.remainingBags) ??
-            Math.max(
-              (parseMaybeNumber(sel.bags) ?? 0) - dispatchedBags,
-              0
-            );
+        const remainingBagsNum =
+          parseMaybeNumber(sel.remainingBags) ??
+          Math.max((parseMaybeNumber(sel.bags) ?? 0) - dispatchedBags, 0);
 
-          const remainingKgNum =
-            parseMaybeNumber(sel.remainingKg) ??
-            remainingBagsNum * kgPerBag;
+        const remainingKgNum =
+          parseMaybeNumber(sel.remainingKg) ?? remainingBagsNum * kgPerBag;
 
-          return {
-            variety: sel.variety ?? "(Unknown variety)",
-            bagsDispatched: dispatchedBags,
-            kgPerBag,
-            totalKg,
-            remainingBags: remainingBagsNum,
-            remainingKg: remainingKgNum,
-          };
-        }
-      );
+        return {
+          variety: sel.variety ?? "(Unknown variety)",
+          bagsDispatched: dispatchedBags,
+          kgPerBag,
+          totalKg,
+          remainingBags: remainingBagsNum,
+          remainingKg: remainingKgNum,
+        };
+      });
 
       if (emailLines.length) {
         await sendDispatchEmail(updatedContract, emailLines);
       }
 
-      // Limpiamos
+      // cleanup
       setDispatchInputs({});
       setPendingDispatches([]);
       setDispatchModalOpen(false);
@@ -566,7 +610,7 @@ const ContractsList: React.FC = () => {
   if (loading) return <p>Loading contracts...</p>;
 
   // ─────────────────────────────
-  // VISTA: UPLOAD (usa ContractLoader)
+  // VISTA: UPLOAD
   // ─────────────────────────────
   if (activeView === "upload" && selected) {
     return (
@@ -591,24 +635,18 @@ const ContractsList: React.FC = () => {
           key={selected.id}
           onBack={() => setActiveView("detail")}
           onUploaded={async (payload) => {
-            // 1) Actualiza estado local
             setContracts((prev) =>
-              prev.map((c) =>
-                c.id === payload.id ? { ...c, ...payload } : c
-              )
+              prev.map((c) => (c.id === payload.id ? { ...c, ...payload } : c))
             );
             setSelected((prev) =>
               prev && prev.id === payload.id ? { ...prev, ...payload } : prev
             );
 
-            // 2) (Opcional) re-fetch para asegurarte de tener los datos exactos del backend
             try {
               const token = await currentUser?.getIdToken();
               const res = await fetch(
                 `${import.meta.env.VITE_FULL_ENDPOINT}/api/getContracts`,
-                {
-                  headers: { Authorization: `Bearer ${token}` },
-                }
+                { headers: { Authorization: `Bearer ${token}` } }
               );
               if (res.ok) {
                 const data = await res.json();
@@ -617,13 +655,9 @@ const ContractsList: React.FC = () => {
                 if (refreshed) setSelected(refreshed);
               }
             } catch (e) {
-              console.warn(
-                "Refresh after upload failed (using local state).",
-                e
-              );
+              console.warn("Refresh after upload failed (using local state).", e);
             }
 
-            // 3) Volver al detalle
             setActiveView("detail");
           }}
         />
@@ -655,7 +689,6 @@ const ContractsList: React.FC = () => {
           </button>
 
           <div className="flex items-center gap-3">
-            {/* Upload con activeView (sin modal) */}
             {isPending && (
               <button
                 onClick={() => setActiveView("upload")}
@@ -679,6 +712,7 @@ const ContractsList: React.FC = () => {
                 Download
               </a>
             ) : null}
+
             <button
               onClick={() => {
                 setContractToDelete(c);
@@ -698,15 +732,14 @@ const ContractsList: React.FC = () => {
           <h2 className="text-xl font-semibold">Contract #{label}</h2>
           <span
             className={`text-xs px-2 py-1 rounded-full border uppercase tracking-wide ${
-              statusColors[c.status] ||
-              "bg-gray-100 text-gray-700 border-gray-300"
+              statusColors[c.status] || "bg-gray-100 text-gray-700 border-gray-300"
             }`}
           >
             {c.status}
           </span>
         </div>
 
-        {/* Update status: si es pending, SOLO aviso amarillo; si no, dropdown */}
+        {/* Update status */}
         <div className="mb-5">
           {isPending ? (
             <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2 inline-block">
@@ -739,10 +772,7 @@ const ContractsList: React.FC = () => {
             </p>
             <p className="text-base font-medium">{c.name || "(No name)"}</p>
             {c.email && (
-              <a
-                className="text-sm text-blue-600 underline"
-                href={`mailto:${c.email}`}
-              >
+              <a className="text-sm text-blue-600 underline" href={`mailto:${c.email}`}>
                 {c.email}
               </a>
             )}
@@ -752,9 +782,7 @@ const ContractsList: React.FC = () => {
             <p className="text-xs uppercase tracking-wide text-gray-600 mb-1">
               Meta
             </p>
-            <p className="text-sm text-gray-700">
-              Created: {formatDate(c.createdAt)}
-            </p>
+            <p className="text-sm text-gray-700">Created: {formatDate(c.createdAt)}</p>
             <p className="text-sm text-gray-700 break-all">
               File key: <span className="font-mono">{c.fileKey || "—"}</span>
             </p>
@@ -762,59 +790,39 @@ const ContractsList: React.FC = () => {
           </div>
         </div>
 
-        {/* ─────────────────────────────
-            ORDER DETAILS (opcionales)
-            ───────────────────────────── */}
+        {/* DETAILS */}
         {(() => {
-          // TODO: en tu data real viene dentro de `details`
           const details = selected?.details || null;
 
           const totals = details?.totals || null;
           const reservation = details?.reservation || null;
-          const selections = Array.isArray(details?.selections)
-            ? details!.selections!
-            : [];
+          const selections = Array.isArray(details?.selections) ? details!.selections! : [];
           const repl = details?.replacementsSnapshot || null;
 
           const dispatchHistory: DispatchHistoryEntry[] =
             (selected as any).dispatchHistory ??
-            (details?.dispatchHistory as
-              | DispatchHistoryEntry[]
-              | undefined) ??
+            (details?.dispatchHistory as DispatchHistoryEntry[] | undefined) ??
             [];
 
-          // Fallbacks por si faltan totales
           const totalKg =
             parseMaybeNumber(totals?.totalKg) ??
             (selections.length
-              ? selections.reduce(
-                  (acc, it) =>
-                    acc + (parseMaybeNumber(it.lineKg) ?? 0),
-                  0
-                )
+              ? selections.reduce((acc: number, it: any) => acc + (parseMaybeNumber(it.lineKg) ?? 0), 0)
               : undefined);
 
           const totalAmount =
             parseMaybeNumber(totals?.totalAmountGBP) ??
             (selections.length
-              ? selections.reduce(
-                  (acc, it) =>
-                    acc + (parseMaybeNumber(it.lineSubtotal) ?? 0),
-                  0
-                )
+              ? selections.reduce((acc: number, it: any) => acc + (parseMaybeNumber(it.lineSubtotal) ?? 0), 0)
               : undefined);
 
           const pricePerBagKg =
             parseMaybeNumber(totals?.pricePerBagKg) ??
             (selections.length &&
-            selections.every(
-              (it) =>
-                parseMaybeNumber(it.lineKg) &&
-                parseMaybeNumber(it.bags)
-            )
+            selections.every((it: any) => parseMaybeNumber(it.lineKg) && parseMaybeNumber(it.bags))
               ? (() => {
                   const nums = selections
-                    .map((it) => {
+                    .map((it: any) => {
                       const kg = parseMaybeNumber(it.lineKg)!;
                       const bags = parseMaybeNumber(it.bags)!;
                       return bags > 0 ? kg / bags : undefined;
@@ -824,162 +832,94 @@ const ContractsList: React.FC = () => {
                 })()
               : undefined);
 
-          // si no hay NADA de detalles, no muestres el bloque
           if (!totals && !reservation && !selections.length && !repl) {
             return null;
           }
 
           return (
             <div className="space-y-6">
-              {/* Resumen de orden */}
               {(totals || totalKg || totalAmount) && (
                 <div>
-                  <h3 className="text-lg font-semibold mb-2">
-                    Order summary
-                  </h3>
+                  <h3 className="text-lg font-semibold mb-2">Order summary</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div className="border rounded p-3">
-                      <p className="text-xs uppercase text-gray-600">
-                        Total KG
-                      </p>
-                      <p className="text-base font-medium">
-                        {fmtNum(totalKg)}
-                      </p>
+                      <p className="text-xs uppercase text-gray-600">Total KG</p>
+                      <p className="text-base font-medium">{fmtNum(totalKg)}</p>
                     </div>
                     <div className="border rounded p-3">
-                      <p className="text-xs uppercase text-gray-600">
-                        Total amount (GBP)
-                      </p>
-                      <p className="text-base font-medium">
-                        {fmtGBP(totalAmount)}
-                      </p>
+                      <p className="text-xs uppercase text-gray-600">Total amount (GBP)</p>
+                      <p className="text-base font-medium">{fmtGBP(totalAmount)}</p>
                     </div>
                     <div className="border rounded p-3">
-                      <p className="text-xs uppercase text-gray-600">
-                        KG per bag
-                      </p>
-                      <p className="text-base font-medium">
-                        {fmtNum(pricePerBagKg)}
-                      </p>
+                      <p className="text-xs uppercase text-gray-600">KG per bag</p>
+                      <p className="text-base font-medium">{fmtNum(pricePerBagKg)}</p>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Programación / Reserva */}
               {reservation &&
-                (reservation.startMonth ||
-                  reservation.endMonth ||
-                  reservation.frequency) && (
+                (reservation.startMonth || reservation.endMonth || reservation.frequency) && (
                   <div>
-                    <h3 className="text-lg font-semibold mb-2">
-                      Schedule
-                    </h3>
+                    <h3 className="text-lg font-semibold mb-2">Schedule</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       <div className="border rounded p-3">
-                        <p className="text-xs uppercase text-gray-600">
-                          Start month
-                        </p>
-                        <p className="text-base font-medium">
-                          {reservation.startMonth || "—"}
-                        </p>
+                        <p className="text-xs uppercase text-gray-600">Start month</p>
+                        <p className="text-base font-medium">{reservation.startMonth || "—"}</p>
                       </div>
                       <div className="border rounded p-3">
-                        <p className="text-xs uppercase text-gray-600">
-                          End month
-                        </p>
-                        <p className="text-base font-medium">
-                          {reservation.endMonth || "—"}
-                        </p>
+                        <p className="text-xs uppercase text-gray-600">End month</p>
+                        <p className="text-base font-medium">{reservation.endMonth || "—"}</p>
                       </div>
                       <div className="border rounded p-3">
-                        <p className="text-xs uppercase text-gray-600">
-                          Frequency
-                        </p>
-                        <p className="text-base font-medium">
-                          {reservation.frequency || "—"}
-                        </p>
+                        <p className="text-xs uppercase text-gray-600">Frequency</p>
+                        <p className="text-base font-medium">{reservation.frequency || "—"}</p>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
                       <div className="border rounded p-3">
-                        <p className="text-xs uppercase text-gray-600">
-                          Months
-                        </p>
+                        <p className="text-xs uppercase text-gray-600">Months</p>
+                        <p className="text-base font-medium">{reservation.months ?? repl?.MONTHS ?? "—"}</p>
+                      </div>
+                      <div className="border rounded p-3">
+                        <p className="text-xs uppercase text-gray-600">Period</p>
                         <p className="text-base font-medium">
-                          {reservation.months ?? repl?.MONTHS ?? "—"}
+                          {(reservation.year1 || repl?.YEAR1 || "—")} – {reservation.year2 || repl?.YEAR2 || "—"}
                         </p>
                       </div>
                       <div className="border rounded p-3">
-                        <p className="text-xs uppercase text-gray-600">
-                          Period
-                        </p>
+                        <p className="text-xs uppercase text-gray-600">First/Last month</p>
                         <p className="text-base font-medium">
-                          {(reservation.year1 || repl?.YEAR1 || "—")} –{" "}
-                          {reservation.year2 || repl?.YEAR2 || "—"}
-                        </p>
-                      </div>
-                      <div className="border rounded p-3">
-                        <p className="text-xs uppercase text-gray-600">
-                          First/Last month
-                        </p>
-                        <p className="text-base font-medium">
-                          {reservation.month1 || repl?.MONTH1 || "—"} /{" "}
-                          {reservation.month2 || repl?.MONTH2 || "—"}
+                          {reservation.month1 || repl?.MONTH1 || "—"} / {reservation.month2 || repl?.MONTH2 || "—"}
                         </p>
                       </div>
                     </div>
                   </div>
                 )}
 
-              {/* Ítems (selections) */}
               {selections.length > 0 && (
                 <div>
-                  <h3 className="text-lg font-semibold mb-2">
-                    Line items
-                  </h3>
+                  <h3 className="text-lg font-semibold mb-2">Line items</h3>
                   <div className="overflow-x-auto border rounded">
                     <table className="min-w-full text-sm">
                       <thead className="bg-gray-50">
                         <tr className="text-left">
-                          <th className="px-3 py-2 font-semibold">
-                            Variety
-                          </th>
-                          <th className="px-3 py-2 font-semibold">
-                            Bags
-                          </th>
+                          <th className="px-3 py-2 font-semibold">Variety</th>
+                          <th className="px-3 py-2 font-semibold">Bags</th>
                           <th className="px-3 py-2 font-semibold">KG</th>
-                          <th className="px-3 py-2 font-semibold">
-                            £/KG
-                          </th>
-                          <th className="px-3 py-2 font-semibold">
-                            Subtotal
-                          </th>
+                          <th className="px-3 py-2 font-semibold">£/KG</th>
+                          <th className="px-3 py-2 font-semibold">Subtotal</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {selections.map((it, idx) => (
+                        {selections.map((it: any, idx: number) => (
                           <tr key={idx} className="border-t">
-                            <td className="px-3 py-2">
-                              {it.variety || "—"}
-                            </td>
-                            <td className="px-3 py-2">
-                              {fmtNum(parseMaybeNumber(it.bags))}
-                            </td>
-                            <td className="px-3 py-2">
-                              {fmtNum(parseMaybeNumber(it.lineKg))}
-                            </td>
-                            <td className="px-3 py-2">
-                              {fmtGBP(
-                                parseMaybeNumber(it.unitPricePerKg)
-                              )}
-                            </td>
-                            <td className="px-3 py-2">
-                              {fmtGBP(
-                                parseMaybeNumber(it.lineSubtotal)
-                              )}
-                            </td>
+                            <td className="px-3 py-2">{it.variety || "—"}</td>
+                            <td className="px-3 py-2">{fmtNum(parseMaybeNumber(it.bags))}</td>
+                            <td className="px-3 py-2">{fmtNum(parseMaybeNumber(it.lineKg))}</td>
+                            <td className="px-3 py-2">{fmtGBP(parseMaybeNumber(it.unitPricePerKg))}</td>
+                            <td className="px-3 py-2">{fmtGBP(parseMaybeNumber(it.lineSubtotal))}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -988,25 +928,19 @@ const ContractsList: React.FC = () => {
                 </div>
               )}
 
-              {/* ===== Dispatch tracking (por variedad) ===== */}
+              {/* Dispatch tracking */}
               {selections.length > 0 && (
                 <div className="mt-6">
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-lg font-semibold">
-                      Dispatch tracking
-                    </h3>
+                    <h3 className="text-lg font-semibold">Dispatch tracking</h3>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs uppercase tracking-wide text-gray-600">
-                        View as
-                      </span>
+                      <span className="text-xs uppercase tracking-wide text-gray-600">View as</span>
                       <div className="border rounded overflow-hidden">
                         <button
                           type="button"
                           onClick={() => setUnitView("bags")}
                           className={`px-3 py-1 text-sm ${
-                            unitView === "bags"
-                              ? "bg-[#044421] text-white"
-                              : "bg-white text-[#044421]"
+                            unitView === "bags" ? "bg-[#044421] text-white" : "bg-white text-[#044421]"
                           }`}
                         >
                           Bags
@@ -1015,9 +949,7 @@ const ContractsList: React.FC = () => {
                           type="button"
                           onClick={() => setUnitView("kg")}
                           className={`px-3 py-1 text-sm border-l ${
-                            unitView === "kg"
-                              ? "bg-[#044421] text-white"
-                              : "bg-white text-[#044421]"
+                            unitView === "kg" ? "bg-[#044421] text-white" : "bg-white text-[#044421]"
                           }`}
                         >
                           KG
@@ -1026,30 +958,20 @@ const ContractsList: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Totales rápidos (globales) */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
                     <div className="border rounded p-3">
-                      <p className="text-xs uppercase text-gray-600">
-                        Total bags (all varieties)
-                      </p>
+                      <p className="text-xs uppercase text-gray-600">Total bags (all varieties)</p>
                       <p className="text-base font-medium">
                         {fmtNum(
-                          selections.reduce(
-                            (acc, it) =>
-                              acc +
-                              (parseMaybeNumber(it.bags) ?? 0),
-                            0
-                          )
+                          selections.reduce((acc: number, it: any) => acc + (parseMaybeNumber(it.bags) ?? 0), 0)
                         )}
                       </p>
                     </div>
                     <div className="border rounded p-3">
-                      <p className="text-xs uppercase text-gray-600">
-                        Total KG (all varieties)
-                      </p>
+                      <p className="text-xs uppercase text-gray-600">Total KG (all varieties)</p>
                       <p className="text-base font-medium">
                         {fmtNum(
-                          selections.reduce((acc, it) => {
+                          selections.reduce((acc: number, it: any) => {
                             const kg = parseMaybeNumber(it.lineKg);
                             const bags = parseMaybeNumber(it.bags);
                             return acc + (kg ?? (bags ?? 0) * 24);
@@ -1059,94 +981,50 @@ const ContractsList: React.FC = () => {
                     </div>
                     {totals?.totalAmountGBP != null && (
                       <div className="border rounded p-3">
-                        <p className="text-xs uppercase text-gray-600">
-                          Total amount (GBP)
-                        </p>
-                        <p className="text-base font-medium">
-                          £{Number(totals.totalAmountGBP).toFixed(2)}
-                        </p>
+                        <p className="text-xs uppercase text-gray-600">Total amount (GBP)</p>
+                        <p className="text-base font-medium">£{Number(totals.totalAmountGBP).toFixed(2)}</p>
                       </div>
                     )}
                   </div>
 
-                  {/* Tabla por variedad con barra de FALTANTE en verde */}
                   <div className="overflow-x-auto border rounded">
                     <table className="min-w-full text-sm">
                       <thead className="bg-gray-50">
                         <tr className="text-left">
+                          <th className="px-3 py-2 font-semibold">Variety</th>
+                          <th className="px-3 py-2 font-semibold">{unitView === "bags" ? "Total bags" : "Total KG"}</th>
                           <th className="px-3 py-2 font-semibold">
-                            Variety
+                            {unitView === "bags" ? "Remaining bags" : "Remaining KG"}
                           </th>
-                          <th className="px-3 py-2 font-semibold">
-                            {unitView === "bags"
-                              ? "Total bags"
-                              : "Total KG"}
-                          </th>
-                          <th className="px-3 py-2 font-semibold">
-                            {unitView === "bags"
-                              ? "Remaining bags"
-                              : "Remaining KG"}
-                          </th>
-                          <th className="px-3 py-2 font-semibold">
-                            Remaining %
-                          </th>
-                          <th className="px-3 py-2 font-semibold w-64">
-                            Progress (remaining)
-                          </th>
-                          <th className="px-3 py-2 font-semibold">
-                            Dispatch
-                          </th>{" "}
-                          {/* <-- NUEVA */}
+                          <th className="px-3 py-2 font-semibold">Remaining %</th>
+                          <th className="px-3 py-2 font-semibold w-64">Progress (remaining)</th>
+                          <th className="px-3 py-2 font-semibold">Dispatch</th>
                         </tr>
                       </thead>
 
                       <tbody>
-                        {selections.map((it, idx) => {
-                          const totalBags =
-                            parseMaybeNumber(it.bags) ?? 0;
-                          const totalKg =
-                            parseMaybeNumber(it.lineKg) ??
-                            totalBags * 24;
+                        {selections.map((it: any, idx: number) => {
+                          const totalBags = parseMaybeNumber(it.bags) ?? 0;
+                          const totalKg = parseMaybeNumber(it.lineKg) ?? totalBags * 24;
 
-                          const remBags =
-                            parseMaybeNumber(it.remainingBags) ??
-                            totalBags;
-                          const remKg =
-                            parseMaybeNumber(it.remainingKg) ??
-                            totalKg;
+                          const remBags = parseMaybeNumber(it.remainingBags) ?? totalBags;
+                          const remKg = parseMaybeNumber(it.remainingKg) ?? totalKg;
 
-                          const total =
-                            unitView === "bags" ? totalBags : totalKg;
-                          const remaining =
-                            unitView === "bags" ? remBags : remKg;
+                          const total = unitView === "bags" ? totalBags : totalKg;
+                          const remaining = unitView === "bags" ? remBags : remKg;
 
-                          const pctRemaining =
-                            total > 0 ? clamp01(remaining / total) : 0;
-                          const pctRemainingLabel = Math.round(
-                            pctRemaining * 100
-                          );
+                          const pctRemaining = total > 0 ? clamp01(remaining / total) : 0;
+                          const pctRemainingLabel = Math.round(pctRemaining * 100);
 
                           const rowKey = `sel-${idx}`;
 
                           return (
-                            <tr
-                              key={idx}
-                              className="border-t align-middle"
-                            >
-                              <td className="px-3 py-3 font-medium">
-                                {it.variety || "(Variety)"}
-                              </td>
+                            <tr key={idx} className="border-t align-middle">
+                              <td className="px-3 py-3 font-medium">{it.variety || "(Variety)"}</td>
+                              <td className="px-3 py-3">{fmtNum(total)}</td>
+                              <td className="px-3 py-3">{fmtNum(remaining)}</td>
+                              <td className="px-3 py-3">{pctRemainingLabel}%</td>
                               <td className="px-3 py-3">
-                                {fmtNum(total)}
-                              </td>
-                              <td className="px-3 py-3">
-                                {fmtNum(remaining)}
-                              </td>
-                              <td className="px-3 py-3">
-                                {pctRemainingLabel}%
-                              </td>
-                              <td className="px-3 py-3">
-                                {/* barra verde que ya tienes */}
                                 <div className="w-full bg-gray-200 rounded h-2.5">
                                   <div
                                     className="h-2.5 rounded"
@@ -1160,16 +1038,8 @@ const ContractsList: React.FC = () => {
                                 </div>
                                 <p className="text-[11px] text-gray-500 mt-1">
                                   {unitView === "bags"
-                                    ? `Completed: ${fmtNum(
-                                        total - remaining
-                                      )} / ${fmtNum(
-                                        total
-                                      )} bags`
-                                    : `Completed: ${fmtNum(
-                                        total - remaining
-                                      )} / ${fmtNum(
-                                        total
-                                      )} kg`}
+                                    ? `Completed: ${fmtNum(total - remaining)} / ${fmtNum(total)} bags`
+                                    : `Completed: ${fmtNum(total - remaining)} / ${fmtNum(total)} kg`}
                                 </p>
                               </td>
 
@@ -1181,17 +1051,11 @@ const ContractsList: React.FC = () => {
                                     className="w-20 border rounded px-2 py-1 text-xs"
                                     placeholder="Bags"
                                     value={dispatchInputs[rowKey] ?? ""}
-                                    onChange={(e) =>
-                                      handleDispatchInputChange(
-                                        rowKey,
-                                        e.target.value
-                                      )
-                                    }
+                                    onChange={(e) => handleDispatchInputChange(rowKey, e.target.value)}
                                   />
                                 </div>
                                 <p className="text-[10px] text-gray-500 mt-1">
-                                  Dispatch is in 24kg bags. Fill the bags
-                                  for this batch.
+                                  Dispatch is in 24kg bags. Fill the bags for this batch.
                                 </p>
                               </td>
                             </tr>
@@ -1199,10 +1063,7 @@ const ContractsList: React.FC = () => {
                         })}
                         {selections.length === 0 && (
                           <tr>
-                            <td
-                              colSpan={5}
-                              className="px-3 py-4 text-center text-gray-500"
-                            >
+                            <td colSpan={6} className="px-3 py-4 text-center text-gray-500">
                               No line items found for this contract.
                             </td>
                           </tr>
@@ -1219,101 +1080,84 @@ const ContractsList: React.FC = () => {
                     Make dispatch
                   </button>
                   <p className="text-[11px] text-gray-500 mt-1">
-                    Enter the number of bags to dispatch for each
-                    variety, then click “Make dispatch”.
+                    Enter the number of bags to dispatch for each variety, then click “Make dispatch”.
                   </p>
 
                   <p className="text-[11px] text-gray-500 mt-2">
-                    The green bar shows how much is <b>remaining</b> to be
-                    dispatched per variety.
+                    The green bar shows how much is <b>remaining</b> to be dispatched per variety.
                   </p>
                 </div>
               )}
 
-              {/* ===== Dispatch history (histórico de despachos) ===== */}
+              {/* Dispatch history */}
               {dispatchHistory && dispatchHistory.length > 0 && (
                 <div className="mt-8">
-                  <h3 className="text-lg font-semibold mb-2">
-                    Dispatch history
-                  </h3>
+                  <h3 className="text-lg font-semibold mb-2">Dispatch history</h3>
                   <p className="text-[11px] text-gray-500 mb-3">
-                    List of all dispatches applied to this contract
-                    (newest first).
+                    List of all dispatches applied to this contract (newest first).
                   </p>
 
                   <div className="space-y-4">
                     {dispatchHistory
                       .slice()
                       .sort((a, b) => {
-                        const sa =
-                          (a.createdAt as any)?.seconds ??
-                          (a.createdAt as any)?._seconds ??
-                          0;
-                        const sb =
-                          (b.createdAt as any)?.seconds ??
-                          (b.createdAt as any)?._seconds ??
-                          0;
-                        return sb - sa; // más reciente primero
+                        const sa = (a.createdAt as any)?.seconds ?? (a.createdAt as any)?._seconds ?? 0;
+                        const sb = (b.createdAt as any)?.seconds ?? (b.createdAt as any)?._seconds ?? 0;
+                        return sb - sa;
                       })
                       .map((entry, idx) => (
-                        <div
-                          key={idx}
-                          className="border rounded p-3 bg-gray-50/50"
-                        >
+                        <div key={idx} className="border rounded p-3 bg-gray-50/50">
                           <div className="flex items-center justify-between mb-2 text-xs text-gray-600">
-                            <span className="font-semibold">
-                              Dispatch #
-                              {dispatchHistory.length - idx}
-                            </span>
-                            <span>
-                              {entry.createdAt
-                                ? formatDate(entry.createdAt)
-                                : "—"}
-                            </span>
+                            <span className="font-semibold">Dispatch #{dispatchHistory.length - idx}</span>
+                            <span>{entry.createdAt ? formatDate(entry.createdAt) : "—"}</span>
                           </div>
+
+                          {/* ✅ NEW: show dispatch meta if present */}
+                          {(entry.dispatchId ||
+                            entry.deliveryPostcode ||
+                            entry.consignmentNumber ||
+                            entry.referenceNumber) && (
+                            <div className="mb-2 text-xs text-gray-700 bg-white border rounded px-3 py-2">
+                              <div className="flex flex-wrap gap-x-4 gap-y-1">
+                                <span>
+                                  <span className="text-gray-500">Dispatch ID:</span>{" "}
+                                  <b>{entry.dispatchId || "—"}</b>
+                                </span>
+                                <span>
+                                  <span className="text-gray-500">Delivery postcode:</span>{" "}
+                                  <b>{entry.deliveryPostcode || "—"}</b>
+                                </span>
+                                <span>
+                                  <span className="text-gray-500">Consignment:</span>{" "}
+                                  <b>{entry.consignmentNumber || "—"}</b>
+                                </span>
+                                <span>
+                                  <span className="text-gray-500">Reference:</span>{" "}
+                                  <b>{entry.referenceNumber || "—"}</b>
+                                </span>
+                              </div>
+                            </div>
+                          )}
 
                           <div className="overflow-x-auto">
                             <table className="min-w-full text-xs">
                               <thead className="bg-white">
                                 <tr className="text-left">
-                                  <th className="px-2 py-1 font-semibold">
-                                    Variety
-                                  </th>
-                                  <th className="px-2 py-1 font-semibold">
-                                    Bags
-                                  </th>
-                                  <th className="px-2 py-1 font-semibold">
-                                    KG
-                                  </th>
-                                  <th className="px-2 py-1 font-semibold">
-                                    Remaining bags
-                                  </th>
-                                  <th className="px-2 py-1 font-semibold">
-                                    Remaining KG
-                                  </th>
+                                  <th className="px-2 py-1 font-semibold">Variety</th>
+                                  <th className="px-2 py-1 font-semibold">Bags</th>
+                                  <th className="px-2 py-1 font-semibold">KG</th>
+                                  <th className="px-2 py-1 font-semibold">Remaining bags</th>
+                                  <th className="px-2 py-1 font-semibold">Remaining KG</th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {(entry.lines || []).map((line, j) => (
-                                  <tr
-                                    key={j}
-                                    className="border-t bg-white"
-                                  >
-                                    <td className="px-2 py-1">
-                                      {line.variety || "—"}
-                                    </td>
-                                    <td className="px-2 py-1">
-                                      {fmtNum(line.bags)}
-                                    </td>
-                                    <td className="px-2 py-1">
-                                      {fmtNum(line.kg)}
-                                    </td>
-                                    <td className="px-2 py-1">
-                                      {fmtNum(line.remainingBags)}
-                                    </td>
-                                    <td className="px-2 py-1">
-                                      {fmtNum(line.remainingKg)}
-                                    </td>
+                                  <tr key={j} className="border-t bg-white">
+                                    <td className="px-2 py-1">{line.variety || "—"}</td>
+                                    <td className="px-2 py-1">{fmtNum(line.bags)}</td>
+                                    <td className="px-2 py-1">{fmtNum(line.kg)}</td>
+                                    <td className="px-2 py-1">{fmtNum(line.remainingBags)}</td>
+                                    <td className="px-2 py-1">{fmtNum(line.remainingKg)}</td>
                                   </tr>
                                 ))}
                               </tbody>
@@ -1328,6 +1172,7 @@ const ContractsList: React.FC = () => {
           );
         })()}
 
+        {/* Dispatch modal */}
         <AnimatePresence>
           {dispatchModalOpen && selected && (
             <motion.div
@@ -1346,35 +1191,121 @@ const ContractsList: React.FC = () => {
                 exit={{ scale: 0.9 }}
                 onClick={(e) => e.stopPropagation()}
               >
-                <h3 className="text-lg font-semibold mb-2">
-                  Confirm dispatch
-                </h3>
+                <h3 className="text-lg font-semibold mb-2">Confirm dispatch</h3>
                 <p className="text-sm text-gray-700 mb-3">
                   You are about to apply the following dispatch for contract{" "}
-                  <b>#{selected.contractNo || selected.id}</b>:
+                  <b>#{selected.contractNo || selected.id}</b>.
                 </p>
+
+                {/* ✅ NEW: dispatch id (readonly) */}
+                <div className="border rounded px-3 py-2 text-sm bg-gray-50 mb-3">
+                  <span className="text-gray-600">Dispatch ID:</span>{" "}
+                  <b className="font-mono">{dispatchId || "—"}</b>
+                </div>
+
+                {/* ✅ NEW: optional fields with checkboxes */}
+                <div className="space-y-3 mb-4">
+                  {/* Delivery postcode */}
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-gray-700">Delivery postcode</label>
+
+                      <label className="flex items-center gap-2 text-xs text-gray-600">
+                        <input
+                          type="checkbox"
+                          checked={enableDeliveryPostcode}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setEnableDeliveryPostcode(checked);
+                            if (!checked) setDeliveryPostcode(""); // opcional: limpiar si se apaga
+                          }}
+                          className="h-4 w-4"
+                        />
+                        Include
+                      </label>
+                    </div>
+
+                    <input
+                      value={deliveryPostcode}
+                      onChange={(e) => setDeliveryPostcode(e.target.value)}
+                      disabled={!enableDeliveryPostcode}
+                      className="mt-1 w-full border rounded px-3 py-2 text-sm disabled:bg-gray-100 disabled:text-gray-500"
+                      placeholder="e.g. G46 7TL"
+                    />
+                  </div>
+
+                  {/* Consignment number */}
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-gray-700">Consignment number</label>
+
+                      <label className="flex items-center gap-2 text-xs text-gray-600">
+                        <input
+                          type="checkbox"
+                          checked={enableConsignmentNumber}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setEnableConsignmentNumber(checked);
+                            if (!checked) setConsignmentNumber("");
+                          }}
+                          className="h-4 w-4"
+                        />
+                        Include
+                      </label>
+                    </div>
+
+                    <input
+                      value={consignmentNumber}
+                      onChange={(e) => setConsignmentNumber(e.target.value)}
+                      disabled={!enableConsignmentNumber}
+                      className="mt-1 w-full border rounded px-3 py-2 text-sm disabled:bg-gray-100 disabled:text-gray-500"
+                      placeholder="e.g. CGL6337"
+                    />
+                  </div>
+
+                  {/* Reference number */}
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-gray-700">Reference number</label>
+
+                      <label className="flex items-center gap-2 text-xs text-gray-600">
+                        <input
+                          type="checkbox"
+                          checked={enableReferenceNumber}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setEnableReferenceNumber(checked);
+                            if (!checked) setReferenceNumber("");
+                          }}
+                          className="h-4 w-4"
+                        />
+                        Include
+                      </label>
+                    </div>
+
+                    <input
+                      value={referenceNumber}
+                      onChange={(e) => setReferenceNumber(e.target.value)}
+                      disabled={!enableReferenceNumber}
+                      className="mt-1 w-full border rounded px-3 py-2 text-sm disabled:bg-gray-100 disabled:text-gray-500"
+                      placeholder="e.g. 0300241676507"
+                    />
+                  </div>
+                </div>
 
                 <div className="max-h-48 overflow-y-auto border rounded mb-3">
                   <table className="min-w-full text-xs">
                     <thead className="bg-gray-50">
                       <tr className="text-left">
-                        <th className="px-2 py-1 font-semibold">
-                          Variety
-                        </th>
-                        <th className="px-2 py-1 font-semibold">
-                          Bags
-                        </th>
-                        <th className="px-2 py-1 font-semibold">
-                          KG (24kg/bag)
-                        </th>
+                        <th className="px-2 py-1 font-semibold">Variety</th>
+                        <th className="px-2 py-1 font-semibold">Bags</th>
+                        <th className="px-2 py-1 font-semibold">KG (24kg/bag)</th>
                       </tr>
                     </thead>
                     <tbody>
                       {pendingDispatches.map((d, i) => (
                         <tr key={i} className="border-t">
-                          <td className="px-2 py-1">
-                            {d.variety || `(Line ${d.index + 1})`}
-                          </td>
+                          <td className="px-2 py-1">{d.variety || `(Line ${d.index + 1})`}</td>
                           <td className="px-2 py-1">{d.bags}</td>
                           <td className="px-2 py-1">{d.bags * 24}</td>
                         </tr>
@@ -1383,17 +1314,20 @@ const ContractsList: React.FC = () => {
                   </table>
                 </div>
 
+                {dispatchMetaError && (
+                  <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2 mb-3">
+                    {dispatchMetaError}
+                  </div>
+                )}
+
                 <label className="flex items-center gap-2 text-sm mb-4">
                   <input
                     type="checkbox"
                     checked={dispatchConfirmChecked}
-                    onChange={(e) =>
-                      setDispatchConfirmChecked(e.target.checked)
-                    }
+                    onChange={(e) => setDispatchConfirmChecked(e.target.checked)}
                     className="h-4 w-4"
                   />
-                  I confirm this dispatch and understand it will reduce
-                  remaining bags/kg.
+                  I confirm this dispatch.
                 </label>
 
                 <div className="flex justify-end gap-2">
@@ -1441,8 +1375,7 @@ const ContractsList: React.FC = () => {
               >
                 <h2 className="text-lg font-bold mb-4">Confirm Delete</h2>
                 <p className="text-sm mb-2">
-                  Type <strong>delete permanently</strong> to confirm
-                  deletion of this contract.
+                  Type <strong>delete permanently</strong> to confirm deletion of this contract.
                 </p>
                 <input
                   type="text"
@@ -1465,9 +1398,7 @@ const ContractsList: React.FC = () => {
                   <button
                     onClick={handleDeleteContract}
                     className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 text-sm disabled:opacity-50"
-                    disabled={
-                      deleting || confirmText !== "delete permanently"
-                    }
+                    disabled={deleting || confirmText !== "delete permanently"}
                   >
                     {deleting ? "Deleting..." : "Delete"}
                   </button>
@@ -1496,15 +1427,10 @@ const ContractsList: React.FC = () => {
                 exit={{ scale: 0.9 }}
                 onClick={(e) => e.stopPropagation()}
               >
-                <h3 className="text-lg font-semibold mb-2">
-                  Confirm status change
-                </h3>
+                <h3 className="text-lg font-semibold mb-2">Confirm status change</h3>
                 <p className="text-sm text-gray-700 mb-2">
                   You’re about to change the status of{" "}
-                  <b>
-                    Contract #{statusTarget.contractNo || statusTarget.id}
-                  </b>
-                  .
+                  <b>Contract #{statusTarget.contractNo || statusTarget.id}</b>.
                 </p>
                 <div className="flex items-center gap-2 mb-3">
                   <span
@@ -1527,17 +1453,14 @@ const ContractsList: React.FC = () => {
                 </div>
 
                 <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-2 mb-3">
-                  A notification email will be sent to{" "}
-                  <b>{statusTarget.email}</b>.
+                  A notification email will be sent to <b>{statusTarget.email}</b>.
                 </p>
 
                 <label className="flex items-center gap-2 text-sm mb-4">
                   <input
                     type="checkbox"
                     checked={statusConfirmChecked}
-                    onChange={(e) =>
-                      setStatusConfirmChecked(e.target.checked)
-                    }
+                    onChange={(e) => setStatusConfirmChecked(e.target.checked)}
                     className="h-4 w-4"
                   />
                   I understand and want to proceed.
@@ -1592,9 +1515,7 @@ const ContractsList: React.FC = () => {
 
           <select
             value={statusFilter}
-            onChange={(e) =>
-              setStatusFilter(e.target.value as any)
-            }
+            onChange={(e) => setStatusFilter(e.target.value as any)}
             className="border rounded px-3 py-2 text-sm"
           >
             <option value="">All statuses</option>
@@ -1627,9 +1548,7 @@ const ContractsList: React.FC = () => {
       </div>
 
       {filteredAndSorted.length === 0 ? (
-        <p className="text-gray-600">
-          No contracts match your filters.
-        </p>
+        <p className="text-gray-600">No contracts match your filters.</p>
       ) : (
         <ul className="space-y-3">
           {filteredAndSorted.map((c) => {
@@ -1650,9 +1569,7 @@ const ContractsList: React.FC = () => {
                     : null
                 }
               >
-                <p className="font-semibold mb-1">
-                  Contract #{label}
-                </p>
+                <p className="font-semibold mb-1">Contract #{label}</p>
                 <p className="text-sm text-gray-600">
                   {c.name || "(No name)"} — {c.email || ""}
                 </p>
@@ -1660,8 +1577,7 @@ const ContractsList: React.FC = () => {
                   {formatDate(c.createdAt)} • Status:{" "}
                   <span
                     className={`px-2 py-0.5 rounded-full border ${
-                      statusColors[c.status] ||
-                      "bg-gray-100 text-gray-700 border-gray-300"
+                      statusColors[c.status] || "bg-gray-100 text-gray-700 border-gray-300"
                     }`}
                   >
                     {c.status}

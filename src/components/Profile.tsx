@@ -3,6 +3,7 @@ import Footer from "./Footer";
 import { useAuth } from "../contexts/AuthContext";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase/firebase";
+import { deleteUser } from "firebase/auth";
 
 const Profile: React.FC = () => {
   const { currentUser } = useAuth();
@@ -12,6 +13,13 @@ const Profile: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isProfileIncomplete, setIsProfileIncomplete] = useState(false);
+
+  // Delete account UI state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleteCheckedFinal, setDeleteCheckedFinal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const labelCls = "block text-xs font-semibold text-gray-700";
   const inputCls =
@@ -50,7 +58,6 @@ const Profile: React.FC = () => {
           setOriginalData(data);
           setIsProfileIncomplete(!data.profileCompleted);
         } else {
-          // si no existe doc, igual quitamos loading
           setUserData({});
           setOriginalData({});
           setIsProfileIncomplete(true);
@@ -108,6 +115,63 @@ const Profile: React.FC = () => {
       }
     } else {
       alert("No changes detected to update.");
+    }
+  };
+
+  /**
+   * Delete account:
+   * 1) Update Firestore user doc with `disabled: true`
+   * 2) Delete Firebase Auth user
+   *
+   * Note: Firebase can require "recent login" and block deletion.
+   * With your requested UX (no password / no reauth), if Firebase requires it,
+   * you must prompt the user to re-login and try again.
+   */
+  const handleDeleteAccount = async () => {
+    if (!currentUser?.uid) return;
+
+    setIsDeleting(true);
+    setDeleteError(null);
+
+    try {
+      if (deleteConfirmText.trim().toUpperCase() !== "DELETE") {
+        setDeleteError('Type "DELETE" to confirm.');
+        setIsDeleting(false);
+        return;
+      }
+
+      if (!deleteCheckedFinal) {
+        setDeleteError("Please confirm the checkbox to continue.");
+        setIsDeleting(false);
+        return;
+      }
+
+      // 1) Firestore: mark disabled
+      const userRef = doc(db, "users", currentUser.uid);
+      await updateDoc(userRef, {
+        disabled: true,
+        disabledAt: new Date().toISOString(),
+      });
+
+      // 2) Auth: delete user
+      try {
+        await deleteUser(currentUser);
+      } catch (err: any) {
+        if (err?.code === "auth/requires-recent-login") {
+          throw new Error(
+            "For security, please log out and log in again, then retry deleting your account."
+          );
+        }
+        throw err;
+      }
+
+      setShowDeleteModal(false);
+      alert("Your account was deleted.");
+    } catch (e: any) {
+      console.error(e);
+      setDeleteError(e?.message || "Failed to delete account.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -198,9 +262,7 @@ const Profile: React.FC = () => {
                 <h3 className="text-base font-semibold text-gray-900">
                   Basic information
                 </h3>
-                <p className="text-sm text-gray-600">
-                  Name and role details.
-                </p>
+                <p className="text-sm text-gray-600">Name and role details.</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -343,7 +405,7 @@ const Profile: React.FC = () => {
 
             <div className="my-8 h-px w-full bg-gray-200" />
 
-            {/* Section: Profile image (✅ fixed) */}
+            {/* Section: Profile image */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <h3 className="text-base font-semibold text-gray-900">
@@ -362,7 +424,6 @@ const Profile: React.FC = () => {
                       alt="Profile"
                       className="h-full w-full object-cover"
                       onError={(e) => {
-                        // si falla el URL, ocultamos img y mostramos letra
                         e.currentTarget.style.display = "none";
                         const parent = e.currentTarget.parentElement;
                         if (parent) {
@@ -381,7 +442,6 @@ const Profile: React.FC = () => {
                   type="button"
                   className="h-10 px-4 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
                   onClick={() => {
-                    // por ahora no haces update de image, solo placeholder:
                     alert(
                       "Profile image comes from Google login (Firebase Auth). If you want manual upload, we can add it."
                     );
@@ -395,7 +455,21 @@ const Profile: React.FC = () => {
 
           {/* Card footer */}
           <div className="px-4 sm:px-6 py-4 border-t bg-white rounded-b-2xl">
-            <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-end">
+            {/* ✅ separated: delete left, update right */}
+            <div className="flex items-center justify-between gap-3">
+              <button
+                type="button"
+                className="h-10 px-4 rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                onClick={() => {
+                  setDeleteConfirmText("");
+                  setDeleteCheckedFinal(false);
+                  setDeleteError(null);
+                  setShowDeleteModal(true);
+                }}
+              >
+                Delete account
+              </button>
+
               <button
                 type="button"
                 className="h-10 px-5 rounded-lg bg-[#044421] text-white text-sm font-semibold hover:bg-[#066232]
@@ -408,6 +482,84 @@ const Profile: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Delete modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-[80] bg-black/40 flex items-center justify-center p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-gray-200">
+            <div className="px-5 py-4 border-b flex items-center justify-between">
+              <h3 className="text-base font-semibold text-gray-900">
+                Delete your account
+              </h3>
+              <button
+                className="h-9 w-9 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-700"
+                onClick={() => setShowDeleteModal(false)}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <p className="text-sm text-gray-700">
+                Your account will be permanently deleted.
+              </p>
+
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                To confirm, type <span className="font-semibold">DELETE</span>.
+              </div>
+
+              <div>
+                <label className={labelCls}>Type DELETE to confirm</label>
+                <input
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  className={inputCls}
+                  placeholder="DELETE"
+                />
+              </div>
+
+              {/* Extra confirmation step */}
+              <label className="flex items-start gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={deleteCheckedFinal}
+                  onChange={(e) => setDeleteCheckedFinal(e.target.checked)}
+                />
+                <span className="text-sm text-gray-700">
+                  I understand this action is permanent.
+                </span>
+              </label>
+
+              {deleteError && (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                  {deleteError}
+                </div>
+              )}
+            </div>
+
+            <div className="px-5 py-4 border-t flex items-center justify-end gap-3">
+              <button
+                type="button"
+                className="h-10 px-4 rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="h-10 px-4 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 disabled:bg-gray-400"
+                onClick={handleDeleteAccount}
+                disabled={isDeleting}
+              >
+                {isDeleting ? "Deleting..." : "Delete account"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>

@@ -7,9 +7,11 @@ import ContractsDashboard from './ContractDashboard';
 import TeamMembersDashboard from './TeamDashboard';
 import OrdersList from './OrdersList';
 import GroupsManager from './Groups';
+import CompaniesManager from './Companies';
+import EventsManager from './EventsManager';
 
 const Dashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'users' | 'requests' | 'orders' | 'projects' | 'groups' | 'contracts' | 'teammembers'>('users'); // Agrega 'orders' como una opción
+  const [activeTab, setActiveTab] = useState<'users' | 'requests' | 'orders' | 'projects' | 'groups' | 'contracts' | 'teammembers' | 'companies' | 'events'>('users'); // Agrega 'orders' como una opción
 
   return (
     <div 
@@ -34,24 +36,6 @@ const Dashboard: React.FC = () => {
           >
             Requests
           </button>
-          {/* <button
-            className={`block w-full text-left px-4 py-2 ${activeTab === 'orders' ? 'bg-gray-300' : ''}`} // Nueva pestaña
-            onClick={() => setActiveTab('orders')}
-          >
-            Orders
-          </button> */}
-          <button
-            className={`block w-full text-left px-4 py-2 ${activeTab === 'projects' ? 'bg-gray-300' : ''}`} // Nueva pestaña
-            onClick={() => setActiveTab('projects')}
-          >
-            Projects
-          </button>
-          <button
-            className={`block w-full text-left px-4 py-2 ${activeTab === 'groups' ? 'bg-gray-300' : ''}`} // Nueva pestaña
-            onClick={() => setActiveTab('groups')}
-          >
-            Groups
-          </button>
           <button
             className={`block w-full text-left px-4 py-2 ${activeTab === 'contracts' ? 'bg-gray-300' : ''}`} // Nueva pestaña
             onClick={() => setActiveTab('contracts')}
@@ -65,7 +49,31 @@ const Dashboard: React.FC = () => {
           >
             Orders
           </button>
+          <button
+            className={`block w-full text-left px-4 py-2 ${activeTab === 'events' ? 'bg-gray-300' : ''}`} // Nueva pestaña
+            onClick={() => setActiveTab('events')}
+          >
+            Events
+          </button>
+          <button
+            className={`block w-full text-left px-4 py-2 ${activeTab === 'companies' ? 'bg-gray-300' : ''}`} // Nueva pestaña
+            onClick={() => setActiveTab('companies')}
+          >
+            Companies
+          </button>
+          <button
+            className={`block w-full text-left px-4 py-2 ${activeTab === 'groups' ? 'bg-gray-300' : ''}`} // Nueva pestaña
+            onClick={() => setActiveTab('groups')}
+          >
+            Groups
+          </button>
 
+          <button
+            className={`block w-full text-left px-4 py-2 ${activeTab === 'projects' ? 'bg-gray-300' : ''}`} // Nueva pestaña
+            onClick={() => setActiveTab('projects')}
+          >
+            Projects
+          </button>
           <button
             className={`block w-full text-left px-4 py-2 ${activeTab === 'teammembers' ? 'bg-gray-300' : ''}`} // Nueva pestaña
             onClick={() => setActiveTab('teammembers')}
@@ -86,6 +94,9 @@ const Dashboard: React.FC = () => {
           {activeTab === 'orders' && <OrdersList />} 
           
           {activeTab === 'groups' && <GroupsManager />} 
+          {activeTab === 'companies' && <CompaniesManager />} 
+          
+          {activeTab === 'events' && <EventsManager />} 
         </div>
       </div>
     </div>

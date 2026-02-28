@@ -454,35 +454,47 @@ const buildOrderStatusEmailHTML = (orderLabel: string, newStatus: string, tracki
 
   // ───────────────────────────────────────────────────────────────────────────────
 
-  if (selectedOrder) {
-    const o = selectedOrder;
-    const orderLabel = o.orderNoShort || o.id; // ← usar corto si existe
-    return (
-      <div className="bg-white p-5 rounded-lg shadow text-[#111]">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-3">
-          <button
-            onClick={() => setSelectedOrder(null)}
-            className="text-sm px-3 py-1 rounded border hover:bg-gray-50"
-          >
-            ← Back to orders
-          </button>
+// ==========================
+// RETURN: DETAIL (selectedOrder)
+// ==========================
+if (selectedOrder) {
+  const o = selectedOrder;
+  const orderLabel = o.orderNoShort || o.id;
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => openEmailModal(o)}
-              className="ml-2 inline-flex items-center gap-2 px-3 py-1.5 rounded border bg-white hover:bg-gray-50 text-sm"
-              title="Generate email template"
-            >
-              <FontAwesomeIcon icon={faEnvelope} />
-              Generate
-            </button>
-          </div>
+  return (
+    <div className="bg-white p-4 rounded-lg shadow-md">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3 mb-4 border-b pb-3">
+        <div>
+          <h2 className="text-lg font-bold text-gray-900">Order #{orderLabel}</h2>
+          <p className="text-sm text-gray-500">
+            Review items, fulfilment details and update status.
+          </p>
         </div>
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xl font-semibold">Order #{orderLabel}</h2>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setSelectedOrder(null)}
+            className="h-9 px-3 rounded-md text-sm font-medium inline-flex items-center gap-2 border border-gray-200 bg-white hover:bg-gray-100"
+            title="Back to orders"
+          >
+            ← Back
+          </button>
+
+          <button
+            onClick={() => openEmailModal(o)}
+            className="h-9 px-3 rounded-md text-sm font-medium inline-flex items-center gap-2 border bg-[#174B3D] text-white border-[#174B3D] hover:bg-[#0f3a2d]"
+            title="Generate email template"
+          >
+            <FontAwesomeIcon icon={faEnvelope} />
+            Generate
+          </button>
+        </div>
+      </div>
+
+      {/* Top row: Status + Update */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+        <div className="flex items-center gap-2">
           <span
             className={`text-xs px-2 py-1 rounded-full border uppercase tracking-wide ${
               statusColors[o.status] || "bg-gray-100 text-gray-700 border-gray-300"
@@ -490,90 +502,101 @@ const buildOrderStatusEmailHTML = (orderLabel: string, newStatus: string, tracki
           >
             {friendlyStatus(o)}
           </span>
+          {o.deliveryMethod && (
+            <span className="text-xs text-gray-500">
+              · <span className="capitalize">{o.deliveryMethod}</span>
+            </span>
+          )}
         </div>
 
-        {/* Controls */}
-        <div className="mb-5">
-          <label className="text-xs uppercase tracking-wide text-gray-600 mr-2">
-            Update status
-          </label>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-gray-700">Update status</span>
           <select
             value={o.status}
             disabled={updating}
             onChange={(e) => {
               setStatusToApply(e.target.value as any);
               setStatusConfirm(false);
-
               setTrackingNumber("");
-
               setStatusModalOpen(true);
             }}
-            className="border rounded px-2 py-1 text-sm"
+            className="border border-gray-300 px-2 py-1 rounded-md text-sm bg-white"
+            title="Update status"
           >
-            <option value="pending">Pending</option>
-            <option value="processing">Processing</option>
-            <option value="handoff">{prettyStatus("handoff",o.deliveryMethod)}</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
+            <option value="pending">pending</option>
+            <option value="processing">processing</option>
+            <option value="handoff">{prettyStatus("handoff", o.deliveryMethod)}</option>
+            <option value="completed">completed</option>
+            <option value="cancelled">cancelled</option>
           </select>
         </div>
+      </div>
 
-        {/* Meta blocks */}
-        <div className="grid md:grid-cols-2 gap-6 mb-2">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-gray-600 mb-1">Customer</p>
-            <p className="text-base font-medium">{o.customerName || "(No name)"}</p>
-            {o.customerEmail && (
-              <a
-                className="text-sm text-blue-600 underline"
-                href={`mailto:${o.customerEmail}`}
-              >
-                {o.customerEmail}
-              </a>
-            )}
-            {o.phone && (
-              <p className="text-sm text-gray-700 mt-1">
-                Phone: <span className="font-medium">{o.phone}</span>
-              </p>
-            )}
-          </div>
-
-          <div>
-            <p className="text-xs uppercase tracking-wide text-gray-600 mb-1">Meta</p>
-            <p className="text-sm text-gray-700">
-              Created:&nbsp;{o.createdAt ? o.createdAt.toLocaleString() : "No date"}
+      {/* Meta blocks */}
+      <div className="grid md:grid-cols-2 gap-6 mb-6">
+        <div>
+          <p className="text-xs font-semibold text-gray-700 mb-1">Customer</p>
+          <p className="text-sm text-gray-900 font-semibold">
+            {o.customerName || "(No name)"}
+          </p>
+          {o.customerEmail ? (
+            <a className="text-sm text-blue-600 underline" href={`mailto:${o.customerEmail}`}>
+              {o.customerEmail}
+            </a>
+          ) : (
+            <p className="text-sm text-gray-500">—</p>
+          )}
+          {o.phone && (
+            <p className="text-sm text-gray-700 mt-1">
+              Phone: <span className="font-medium">{o.phone}</span>
             </p>
-          </div>
-
+          )}
         </div>
 
-        {/* Fulfilment / Address */}
-        <div className="grid md:grid-cols-2 gap-6 mb-6">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-gray-600 mb-1">Fulfilment</p>
-            <p className="text-sm">
-              Method:&nbsp;
-              <span className="font-medium capitalize">
-                {o.deliveryMethod ? o.deliveryMethod : "—"}
-              </span>
-            </p>
-            <p className="text-sm">
-              Preferred date:&nbsp;
-              <span className="font-medium">
-                {o.preferredDeliveryDate
-                  ? o.preferredDeliveryDate.toLocaleString()
-                  : "—"}
-              </span>
-            </p>
-          </div>
+        <div>
+          <p className="text-xs font-semibold text-gray-700 mb-1">Meta</p>
+          <p className="text-sm text-gray-700">
+            Created: {o.createdAt ? o.createdAt.toLocaleString() : "—"}
+          </p>
+          <p className="text-sm text-gray-700 break-all">
+            ID: <span className="font-mono">{o.id}</span>
+          </p>
+        </div>
+      </div>
 
-          <div>
-            <p className="text-xs uppercase tracking-wide text-gray-600 mb-1">Address & Notes</p>
+      {/* Fulfilment / Address */}
+      <div className="grid md:grid-cols-2 gap-6 mb-6">
+        <div>
+          <p className="text-xs font-semibold text-gray-700 mb-1">Fulfilment</p>
+          <p className="text-sm text-gray-800">
+            Method:{" "}
+            <span className="font-medium capitalize">
+              {o.deliveryMethod ? o.deliveryMethod : "—"}
+            </span>
+          </p>
+          <p className="text-sm text-gray-800">
+            Preferred date:{" "}
+            <span className="font-medium">
+              {o.preferredDeliveryDate ? o.preferredDeliveryDate.toLocaleString() : "—"}
+            </span>
+          </p>
+          {o.trackingNumber && (
+            <p className="text-sm text-gray-800">
+              Tracking: <span className="font-mono">{o.trackingNumber}</span>
+            </p>
+          )}
+        </div>
+
+        <div>
+          <p className="text-xs font-semibold text-gray-700 mb-1">Address & Notes</p>
+
+          <div className="rounded-md border border-gray-200 bg-gray-50 p-3">
             <p className={`text-sm ${o.address ? "text-gray-800" : "text-gray-500"}`}>
               <span className="font-medium">Address:</span>{" "}
               {o.address ? <span className="break-words">{o.address}</span> : "—"}
             </p>
-            <p className={`text-sm ${o.notes ? "text-gray-800" : "text-gray-500"}`}>
+
+            <p className={`text-sm mt-2 ${o.notes ? "text-gray-800" : "text-gray-500"}`}>
               <span className="font-medium">Notes:</span>{" "}
               {o.notes ? (
                 <span className="whitespace-pre-wrap break-words">{o.notes}</span>
@@ -583,330 +606,367 @@ const buildOrderStatusEmailHTML = (orderLabel: string, newStatus: string, tracki
             </p>
           </div>
         </div>
+      </div>
 
-        {/* Items */}
-        <div>
-          <p className="text-xs uppercase tracking-wide text-gray-600 mb-2">Items</p>
-          {o.items?.length ? (
-            <div className="overflow-x-auto rounded-lg border">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-600">
-                  <tr>
-                    <th className="text-left px-3 py-2 border-b">Variety</th>
-                    <th className="text-right px-3 py-2 border-b">Bags</th>
-                    <th className="text-right px-3 py-2 border-b">Bag (kg)</th>
-                    <th className="text-right px-3 py-2 border-b">Line kg</th>
-                    <th className="text-right px-3 py-2 border-b">Unit / kg</th>
-                    <th className="text-right px-3 py-2 border-b">Subtotal</th>
+      {/* Items */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-semibold text-gray-700">Items</span>
+          <span className="text-xs text-gray-500">
+            {o.items?.length ? `${o.items.length} item(s)` : "0 items"}
+          </span>
+        </div>
+
+        {o.items?.length ? (
+          <div className="overflow-x-auto rounded-md border border-gray-200 bg-white">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr className="text-left">
+                  <th className="px-3 py-2 text-xs font-semibold text-gray-600 uppercase tracking-wide border-b">
+                    Variety
+                  </th>
+                  <th className="px-3 py-2 text-xs font-semibold text-gray-600 uppercase tracking-wide border-b text-right">
+                    Bags
+                  </th>
+                  <th className="px-3 py-2 text-xs font-semibold text-gray-600 uppercase tracking-wide border-b text-right">
+                    Bag (kg)
+                  </th>
+                  <th className="px-3 py-2 text-xs font-semibold text-gray-600 uppercase tracking-wide border-b text-right">
+                    Line kg
+                  </th>
+                  <th className="px-3 py-2 text-xs font-semibold text-gray-600 uppercase tracking-wide border-b text-right">
+                    Unit / kg
+                  </th>
+                  <th className="px-3 py-2 text-xs font-semibold text-gray-600 uppercase tracking-wide border-b text-right">
+                    Subtotal
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {o.items.map((it, i) => (
+                  <tr key={i} className="hover:bg-gray-50">
+                    <td className="px-3 py-2 border-b">{it.varietyName ?? "—"}</td>
+                    <td className="px-3 py-2 border-b text-right">
+                      {typeof it.bags === "number" ? it.bags : "—"}
+                    </td>
+                    <td className="px-3 py-2 border-b text-right">
+                      {typeof it.bagKg === "number" ? it.bagKg : "—"}
+                    </td>
+                    <td className="px-3 py-2 border-b text-right">
+                      {typeof it.lineKg === "number" ? it.lineKg : "—"}
+                    </td>
+                    <td className="px-3 py-2 border-b text-right">
+                      {typeof it.unitPricePerKg === "number"
+                        ? currencyFmt(it.unitPricePerKg, o.totals.currency)
+                        : "—"}
+                    </td>
+                    <td className="px-3 py-2 border-b text-right">
+                      {typeof it.lineSubtotal === "number"
+                        ? currencyFmt(it.lineSubtotal, o.totals.currency)
+                        : "—"}
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {o.items.map((it, i) => (
-                    <tr key={i} className="hover:bg-gray-50/60">
-                      <td className="px-3 py-2 border-b">{it.varietyName ?? "—"}</td>
-                      <td className="px-3 py-2 border-b text-right">
-                        {typeof it.bags === "number" ? it.bags : "—"}
-                      </td>
-                      <td className="px-3 py-2 border-b text-right">
-                        {typeof it.bagKg === "number" ? it.bagKg : "—"}
-                      </td>
-                      <td className="px-3 py-2 border-b text-right">
-                        {typeof it.lineKg === "number" ? it.lineKg : "—"}
-                      </td>
-                      <td className="px-3 py-2 border-b text-right">
-                        {typeof it.unitPricePerKg === "number"
-                          ? currencyFmt(it.unitPricePerKg, o.totals.currency)
-                          : "—"}
-                      </td>
-                      <td className="px-3 py-2 border-b text-right">
-                        {typeof it.lineSubtotal === "number"
-                          ? currencyFmt(it.lineSubtotal, o.totals.currency)
-                          : "—"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500 italic">No items.</p>
+        )}
 
-
+        {/* Totals (same vibe as CompanyManager blocks) */}
+        <div className="mt-4 flex justify-end">
+          <div className="w-full md:w-auto md:min-w-[280px] rounded-md border border-gray-200 bg-gray-50 p-4">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600">Delivery fee</span>
+              <span className="font-medium">
+                {currencyFmt(o.totals?.deliveryFee ?? 0, o.totals?.currency ?? "GBP")}
+              </span>
             </div>
-          ) : (
-            <p className="text-sm text-gray-600">No items.</p>
-          )}
-          {/* Totals summary (moved to bottom-right) */}
-          <div className="mt-4 flex justify-end">
-            <div className="w-full md:w-auto md:min-w-[280px] border rounded-lg p-4 bg-gray-50">
-              <div className="flex items-center justify-between text-sm mb-2">
-                <span className="text-gray-600">Delivery fee</span>
-                <span className="font-medium">
-                  {currencyFmt(o.totals?.deliveryFee ?? 0, o.totals?.currency ?? 'GBP')}
-                </span>
-              </div>
-              <div className="border-t my-2" />
-              <div className="flex items-center justify-between text-base">
-                <span className="font-semibold">Total</span>
-                <span className="font-bold">
-                  {currencyFmt(o.totals?.total ?? 0, o.totals?.currency ?? 'GBP')}
-                </span>
-              </div>
+            <div className="border-t my-3" />
+            <div className="flex items-center justify-between text-base">
+              <span className="font-semibold text-gray-900">Total</span>
+              <span className="font-bold text-gray-900">
+                {currencyFmt(o.totals?.total ?? 0, o.totals?.currency ?? "GBP")}
+              </span>
             </div>
           </div>
         </div>
-
-        {/* MODAL: Email Template */}
-        {showEmailModal && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className="bg-white w-full max-w-2xl rounded-lg shadow-xl overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b">
-                <h3 className="text-base font-semibold">Email Template</h3>
-                <button
-                  onClick={() => setShowEmailModal(false)}
-                  className="text-gray-500 hover:text-gray-700 text-xl leading-none px-2"
-                  aria-label="Close"
-                >
-                  ×
-                </button>
-              </div>
-
-              <div className="p-4 space-y-3">
-                <p className="text-sm text-gray-600">
-                  This is a generated message you can send to your carrier. Edit as needed, then copy.
-                </p>
-
-                <textarea
-                  className="w-full border rounded p-3 text-sm leading-6 min-h-[260px]"
-                  value={emailBody}
-                  onChange={(e) => setEmailBody(e.target.value)}
-                />
-
-                <div className="flex items-center justify-between">
-                  <div className="text-xs text-gray-500">
-                    Tip: If pickup only, we leave the timing line blank on purpose.
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleCopy}
-                      disabled={copied}
-                      className={`inline-flex items-center gap-2 px-3 py-2 rounded border text-sm
-                        ${copied
-                          ? 'bg-blue-600 border-blue-600 text-white opacity-60 cursor-not-allowed'
-                          : 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700 hover:border-blue-700'
-                        }`}
-                    >
-                      {copied ? "Copied" : (
-                        <>
-                          <FontAwesomeIcon icon={faClipboard} />
-                          Copy
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Modal: Confirm status change */}
-        {statusModalOpen && selectedOrder && (
-          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
-            <div className="bg-white w-full max-w-md rounded-lg shadow-xl overflow-hidden">
-              <div className="px-5 py-4 border-b">
-                <h3 className="text-base font-semibold">Confirm status update</h3>
-              </div>
-
-              <div className="px-5 py-4 space-y-3 text-sm text-gray-800">
-                <p>
-                  You’re about to change the status of order{" "}
-                  <b>#{selectedOrder.orderNoShort || selectedOrder.id}</b>.
-                </p>
-                <div className="flex items-center gap-2">
-                  <span className="capitalize px-2 py-1 rounded-full border text-xs">
-                    {friendlyStatus(selectedOrder)}
-                  </span>
-                  <span className="text-gray-400">→</span>
-                  <span className="capitalize px-2 py-1 rounded-full border text-xs">
-                    {prettyStatus(statusToApply, selectedOrder.deliveryMethod) || "—"}
-                  </span>
-                </div>
-
-                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
-                  A notification email will be sent to <b>{selectedOrder.customerEmail || "(no email on file)"}</b>.
-                </p>
-
-                <label className="flex items-start gap-2 mt-2">
-                  <input
-                    type="checkbox"
-                    checked={statusConfirm}
-                    onChange={(e) => setStatusConfirm(e.target.checked)}
-                  />
-                  <span>I understand and want to proceed.</span>
-                </label>
-
-                {isOnTheWayChange && (
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-700">
-                      Tracking number (required for “On the way”)
-                    </label>
-                    <input
-                      value={trackingNumber}
-                      onChange={(e) => setTrackingNumber(e.target.value)}
-                      placeholder="e.g. WAX123456789GB"
-                      className="w-full border rounded px-3 py-2 text-sm"
-                    />
-                    <p className="text-xs text-gray-500">
-                      This will be included in the email sent to the customer.
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <div className="px-5 py-4 border-t flex justify-end gap-2">
-                <button
-                  className="px-4 py-2 rounded border hover:bg-gray-50 text-sm"
-                  disabled={statusSubmitting}
-                  onClick={() => {
-                    setStatusModalOpen(false);
-                    setStatusToApply("");
-                    setStatusConfirm(false);
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 text-sm disabled:opacity-50"
-                  disabled={
-                    !statusConfirm ||
-                    statusSubmitting ||
-                    (isOnTheWayChange && !trackingNumber.trim())
-                  }
-                  onClick={confirmStatusChange}
-                >
-                  {statusSubmitting ? "Updating…" : "Confirm"}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-
       </div>
-    );
-  }
 
-  // ── LISTA + BARRA DE CONTROLES ──────────────────────────────────────────────────
-  return (
-    <div className="bg-white p-4 rounded shadow">
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-4">
-        <h2 className="text-xl font-bold">Orders</h2>
-
-        <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
-          {/* search */}
-          <div className="relative md:w-64">
-            <input
-              type="text"
-              placeholder="Search name, email or order no…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full border rounded px-3 py-2 pr-8 text-sm"
-            />
-            {search && (
+      {/* MODAL: Email Template (CompanyManager style) */}
+      {showEmailModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-2xl w-full">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-lg font-bold">Email Template</h2>
               <button
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                onClick={() => setSearch("")}
-                aria-label="Clear search"
+                onClick={() => setShowEmailModal(false)}
+                className="h-9 w-9 rounded-md border border-gray-200 bg-white hover:bg-gray-100 inline-flex items-center justify-center"
+                aria-label="Close"
+                title="Close"
               >
                 ×
               </button>
-            )}
-          </div>
+            </div>
 
-          {/* status filter */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="border rounded px-3 py-2 text-sm"
-          >
-            <option value="">All statuses</option>
-            <option value="pending">Pending</option>
-            <option value="processing">Processing</option>
-            <option value="handoff">Handoff</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
+            <p className="text-sm text-gray-600 mb-4">
+              Generated message to send to your carrier. Edit as needed, then copy.
+            </p>
 
-          {/* sort */}
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
-            className="border rounded px-3 py-2 text-sm"
-          >
-            <option value="date_desc">Newest first</option>
-            <option value="date_asc">Oldest first</option>
-            <option value="total_desc">Total: high → low</option>
-            <option value="total_asc">Total: low → high</option>
-          </select>
+            <textarea
+              className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm bg-white leading-6 min-h-[260px]"
+              value={emailBody}
+              onChange={(e) => setEmailBody(e.target.value)}
+            />
 
-          {/* clear filters */}
-          <button
-            onClick={() => {
-              setSearch("");
-              setStatusFilter("");
-              setSortBy("date_desc");
-            }}
-            className="border rounded px-3 py-2 text-sm hover:bg-gray-50"
-          >
-            Reset
-          </button>
-        </div>
-      </div>
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-xs text-gray-500">
+                Tip: If pickup only, the timing line can be blank.
+              </div>
 
-      {/* listado */}
-      {filteredAndSorted.length === 0 ? (
-        <p className="text-gray-600">No orders match your filters.</p>
-      ) : (
-        <ul className="space-y-3">
-          {filteredAndSorted.map((o) => {
-            const orderLabel = o.orderNoShort || o.id; // ← usar el corto si existe
-            return (
-              <li
-                key={o.id}
-                className="border p-3 rounded hover:bg-gray-50 cursor-pointer"
-                onClick={() => setSelectedOrder(o)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => (e.key === "Enter" || e.key === " " ? setSelectedOrder(o) : null)}
+              <button
+                onClick={handleCopy}
+                disabled={copied}
+                className={[
+                  "h-9 px-3 rounded-md text-sm font-medium inline-flex items-center gap-2 border",
+                  copied
+                    ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                    : "bg-[#174B3D] text-white border-[#174B3D] hover:bg-[#0f3a2d]",
+                ].join(" ")}
               >
-                {/* NUEVO: mostrar el número de orden en el listado */}
-                <p className="text-xs text-gray-500 mb-1">Order #{orderLabel}</p>
+                {copied ? (
+                  "Copied"
+                ) : (
+                  <>
+                    <FontAwesomeIcon icon={faClipboard} />
+                    Copy
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-                <p className="font-semibold mb-1">
-                  {o.customerName || "(No name)"} — {o.customerEmail || ""}
+      {/* MODAL: Confirm status change (CompanyManager style) */}
+      {statusModalOpen && selectedOrder && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+            <h2 className="text-lg font-bold mb-2">Confirm status update</h2>
+
+            <p className="text-sm text-gray-600 mb-4">
+              You’re about to change the status of order{" "}
+              <b>#{selectedOrder.orderNoShort || selectedOrder.id}</b>.
+            </p>
+
+            <div className="flex items-center gap-2 mb-3">
+              <span className="capitalize px-2 py-1 rounded-full border text-xs">
+                {friendlyStatus(selectedOrder)}
+              </span>
+              <span className="text-gray-400">→</span>
+              <span className="capitalize px-2 py-1 rounded-full border text-xs">
+                {prettyStatus(statusToApply, selectedOrder.deliveryMethod) || "—"}
+              </span>
+            </div>
+
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2 mb-3">
+              A notification email will be sent to{" "}
+              <b>{selectedOrder.customerEmail || "(no email on file)"}</b>.
+            </p>
+
+            <label className="flex items-start gap-2 text-sm mb-3">
+              <input
+                type="checkbox"
+                checked={statusConfirm}
+                onChange={(e) => setStatusConfirm(e.target.checked)}
+                className="h-4 w-4"
+              />
+              <span>I understand and want to proceed.</span>
+            </label>
+
+            {isOnTheWayChange && (
+              <div className="space-y-1 mb-3">
+                <label className="text-xs font-semibold text-gray-700">
+                  Tracking number (required for “On the way”)
+                </label>
+                <input
+                  value={trackingNumber}
+                  onChange={(e) => setTrackingNumber(e.target.value)}
+                  placeholder="e.g. WAX123456789GB"
+                  className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm bg-white"
+                />
+                <p className="text-xs text-gray-500">
+                  This will be included in the email sent to the customer.
                 </p>
+              </div>
+            )}
 
-                <p className="text-sm text-gray-500">
-                  {o.createdAt ? o.createdAt.toLocaleString() : "No date"} • Status:{" "}
-                  <span
-                    className={`px-2 py-0.5 rounded-full border ${
-                      statusColors[o.status] || "bg-gray-100 text-gray-700 border-gray-300"
-                    }`}
-                  >
-                    {friendlyStatus(o)}
-                  </span>
-                </p>
+            <div className="flex justify-end gap-2 mt-5">
+              <button
+                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 text-sm"
+                disabled={statusSubmitting}
+                onClick={() => {
+                  setStatusModalOpen(false);
+                  setStatusToApply("");
+                  setStatusConfirm(false);
+                }}
+              >
+                Cancel
+              </button>
 
-                <p className="font-bold">{currencyFmt(o.totals.total, o.totals.currency)}</p>
-              </li>
-            );
-          })}
-        </ul>
+              <button
+                className={[
+                  "px-4 py-2 rounded text-sm text-white",
+                  statusSubmitting ||
+                  !statusConfirm ||
+                  (isOnTheWayChange && !trackingNumber.trim())
+                    ? "bg-[#174B3D] opacity-70 cursor-not-allowed"
+                    : "bg-[#174B3D] hover:bg-[#0f3a2d]",
+                ].join(" ")}
+                disabled={
+                  !statusConfirm ||
+                  statusSubmitting ||
+                  (isOnTheWayChange && !trackingNumber.trim())
+                }
+                onClick={confirmStatusChange}
+              >
+                {statusSubmitting ? "Updating…" : "Confirm"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
+}
+
+// ==========================
+// RETURN: LIST (no selectedOrder)
+// ==========================
+return (
+  <div className="bg-white p-4 rounded-lg shadow-md">
+    {/* Header */}
+    <div className="flex items-center justify-between gap-3 mb-4 border-b pb-3">
+      <div>
+        <h2 className="text-lg font-bold text-gray-900">Orders</h2>
+        <p className="text-sm text-gray-500">
+          Search, filter and open an order to manage fulfilment.
+        </p>
+      </div>
+
+      <button
+        onClick={() => {
+          setSearch("");
+          setStatusFilter("");
+          setSortBy("date_desc");
+        }}
+        className="text-gray-500 hover:text-gray-700"
+        title="Reset filters"
+      >
+        <span className="text-sm font-semibold">Reset</span>
+      </button>
+    </div>
+
+    {/* Controls */}
+    <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-4">
+      <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+        {/* search */}
+        <input
+          type="text"
+          placeholder="Search name, email or order no…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="border border-gray-300 px-2 py-1 rounded-md text-sm w-full md:w-80 bg-white"
+        />
+
+        {/* status */}
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as any)}
+          className="border border-gray-300 px-2 py-1 rounded-md text-sm bg-white"
+        >
+          <option value="">All statuses</option>
+          <option value="pending">pending</option>
+          <option value="processing">processing</option>
+          <option value="handoff">handoff</option>
+          <option value="completed">completed</option>
+          <option value="cancelled">cancelled</option>
+        </select>
+
+        {/* sort */}
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as any)}
+          className="border border-gray-300 px-2 py-1 rounded-md text-sm bg-white"
+        >
+          <option value="date_desc">Newest first</option>
+          <option value="date_asc">Oldest first</option>
+          <option value="total_desc">Total: high → low</option>
+          <option value="total_asc">Total: low → high</option>
+        </select>
+      </div>
+
+      <div className="text-xs text-gray-500">
+        {filteredAndSorted.length} order(s)
+      </div>
+    </div>
+
+    {/* List */}
+    {filteredAndSorted.length === 0 ? (
+      <p className="text-sm text-gray-500 italic">No orders match your filters.</p>
+    ) : (
+      <div className="divide-y divide-gray-100">
+        {filteredAndSorted.map((o) => {
+          const orderLabel = o.orderNoShort || o.id;
+          return (
+            <button
+              key={o.id}
+              type="button"
+              className="w-full text-left py-3"
+              onClick={() => setSelectedOrder(o)}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-semibold text-sm text-gray-900 truncate">
+                      Order #{orderLabel}
+                    </span>
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full border ${
+                        statusColors[o.status] || "bg-gray-100 text-gray-700 border-gray-300"
+                      }`}
+                    >
+                      {friendlyStatus(o)}
+                    </span>
+                  </div>
+
+                  <div className="text-sm text-gray-600 truncate mt-0.5">
+                    {o.customerName || "(No name)"} — {o.customerEmail || ""}
+                  </div>
+
+                  <div className="text-xs text-gray-500 mt-1">
+                    {o.createdAt ? o.createdAt.toLocaleString() : "No date"}
+                  </div>
+                </div>
+
+                <div className="shrink-0 text-right">
+                  <div className="text-sm font-semibold text-gray-900">
+                    {currencyFmt(o.totals.total, o.totals.currency)}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Fee: {currencyFmt(o.totals?.deliveryFee ?? 0, o.totals?.currency ?? "GBP")}
+                  </div>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    )}
+  </div>
+);
+
 };
 
 export default OrdersList;
