@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { signInWithEmailAndPassword, sendPasswordResetEmail, signOut, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth, db } from '../../firebase/firebase';
 import { useNavigate } from 'react-router-dom';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 import GoogleLogo from '../../assets/Google.png'
 import CaribbeanLogo from '../../assets/green_logo_icon.png'
@@ -32,51 +32,31 @@ const Login: React.FC = () => {
     e.preventDefault();
     setError(null);
     setLoading(true);
-  
+
     try {
-  
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-  
-      if (user.emailVerified) {
-        const userRef = doc(db, "users", user.uid);
-        const userSnap = await getDoc(userRef);
-      
-        if (userSnap.exists()) {
-          const userData = userSnap.data();
-          if (!userData.emailVerified) {
-            const recipients = ['caguirre.dt@gmail.com', 'info@caribbeangoods.co.uk'];
 
-            for (const email of recipients) {
-              try {
-                const response = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/resourcelibray/sendalert`, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    recipientEmail: email,
-                    alertMessage: `User ${user.email} has just verified their email. You can now review and manage their account in the admin panel.`,
-                  }),
-                });
+      // Leer tu documento de usuario en Firestore
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
 
-                const result = await response.text();
-                console.log(`Alert sent to ${email}:`, result);
-              } catch (err) {
-                console.error(`Error sending alert to ${email}:`, err);
-              }
-            }
-            await updateDoc(userRef, { emailVerified: true });
-            // console.log("✅ emailVerified updated to true in Firestore");
-          }
-        }
-      
-        navigate("/Portal");
+      if (!userSnap.exists()) {
+        // Si por alguna razón no existe, puedes crearlo o bloquear
+        setError("User profile not found. Please contact support.");
+        return;
       }
-       else {
-        setError("Please verify your email before logging in. Look for an email with a verification link — check your inbox, spam, and promotions folders.");
+
+      const userData = userSnap.data();
+
+      // ✅ (Opcional) Si quieres seguir usando aprobación manual
+      if (userData.isActive === false) {
+        setError("Your account is pending approval. Please wait for an admin to activate it.");
         await signOut(auth);
+        return;
       }
+
+      navigate("/Portal");
     } catch (err: any) {
       if (err.code === "auth/invalid-credential") {
         setError("Invalid email or password. If you created your account with Google, please use continue with Google.");
