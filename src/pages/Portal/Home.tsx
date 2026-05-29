@@ -4,6 +4,7 @@ import CoffeeCharts from "./CoffeeCharts";
 import PlaceOrder from "./PlaceOrder";
 import Portal from "./Portal"; // (si quieres que "home" siga usando el dashboard overview)
 import Dashboard from "./AdminSection/Admin";
+import InventoryManager from "./AdminSection/InventoryManager";
 
 import Header from "../../components/HeaderControls";
 import Footer from "../../components/Footer";
@@ -14,17 +15,23 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../firebase/firebase";
 
 // Icons
-import TableListIcon from "../../assets/Icons/coffeechart1.svg";
-import FolderOpenIcon from "../../assets/Icons/gallery2.svg";
-import CartShoppingIcon from "../../assets/Icons/order2.svg";
-import UserIcon from "../../assets/Icons/myaccount1.svg";
-import GetInTouchIcon from "../../assets/Icons/getintouch1.svg";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
+import {
+  faBoxesStacked,
+  faCartShopping,
+  faChartLine,
+  faFolderOpen,
+  faGaugeHigh,
+  faScrewdriverWrench,
+  faUser,
+  faWarehouse,
+} from "@fortawesome/free-solid-svg-icons";
 import PortalSidebar from "../../components/PortalSidebar";
 import MyOrders from "./Orders";
 import Profile from '../../components/Profile';
 
 type MenuItem = {
-  icon: string;
+  icon: IconDefinition;
   id: string;
   title: string;
   description: string;
@@ -72,22 +79,25 @@ const PortalHome: React.FC = () => {
   const menuItems: MenuItem[] = [
     // ✅ HOME (tab)
     {
-      icon: TableListIcon, // si tienes un icono de "home", cámbialo aquí
+      icon: faGaugeHigh,
       id: "home",
       title: "My dashboard",
       description: "Overview, seasonality & updates.",
       mode: "tab",
     },
-    { icon: TableListIcon, id: "coffee-charts", title: "Prices & availability", description: "See stock and place an order.", mode: "tab" },
-    { icon: FolderOpenIcon, id: "resource-library", title: "Farm information", description: "Photos, videos and farm resources.", mode: "tab" },
-    { icon: CartShoppingIcon, id: "place-order", title: "Order now", description: "Place your order — we reply in 24h.", mode: "tab" },
+    { icon: faChartLine, id: "coffee-charts", title: "Prices & availability", description: "See stock and place an order.", mode: "tab" },
+    { icon: faFolderOpen, id: "resource-library", title: "Farm information", description: "Photos, videos and farm resources.", mode: "tab" },
+    { icon: faCartShopping, id: "place-order", title: "Order now", description: "Place your order — we reply in 24h.", mode: "tab" },
 
-    { icon: UserIcon, id: "my-account", title: "My account", description: "Personal information.", mode: "tab" },
+    { icon: faUser, id: "my-account", title: "My account", description: "Personal information.", mode: "tab" },
 
-    { icon: GetInTouchIcon, id: "my-orders", title: "My Orders", description: "See all your orders.", mode: "tab" },
+    { icon: faBoxesStacked, id: "my-orders", title: "My Orders", description: "See all your orders.", mode: "tab" },
 
     ...(isAdmin
-      ? [{ icon: TableListIcon, id: "admin", title: "Admin", description: "Manage users and contracts.", mode: "tab" as const }]
+      ? [
+          { icon: faWarehouse, id: "inventory", title: "Inventory", description: "Manage stock, varieties and invoices.", mode: "tab" as const },
+          { icon: faScrewdriverWrench, id: "admin", title: "Admin", description: "Manage users and contracts.", mode: "tab" as const },
+        ]
       : []),
   ];
 
@@ -112,6 +122,8 @@ const PortalHome: React.FC = () => {
         return <MyOrders />;
       case "my-account":
         return <Profile />;
+      case "inventory":
+        return isAdmin ? <InventoryManager /> : null;
       case "admin":
         return isAdmin ? <Dashboard /> : null;
       default:

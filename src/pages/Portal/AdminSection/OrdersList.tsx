@@ -1,8 +1,21 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { getFirestore, collection, getDocs } from "firebase/firestore";
+import {
+  getFirestore,
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  serverTimestamp,
+  updateDoc,
+} from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEnvelope, faClipboard } from '@fortawesome/free-solid-svg-icons';
+import { faEnvelope, faClipboard, faTrash } from '@fortawesome/free-solid-svg-icons';
+import {
+  applyInventoryOutForSource,
+  reverseInventoryOutForSource,
+  type InventoryStockLine,
+} from "../../../utils/inventoryStock";
 
 interface OrderItem {
   bagKg?: number;
@@ -66,7 +79,85 @@ const statusColors: Record<string, string> = {
 const toMaybeDate = (v: any): Date | null =>
   v?.toDate?.() ?? (v ? new Date(v) : null);
 
+const inventoryLinesFromOrder = (order: Order): InventoryStockLine[] =>
+  (order.items || []).map((item) => ({
+    inventoryItemId: item.inventoryItemId || null,
+    label: item.varietyName || "(Unknown variety)",
+    bags: Number(item.bags) || 0,
+    bagKg: Number(item.bagKg) || 24,
+    unitPricePerKg: Number(item.unitPricePerKg) || 0,
+  }));
+
 // pequeño hook para debounce de búsqueda
+const normalizeInventoryLabel = (value: any) =>
+  String(value ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+
+const inventoryItemLabels = (item: any) => {
+  const farm = String(item.farm ?? "").trim();
+  const variety = String(item.variety ?? "").trim();
+  const harvestYear = String(item.harvestYear ?? "").trim();
+  const yearVariety = harvestYear ? `${harvestYear} - ${variety}` : variety;
+
+  return [
+    farm ? `${yearVariety} (${farm})` : yearVariety,
+    yearVariety,
+    farm ? `${variety} (${farm})` : variety,
+    variety,
+  ].filter(Boolean);
+};
+
+const resolveInventoryLinesFromOrder = async (order: Order): Promise<InventoryStockLine[]> => {
+  const lines = inventoryLinesFromOrder(order);
+  if (lines.every((line) => line.inventoryItemId)) return lines;
+
+  const db = getFirestore();
+  const snap = await getDocs(collection(db, "inventoryItems"));
+  const index = new Map<string, { id: string; bagKg: number; pricePerKg: number }[]>();
+
+  snap.docs.forEach((docSnap) => {
+    const item = docSnap.data() as any;
+    const entry = {
+      id: docSnap.id,
+      bagKg: Number(item.bagSizeKg) || 24,
+      pricePerKg: Number(item.pricePerKg) || 0,
+    };
+
+    inventoryItemLabels(item).forEach((label) => {
+      const key = normalizeInventoryLabel(label);
+      if (!key) return;
+      index.set(key, [...(index.get(key) || []), entry]);
+    });
+  });
+
+  return lines.map((line) => {
+    if (line.inventoryItemId) return line;
+
+    const matches = index.get(normalizeInventoryLabel(line.label)) || [];
+    const uniqueMatches = Array.from(new Map(matches.map((match) => [match.id, match])).values());
+
+    if (uniqueMatches.length !== 1) {
+      throw new Error(
+        `Inventory item id is missing for ${line.label}. ${
+          uniqueMatches.length > 1
+            ? "More than one inventory item matches this name."
+            : "No inventory item matches this name."
+        }`
+      );
+    }
+
+    const match = uniqueMatches[0];
+    return {
+      ...line,
+      inventoryItemId: match.id,
+      bagKg: line.bagKg || match.bagKg,
+      unitPricePerKg: line.unitPricePerKg || match.pricePerKg,
+    };
+  });
+};
+
 function useDebounced<T>(value: T, delay = 250) {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {
@@ -96,6 +187,12 @@ const OrdersList: React.FC = () => {
   const [statusConfirm, setStatusConfirm] = useState(false);
   const [statusSubmitting, setStatusSubmitting] = useState(false);
 
+  // Delete confirmation
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Order | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
+
   const searchDebounced = useDebounced(search, 250);
 
   const [trackingNumber, setTrackingNumber] = useState("");
@@ -105,87 +202,153 @@ const OrdersList: React.FC = () => {
   (selectedOrder?.deliveryMethod ?? "").toLowerCase().trim() !== "pickup";
 
 
-const buildOrderStatusEmailHTML = (orderLabel: string, newStatus: string, tracking?: string) => `
-<html>
-  <body style="margin:0;padding:0;background:#f6f8fa;">
-    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f6f8fa;">
-      <tr>
-        <td align="center" style="padding:24px 12px;">
-          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:620px;background:#ffffff;border:1px solid #eaecef;border-radius:8px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:#111;">
-            <tr>
-              <td style="padding:20px 24px 12px;">
-                <h1 style="margin:0;font-size:18px;line-height:1.3;color:#111;">Your order status has changed</h1>
-                <p style="margin:8px 0 0;font-size:14px;line-height:1.6;color:#444;">
-                  We wanted to let you know your order <b>#${orderLabel}</b> has been updated.
-                </p>
-              </td>
-            </tr>
+  const buildOrderStatusEmailHTML = (
+    orderLabel: string,
+    newStatus: string,
+    tracking?: string,
+    includeFeedback?: boolean
+  ) => `
+  <html>
+    <body style="margin:0;padding:0;background:#f6f8fa;">
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f6f8fa;">
+        <tr>
+          <td align="center" style="padding:24px 12px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:620px;background:#ffffff;border:1px solid #eaecef;border-radius:8px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:#111;">
+              
+              <!-- HEADER -->
+              <tr>
+                <td style="padding:20px 24px 12px;">
+                  <h1 style="margin:0;font-size:18px;line-height:1.3;color:#111;">
+                    Your order status has changed
+                  </h1>
+                  <p style="margin:8px 0 0;font-size:14px;line-height:1.6;color:#444;">
+                    We wanted to let you know your order <b>#${orderLabel}</b> has been updated.
+                  </p>
+                </td>
+              </tr>
 
-            <tr>
-              <td style="padding:12px 24px;">
-                <div style="height:1px;background:#eaecef;"></div>
-              </td>
-            </tr>
+              <!-- DIVIDER -->
+              <tr>
+                <td style="padding:12px 24px;">
+                  <div style="height:1px;background:#eaecef;"></div>
+                </td>
+              </tr>
 
-            <tr>
-              <td style="padding:0 24px 4px;">
-                <p style="margin:0 0 10px;font-size:14px;line-height:1.6;color:#444;">
-                  <b>New status:</b>
-                  <span style="
-                    display:inline-block;
-                    margin-left:6px;
-                    padding:2px 8px;
-                    font-size:12px;
-                    line-height:1.6;
-                    border:1px solid #dfe2e6;
-                    border-radius:999px;
-                    text-transform:capitalize;
-                    background:#f3f4f6;
-                    color:#111;
-                  ">
-                    ${newStatus}
-                  </span>
-                </p>
+              <!-- STATUS -->
+              <tr>
+                <td style="padding:0 24px 4px;">
+                  <p style="margin:0 0 10px;font-size:14px;line-height:1.6;color:#444;">
+                    <b>New status:</b>
+                    <span style="
+                      display:inline-block;
+                      margin-left:6px;
+                      padding:2px 8px;
+                      font-size:12px;
+                      line-height:1.6;
+                      border:1px solid #dfe2e6;
+                      border-radius:999px;
+                      text-transform:capitalize;
+                      background:#f3f4f6;
+                      color:#111;
+                    ">
+                      ${newStatus}
+                    </span>
+                  </p>
 
-                ${
-                  tracking
-                    ? `<p style="margin:0 0 10px;font-size:14px;line-height:1.6;color:#444;">
-                        <b>Tracking number:</b> <span style="font-family:monospace;">${tracking}</span>
-                      </p>`
-                    : ``
-                }
-              </td>
-            </tr>
+                  ${
+                    tracking
+                      ? `<p style="margin:0 0 10px;font-size:14px;line-height:1.6;color:#444;">
+                          <b>Tracking number:</b> 
+                          <span style="font-family:monospace;">${tracking}</span>
+                        </p>`
+                      : ``
+                  }
+                </td>
+              </tr>
 
-            <tr>
-              <td style="padding:0 24px 16px;">
-                <p style="margin:0 0 8px;font-size:14px;line-height:1.6;color:#444;">
-                  You can review your order any time in <b>My Orders</b>.
-                </p>
-                <p style="margin:0;font-size:14px;line-height:1.6;color:#444;">
-                  If you have any questions, simply reply to this email and our team will get back to you.
-                </p>
-              </td>
-            </tr>
+              <!-- INFO -->
+              <tr>
+                <td style="padding:0 24px 16px;">
+                  <p style="margin:0 0 8px;font-size:14px;line-height:1.6;color:#444;">
+                    You can review your order any time in <b>My Orders</b>.
+                  </p>
+                  <p style="margin:0;font-size:14px;line-height:1.6;color:#444;">
+                    If you have any questions, simply reply to this email and our team will get back to you.
+                  </p>
+                </td>
+              </tr>
 
-            <tr>
-              <td style="padding:16px 24px 20px;">
-                <p style="margin:0;font-size:13px;line-height:1.6;color:#666;">
-                  — Caribbean Goods Team
-                </p>
-              </td>
-            </tr>
-          </table>
+              <!-- FEEDBACK (SOLO COMPLETED) -->
+              ${
+                includeFeedback
+                  ? `
+                <tr>
+                  <td style="padding:16px 24px;">
+                    <div style="height:1px;background:#eaecef;margin-bottom:16px;"></div>
 
-          <p style="margin:12px 0 0;font-size:12px;line-height:1.6;color:#8a8f98;font-family:Arial,Helvetica,sans-serif;">
-            This message was sent regarding order #${orderLabel}.
-          </p>
-        </td>
-      </tr>
-    </table>
-  </body>
-</html>
-`;
+                    <h3 style="margin:0 0 12px;font-size:16px;color:#111;">
+                      Before you go, we’d love your feedback
+                    </h3>
+
+                    <p style="margin:0 0 10px;font-size:14px;line-height:1.6;color:#444;">
+                      <b>1. How did you hear about us?</b><br/>
+                      You can simply reply to this email.
+                    </p>
+
+                    <p style="margin:0 0 10px;font-size:14px;line-height:1.6;color:#444;">
+                      <b>2. Would you review us on Google?</b><br/>
+                      If you enjoyed your experience, we’d really appreciate it.
+                    </p>
+
+                    <p style="margin:0 0 12px;">
+                      <a 
+                        href="https://www.google.com/maps/place/Caribbean+Goods/@55.8731176,-4.2693048,17z/data=!3m1!4b1!4m6!3m5!1s0x488847957f8ff411:0x8eabe6bcb3f0edb1!8m2!3d55.8731176!4d-4.2693048!16s/g/11fm6fjqfl?entry=ttu&g_ep=EgoyMDI2MDQwOC4wIKXMDSoASAFQAw==" 
+                        style="
+                          display:inline-block;
+                          background:#2563eb;
+                          color:#ffffff;
+                          text-decoration:none;
+                          padding:8px 14px;
+                          border-radius:6px;
+                          font-size:13px;
+                          font-weight:600;
+                        "
+                      >
+                        Leave a review
+                      </a>
+                    </p>
+
+                    <p style="margin:0;font-size:14px;line-height:1.6;color:#444;">
+                      <b>3. Is there something we can do better?</b><br/>
+                      Any feedback helps us improve.
+                    </p>
+                  </td>
+                </tr>
+              `
+                  : ""
+              }
+
+              <!-- FOOTER -->
+              <tr>
+                <td style="padding:16px 24px 20px;">
+                  <p style="margin:0;font-size:13px;line-height:1.6;color:#666;">
+                    — Caribbean Goods Team
+                  </p>
+                </td>
+              </tr>
+
+            </table>
+
+            <!-- SMALL FOOTER -->
+            <p style="margin:12px 0 0;font-size:12px;line-height:1.6;color:#8a8f98;font-family:Arial,Helvetica,sans-serif;">
+              This message was sent regarding order #${orderLabel}.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </body>
+  </html>
+  `;
 
   
 
@@ -329,7 +492,8 @@ const buildOrderStatusEmailHTML = (orderLabel: string, newStatus: string, tracki
           const html = buildOrderStatusEmailHTML(
             orderLabel,
             newStatusLabel,
-            trackingToSend || undefined
+            trackingToSend || undefined,
+            statusToApply === "completed"
           );
 
 
@@ -368,37 +532,100 @@ const buildOrderStatusEmailHTML = (orderLabel: string, newStatus: string, tracki
     }
   };
   
+  const openDeleteModal = (order: Order) => {
+    setDeleteTarget(order);
+    setDeleteConfirmText("");
+    setDeleteModalOpen(true);
+  };
+
+  const closeDeleteModal = () => {
+    if (deleting) return;
+    setDeleteModalOpen(false);
+    setDeleteTarget(null);
+    setDeleteConfirmText("");
+  };
+
+  const handleDeleteOrder = async () => {
+    if (!deleteTarget) return;
+
+    if (deleteConfirmText !== "delete permanently") return;
+
+    if (deleteTarget.status === "handoff") {
+      alert(
+        "This order has already affected inventory. Move it out of handoff first so stock is restored, then delete it."
+      );
+      return;
+    }
+
+    try {
+      setDeleting(true);
+      await deleteDoc(doc(getFirestore(), "orders", deleteTarget.id));
+
+      setOrders((prev) => prev.filter((order) => order.id !== deleteTarget.id));
+
+      if (selectedOrder?.id === deleteTarget.id) {
+        setSelectedOrder(null);
+      }
+
+      setDeleteModalOpen(false);
+      setDeleteTarget(null);
+      setDeleteConfirmText("");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete order.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
 
   const updateStatus = async (orderId: string, newStatus: string, extra?: { trackingNumber?: string }) => {
     try {
       setUpdating(true);
       const auth = getAuth();
-      const token = await auth.currentUser?.getIdToken();
+      const orderBeforeUpdate = orders.find((o) => o.id === orderId) || selectedOrder || null;
+      const previousStatus = orderBeforeUpdate?.status;
+      const appliedStatus = newStatus;
 
-      const res = await fetch(
-        `${import.meta.env.VITE_FULL_ENDPOINT}/orders/orders/${orderId}/status`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({ status: newStatus, ...(extra ?? {}) }),
+      if (orderBeforeUpdate && previousStatus !== appliedStatus) {
+        if (appliedStatus === "handoff" && previousStatus !== "handoff") {
+          await applyInventoryOutForSource({
+            sourceType: "order",
+            sourceId: orderId,
+            lines: await resolveInventoryLinesFromOrder(orderBeforeUpdate),
+            movementType: "order_out",
+            createdBy: auth.currentUser?.uid || null,
+            createdByEmail: auth.currentUser?.email || null,
+          });
         }
-      );
-      if (!res.ok) throw new Error("Failed to update status");
-      const data = await res.json();
+
+        if (previousStatus === "handoff" && appliedStatus !== "handoff") {
+          await reverseInventoryOutForSource({
+            sourceType: "order",
+            sourceId: orderId,
+            lines: await resolveInventoryLinesFromOrder(orderBeforeUpdate),
+            createdBy: auth.currentUser?.uid || null,
+            createdByEmail: auth.currentUser?.email || null,
+          });
+        }
+      }
+
+      await updateDoc(doc(getFirestore(), "orders", orderId), {
+        status: appliedStatus,
+        updatedAt: serverTimestamp(),
+        ...(extra?.trackingNumber ? { trackingNumber: extra.trackingNumber } : {}),
+      });
 
       setOrders((prev) =>
         prev.map((o) =>
           o.id === orderId
-            ? { ...o, status: data.newStatus, ...(isOnTheWayChange ? { trackingNumber: trackingNumber.trim() } : {}) }
+            ? { ...o, status: appliedStatus, ...(isOnTheWayChange ? { trackingNumber: trackingNumber.trim() } : {}) }
             : o
         )
 
       );
       if (selectedOrder?.id === orderId) {
-        setSelectedOrder({ ...selectedOrder, status: data.newStatus });
+        setSelectedOrder({ ...selectedOrder, status: appliedStatus });
       }
     } catch (err) {
       console.error(err);
@@ -488,6 +715,15 @@ if (selectedOrder) {
           >
             <FontAwesomeIcon icon={faEnvelope} />
             Generate
+          </button>
+
+          <button
+            onClick={() => openDeleteModal(o)}
+            className="h-9 px-3 rounded-md text-sm font-medium inline-flex items-center gap-2 border border-red-200 bg-white text-red-700 hover:bg-red-50"
+            title="Delete order"
+          >
+            <FontAwesomeIcon icon={faTrash} />
+            Delete
           </button>
         </div>
       </div>
@@ -743,6 +979,60 @@ if (selectedOrder) {
                     Copy
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Confirm delete */}
+      {deleteModalOpen && deleteTarget && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+            <h2 className="text-lg font-bold mb-2">Confirm Delete</h2>
+
+            <p className="text-sm text-gray-700 mb-2">
+              You are about to permanently delete order{" "}
+              <b>#{deleteTarget.orderNoShort || deleteTarget.id}</b>.
+            </p>
+
+            {deleteTarget.status === "handoff" ? (
+              <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-3 mb-4">
+                This order has already affected inventory. Move it out of handoff first so stock is restored, then delete it.
+              </p>
+            ) : (
+              <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-3 mb-4">
+                This cannot be undone. Type <strong>delete permanently</strong> to confirm.
+              </p>
+            )}
+
+            <input
+              type="text"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              className="border px-3 py-2 w-full rounded mb-4 text-sm"
+              disabled={deleting || deleteTarget.status === "handoff"}
+              placeholder="delete permanently"
+            />
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={closeDeleteModal}
+                className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 text-sm"
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteOrder}
+                className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 text-sm disabled:opacity-50"
+                disabled={
+                  deleting ||
+                  deleteTarget.status === "handoff" ||
+                  deleteConfirmText !== "delete permanently"
+                }
+              >
+                {deleting ? "Deleting..." : "Delete"}
               </button>
             </div>
           </div>

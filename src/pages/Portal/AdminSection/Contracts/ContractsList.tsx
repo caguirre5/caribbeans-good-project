@@ -6,6 +6,7 @@ import {
   faTrash,
   faChevronLeft,
   faUpload,
+  faPaperPlane,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "../../../../contexts/AuthContext";
 import { AnimatePresence, motion } from "framer-motion";
@@ -16,6 +17,12 @@ import {
   buildDispatchEmailHTML,
   DispatchEmailLine,
 } from "../../../../components/utils/mailTemplates"; // ajusta la ruta
+import {
+  applyInventoryOutForSource,
+  releaseInventoryReservation,
+  reserveInventoryForSource,
+  type InventoryStockLine,
+} from "../../../../utils/inventoryStock";
 
 interface DispatchHistoryLine {
   variety?: string;
@@ -70,8 +77,10 @@ interface Contract {
     | null;
   selections?:
     | Array<{
+        inventoryItemId?: string | null;
         variety?: string;
         bags?: number;
+        bagKg?: number;
         lineKg?: number;
         unitPricePerKg?: number;
         lineSubtotal?: number;
@@ -112,6 +121,183 @@ const parseMaybeNumber = (v: any): number | undefined => {
 };
 
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
+
+const contractReportMetrics = (selections: any[]) => {
+  const rows = selections.map((it: any) => {
+    const totalBags = parseMaybeNumber(it.bags) ?? 0;
+    const bagKg =
+      parseMaybeNumber(it.bagKg) ??
+      (() => {
+        const lineKg = parseMaybeNumber(it.lineKg);
+        return totalBags > 0 && lineKg ? lineKg / totalBags : 24;
+      })();
+    const totalKg = parseMaybeNumber(it.lineKg) ?? totalBags * bagKg;
+    const remainingBags = parseMaybeNumber(it.remainingBags) ?? totalBags;
+    const remainingKg = parseMaybeNumber(it.remainingKg) ?? remainingBags * bagKg;
+    const collectedBags = Math.max(0, totalBags - remainingBags);
+    const collectedKg = Math.max(0, totalKg - remainingKg);
+
+    return {
+      variety: String(it.variety || "Coffee").trim(),
+      totalBags,
+      totalKg,
+      collectedBags,
+      collectedKg,
+      remainingBags,
+      remainingKg,
+    };
+  });
+
+  const totals = rows.reduce(
+    (acc, row) => ({
+      totalBags: acc.totalBags + row.totalBags,
+      totalKg: acc.totalKg + row.totalKg,
+      collectedBags: acc.collectedBags + row.collectedBags,
+      collectedKg: acc.collectedKg + row.collectedKg,
+      remainingBags: acc.remainingBags + row.remainingBags,
+      remainingKg: acc.remainingKg + row.remainingKg,
+    }),
+    {
+      totalBags: 0,
+      totalKg: 0,
+      collectedBags: 0,
+      collectedKg: 0,
+      remainingBags: 0,
+      remainingKg: 0,
+    }
+  );
+
+  const completion =
+    totals.totalKg > 0 ? Math.round((totals.collectedKg / totals.totalKg) * 100) : 0;
+
+  return { rows, totals, completion };
+};
+
+const buildContractStatusReportHTML = (opts: {
+  roasterName: string;
+  contractNo: string;
+  monthYear: string;
+  metrics: ReturnType<typeof contractReportMetrics>;
+}) => {
+  const { roasterName, contractNo, monthYear, metrics } = opts;
+  const { totals, rows, completion } = metrics;
+
+  const lineRows = rows
+    .map(
+      (row) => `
+        <tr>
+          <td style="padding:8px 10px;border:1px solid #eaecef;">${row.variety}</td>
+          <td style="padding:8px 10px;border:1px solid #eaecef;text-align:right;">${fmtNum(row.totalKg)} kg / ${fmtNum(row.totalBags)} bags</td>
+          <td style="padding:8px 10px;border:1px solid #eaecef;text-align:right;">${fmtNum(row.collectedKg)} kg / ${fmtNum(row.collectedBags)} bags</td>
+          <td style="padding:8px 10px;border:1px solid #eaecef;text-align:right;">${fmtNum(row.remainingKg)} kg / ${fmtNum(row.remainingBags)} bags</td>
+        </tr>`
+    )
+    .join("");
+
+  return `
+  <html>
+    <body style="margin:0;padding:0;background:#f6f8fa;">
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f6f8fa;">
+        <tr>
+          <td align="center" style="padding:24px 12px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:660px;background:#ffffff;border:1px solid #eaecef;border-radius:8px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:#111;">
+              <tr>
+                <td style="padding:22px 24px 12px;">
+                  <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:#444;">Hi ${roasterName || "there"},</p>
+                  <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:#444;">I hope you're doing well.</p>
+                  <p style="margin:0;font-size:14px;line-height:1.6;color:#444;">
+                    Please find below your current contract status with Caribbean Goods for the month of <b>${monthYear}</b>.
+                  </p>
+                </td>
+              </tr>
+
+              <tr><td style="padding:12px 24px;"><div style="height:1px;background:#eaecef;"></div></td></tr>
+
+              <tr>
+                <td style="padding:0 24px 16px;">
+                  <h2 style="margin:0 0 10px;font-size:16px;line-height:1.4;color:#111;">Contract summary</h2>
+                  <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#444;"><b>Contract:</b> #${contractNo}</p>
+                  <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#444;"><b>Contracted volume:</b> ${fmtNum(totals.totalKg)} kg / ${fmtNum(totals.totalBags)} bags</p>
+                  <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#444;"><b>Coffee collected to date:</b> ${fmtNum(totals.collectedKg)} kg / ${fmtNum(totals.collectedBags)} bags</p>
+                  <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#444;"><b>Remaining volume to purchase:</b> ${fmtNum(totals.remainingKg)} kg / ${fmtNum(totals.remainingBags)} bags</p>
+                  <p style="margin:0;font-size:14px;line-height:1.6;color:#444;"><b>Contract completion:</b> ${completion}%</p>
+                </td>
+              </tr>
+
+              <tr>
+                <td style="padding:0 24px 16px;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;border:1px solid #eaecef;font-size:13px;">
+                    <thead>
+                      <tr style="background:#fafafa;text-align:left;">
+                        <th style="padding:8px 10px;border:1px solid #eaecef;">Coffee</th>
+                        <th style="padding:8px 10px;border:1px solid #eaecef;text-align:right;">Contracted</th>
+                        <th style="padding:8px 10px;border:1px solid #eaecef;text-align:right;">Collected</th>
+                        <th style="padding:8px 10px;border:1px solid #eaecef;text-align:right;">Remaining</th>
+                      </tr>
+                    </thead>
+                    <tbody>${lineRows}</tbody>
+                  </table>
+                </td>
+              </tr>
+
+              <tr>
+                <td style="padding:0 24px 18px;">
+                  <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:#444;">You can also review your contract status and place new orders anytime through the Roaster's Portal.</p>
+                  <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:#444;">Thanks again for working with us and supporting the farmers behind these coffees in Guatemala. We truly appreciate your continued partnership with Caribbean Goods.</p>
+                  <p style="margin:0 0 8px;font-size:14px;line-height:1.6;color:#444;">Please feel free to reach out if you would like:</p>
+                  <ul style="margin:0 0 14px 18px;padding:0;font-size:14px;line-height:1.6;color:#444;">
+                    <li>Fresh crop arrival timelines</li>
+                    <li>Samples</li>
+                    <li>Assistance planning future purchases</li>
+                  </ul>
+                  <p style="margin:0;font-size:14px;line-height:1.6;color:#444;">Best regards,</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+  </html>`;
+};
+
+const getContractSelections = (contract: Contract | any) =>
+  contract?.details?.selections || contract?.selections || [];
+
+const inventoryLinesFromContract = (contract: Contract | any): InventoryStockLine[] =>
+  getContractSelections(contract).map((item: any, index: number) => {
+    const bags =
+      parseMaybeNumber(item.remainingBags) ??
+      parseMaybeNumber(item.bags) ??
+      0;
+
+    return {
+      inventoryItemId: item.inventoryItemId || null,
+      label: item.variety || "(Unknown variety)",
+      bags,
+      bagKg: parseMaybeNumber(item.bagKg) ?? 24,
+      unitPricePerKg: parseMaybeNumber(item.unitPricePerKg),
+      selectionIndex: index,
+    };
+  });
+
+const inventoryLinesFromDispatch = (
+  contract: Contract | any,
+  dispatches: { index: number; bags: number }[]
+): InventoryStockLine[] => {
+  const selections = getContractSelections(contract);
+  return dispatches.map((item) => {
+    const selection = selections[item.index] || {};
+    return {
+      inventoryItemId: selection.inventoryItemId || null,
+      label: selection.variety || "(Unknown variety)",
+      bags: item.bags,
+      bagKg: parseMaybeNumber(selection.bagKg) ?? 24,
+      unitPricePerKg: parseMaybeNumber(selection.unitPricePerKg),
+      selectionIndex: item.index,
+    };
+  });
+};
 
 type View = "list" | "detail" | "upload";
 
@@ -182,6 +368,18 @@ const ContractsList: React.FC = () => {
   const [enableDeliveryPostcode, setEnableDeliveryPostcode] = useState(false);
   const [enableConsignmentNumber, setEnableConsignmentNumber] = useState(false);
   const [enableReferenceNumber, setEnableReferenceNumber] = useState(false);
+  const [reportSendingId, setReportSendingId] = useState<string | null>(null);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [reportTarget, setReportTarget] = useState<{
+    contract: Contract;
+    selections: any[];
+    metrics: ReturnType<typeof contractReportMetrics>;
+    contractNo: string;
+    roasterName: string;
+    monthYear: string;
+  } | null>(null);
+  const [reportError, setReportError] = useState("");
+  const [reportSent, setReportSent] = useState(false);
 
   useEffect(() => {
     const fetchContracts = async () => {
@@ -370,6 +568,9 @@ const ContractsList: React.FC = () => {
     try {
       setUpdating(true);
       const token = await currentUser?.getIdToken();
+      const contractBeforeUpdate =
+        contracts.find((contract) => contract.id === id) || selected || null;
+      const previousStatus = contractBeforeUpdate?.status;
 
       const res = await fetch(
         `${import.meta.env.VITE_FULL_ENDPOINT}/orders/contracts/${id}/status`,
@@ -382,18 +583,55 @@ const ContractsList: React.FC = () => {
           body: JSON.stringify({ status: newStatus }),
         }
       );
-      if (!res.ok) throw new Error("Failed to update contract status");
+      if (!res.ok) {
+        const message = await res.text().catch(() => "");
+        throw new Error(message || "Failed to update contract status");
+      }
       const data = await res.json();
+      const appliedStatus = data.newStatus ?? newStatus;
+      const responseContract = data.contract ?? {};
+      const updatedContract = {
+        ...(contractBeforeUpdate || {}),
+        ...responseContract,
+        status: appliedStatus,
+        details: responseContract.details ?? contractBeforeUpdate?.details,
+        selections: responseContract.selections ?? contractBeforeUpdate?.selections,
+      };
+
+      if (contractBeforeUpdate && previousStatus !== appliedStatus) {
+        if (appliedStatus === "active" && previousStatus !== "active") {
+          await reserveInventoryForSource({
+            sourceType: "contract",
+            sourceId: id,
+            lines: inventoryLinesFromContract(updatedContract),
+            createdBy: currentUser?.uid || null,
+            createdByEmail: currentUser?.email || null,
+          });
+        }
+
+        if (
+          previousStatus === "active" &&
+          ["pending", "cancelled"].includes(String(appliedStatus))
+        ) {
+          await releaseInventoryReservation({
+            sourceType: "contract",
+            sourceId: id,
+            lines: inventoryLinesFromContract(contractBeforeUpdate),
+            createdBy: currentUser?.uid || null,
+            createdByEmail: currentUser?.email || null,
+          });
+        }
+      }
 
       setContracts((prev) =>
-        prev.map((c) => (c.id === id ? { ...c, status: data.newStatus ?? newStatus } : c))
+        prev.map((c) => (c.id === id ? { ...c, ...updatedContract } : c))
       );
       if (selected?.id === id) {
-        setSelected({ ...selected, status: data.newStatus ?? newStatus });
+        setSelected({ ...selected, ...updatedContract });
       }
     } catch (err) {
       console.error(err);
-      alert("Error updating status");
+      alert(err instanceof Error ? err.message : "Error updating status");
     } finally {
       setUpdating(false);
     }
@@ -440,6 +678,87 @@ const ContractsList: React.FC = () => {
       });
     } catch (err) {
       console.error("Error sending dispatch email:", err);
+    }
+  };
+
+  const openContractStatusReportModal = (contract: Contract, selections: any[]) => {
+    const metrics = contractReportMetrics(selections);
+    const contractNo = contract.contractNo || contract.id;
+    const roasterName =
+      contract.name ||
+      contract.customer?.fullName ||
+      String(contract.details?.customer?.fullName || "").trim() ||
+      "there";
+    const monthYear = new Date().toLocaleDateString("en-GB", {
+      month: "long",
+      year: "numeric",
+    });
+
+    setReportTarget({
+      contract,
+      selections,
+      metrics,
+      contractNo,
+      roasterName,
+      monthYear,
+    });
+    setReportError(
+      !contract.email
+        ? "This contract does not have a customer email."
+        : metrics.totals.remainingBags <= 0 && metrics.totals.remainingKg <= 0
+          ? "There is no reserved/remaining volume to report for this contract."
+          : ""
+    );
+    setReportSent(false);
+    setReportModalOpen(true);
+  };
+
+  const closeContractStatusReportModal = () => {
+    if (reportSendingId) return;
+    setReportModalOpen(false);
+    setReportTarget(null);
+    setReportError("");
+    setReportSent(false);
+  };
+
+  const sendContractStatusReport = async () => {
+    if (!reportTarget || reportError || !reportTarget.contract.email) return;
+
+    try {
+      const { contract, metrics, contractNo, roasterName, monthYear } = reportTarget;
+      setReportSendingId(contract.id);
+      const token = await currentUser?.getIdToken();
+      const html = buildContractStatusReportHTML({
+        roasterName,
+        contractNo,
+        monthYear,
+        metrics,
+      });
+
+      const res = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/email/sendCustomEmail`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          recipientEmail: contract.email,
+          subject: `Contract status report #${contractNo} - ${monthYear}`,
+          html,
+        }),
+      });
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        throw new Error(txt || "Failed to send contract status report");
+      }
+
+      setReportSent(true);
+    } catch (err) {
+      console.error("Error sending contract status report:", err);
+      setReportError(err instanceof Error ? err.message : "Error sending contract status report.");
+    } finally {
+      setReportSendingId(null);
     }
   };
 
@@ -560,6 +879,16 @@ const ContractsList: React.FC = () => {
       const payload = await res.json();
       updatedContract = payload.contract ?? payload;
 
+      await applyInventoryOutForSource({
+        sourceType: "contract",
+        sourceId: selected.id,
+        lines: inventoryLinesFromDispatch(selected, pendingDispatches),
+        movementType: "reservation_fulfillment",
+        releaseReserved: true,
+        createdBy: currentUser?.uid || null,
+        createdByEmail: currentUser?.email || null,
+      });
+
       setContracts((prev) =>
         prev.map((c) => (c.id === updatedContract.id ? updatedContract : c))
       );
@@ -635,6 +964,22 @@ const ContractsList: React.FC = () => {
           key={selected.id}
           onBack={() => setActiveView("detail")}
           onUploaded={async (payload) => {
+            const contractBeforeUpload = selected;
+            const uploadedContract = { ...contractBeforeUpload, ...payload };
+
+            if (
+              payload.status === "active" &&
+              contractBeforeUpload.status !== "active"
+            ) {
+              await reserveInventoryForSource({
+                sourceType: "contract",
+                sourceId: payload.id,
+                lines: inventoryLinesFromContract(uploadedContract),
+                createdBy: currentUser?.uid || null,
+                createdByEmail: currentUser?.email || null,
+              });
+            }
+
             setContracts((prev) =>
               prev.map((c) => (c.id === payload.id ? { ...c, ...payload } : c))
             );
@@ -797,6 +1142,9 @@ const ContractsList: React.FC = () => {
           const totals = details?.totals || null;
           const reservation = details?.reservation || null;
           const selections = Array.isArray(details?.selections) ? details!.selections! : [];
+          const reportMetrics = contractReportMetrics(selections);
+          const hasRemainingReservation =
+            reportMetrics.totals.remainingBags > 0 || reportMetrics.totals.remainingKg > 0;
           const repl = details?.replacementsSnapshot || null;
 
           const dispatchHistory: DispatchHistoryEntry[] =
@@ -934,6 +1282,18 @@ const ContractsList: React.FC = () => {
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-lg font-semibold">Dispatch tracking</h3>
                     <div className="flex items-center gap-2">
+                      {hasRemainingReservation && (
+                        <button
+                          type="button"
+                          onClick={() => openContractStatusReportModal(selected, selections)}
+                          disabled={reportSendingId === selected.id}
+                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded border border-[#044421] text-[#044421] text-sm font-medium bg-white hover:bg-[#044421] hover:text-white disabled:opacity-60 disabled:cursor-not-allowed"
+                          title="Send contract status report"
+                        >
+                          <FontAwesomeIcon icon={faPaperPlane} />
+                          {reportSendingId === selected.id ? "Sending..." : "Send report"}
+                        </button>
+                      )}
                       <span className="text-xs uppercase tracking-wide text-gray-600">View as</span>
                       <div className="border rounded overflow-hidden">
                         <button
@@ -996,8 +1356,8 @@ const ContractsList: React.FC = () => {
                           <th className="px-3 py-2 font-semibold">
                             {unitView === "bags" ? "Remaining bags" : "Remaining KG"}
                           </th>
-                          <th className="px-3 py-2 font-semibold">Remaining %</th>
-                          <th className="px-3 py-2 font-semibold w-64">Progress (remaining)</th>
+                          <th className="px-3 py-2 font-semibold">Completed %</th>
+                          <th className="px-3 py-2 font-semibold w-64">Progress</th>
                           <th className="px-3 py-2 font-semibold">Dispatch</th>
                         </tr>
                       </thead>
@@ -1012,9 +1372,10 @@ const ContractsList: React.FC = () => {
 
                           const total = unitView === "bags" ? totalBags : totalKg;
                           const remaining = unitView === "bags" ? remBags : remKg;
+                          const completed = Math.max(total - remaining, 0);
 
-                          const pctRemaining = total > 0 ? clamp01(remaining / total) : 0;
-                          const pctRemainingLabel = Math.round(pctRemaining * 100);
+                          const pctCompleted = total > 0 ? clamp01(completed / total) : 0;
+                          const pctCompletedLabel = Math.round(pctCompleted * 100);
 
                           const rowKey = `sel-${idx}`;
 
@@ -1023,23 +1384,23 @@ const ContractsList: React.FC = () => {
                               <td className="px-3 py-3 font-medium">{it.variety || "(Variety)"}</td>
                               <td className="px-3 py-3">{fmtNum(total)}</td>
                               <td className="px-3 py-3">{fmtNum(remaining)}</td>
-                              <td className="px-3 py-3">{pctRemainingLabel}%</td>
+                              <td className="px-3 py-3">{pctCompletedLabel}%</td>
                               <td className="px-3 py-3">
                                 <div className="w-full bg-gray-200 rounded h-2.5">
                                   <div
                                     className="h-2.5 rounded"
                                     style={{
-                                      width: `${pctRemaining * 100}%`,
+                                      width: `${pctCompleted * 100}%`,
                                       backgroundColor: "#16a34a",
                                       transition: "width 300ms ease",
                                     }}
-                                    aria-label={`Remaining ${pctRemainingLabel}%`}
+                                    aria-label={`Completed ${pctCompletedLabel}%`}
                                   />
                                 </div>
                                 <p className="text-[11px] text-gray-500 mt-1">
                                   {unitView === "bags"
-                                    ? `Completed: ${fmtNum(total - remaining)} / ${fmtNum(total)} bags`
-                                    : `Completed: ${fmtNum(total - remaining)} / ${fmtNum(total)} kg`}
+                                    ? `Completed: ${fmtNum(completed)} / ${fmtNum(total)} bags`
+                                    : `Completed: ${fmtNum(completed)} / ${fmtNum(total)} kg`}
                                 </p>
                               </td>
 
@@ -1171,6 +1532,94 @@ const ContractsList: React.FC = () => {
             </div>
           );
         })()}
+
+        {/* Contract status report modal */}
+        <AnimatePresence>
+          {reportModalOpen && reportTarget && (
+            <motion.div
+              className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={closeContractStatusReportModal}
+            >
+              <motion.div
+                className="bg-white p-6 rounded shadow-lg w-full max-w-lg"
+                initial={{ scale: 0.9 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0.9 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="h-10 w-10 rounded-full bg-[#044421]/10 text-[#044421] flex items-center justify-center shrink-0">
+                    <FontAwesomeIcon icon={faPaperPlane} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold">Send contract status report</h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      This will email the current contract summary to{" "}
+                      <b>{reportTarget.contract.email || "(no email on file)"}</b>.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="rounded border border-gray-200 bg-gray-50 p-4 text-sm space-y-2">
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-600">Contract</span>
+                    <span className="font-medium">#{reportTarget.contractNo}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-600">Month</span>
+                    <span className="font-medium">{reportTarget.monthYear}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-600">Remaining</span>
+                    <span className="font-medium text-right">
+                      {fmtNum(reportTarget.metrics.totals.remainingKg)} kg /{" "}
+                      {fmtNum(reportTarget.metrics.totals.remainingBags)} bags
+                    </span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-600">Completion</span>
+                    <span className="font-medium">{reportTarget.metrics.completion}%</span>
+                  </div>
+                </div>
+
+                {reportError && (
+                  <p className="mt-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded p-3">
+                    {reportError}
+                  </p>
+                )}
+
+                {reportSent && (
+                  <p className="mt-4 text-sm text-green-800 bg-green-50 border border-green-200 rounded p-3">
+                    Contract status report sent.
+                  </p>
+                )}
+
+                <div className="flex justify-end gap-2 mt-5">
+                  <button
+                    className="px-4 py-2 rounded border hover:bg-gray-50 text-sm"
+                    disabled={!!reportSendingId}
+                    onClick={closeContractStatusReportModal}
+                  >
+                    {reportSent ? "Close" : "Cancel"}
+                  </button>
+                  {!reportSent && (
+                    <button
+                      className="px-4 py-2 rounded bg-[#044421] text-white hover:bg-[#033719] text-sm disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2"
+                      disabled={!!reportSendingId || !!reportError}
+                      onClick={sendContractStatusReport}
+                    >
+                      <FontAwesomeIcon icon={faPaperPlane} />
+                      {reportSendingId ? "Sending..." : "Send report"}
+                    </button>
+                  )}
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Dispatch modal */}
         <AnimatePresence>

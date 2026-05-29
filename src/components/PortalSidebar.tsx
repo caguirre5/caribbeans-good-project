@@ -1,7 +1,10 @@
 import { useMemo, useState } from "react";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 
 type MenuItem = {
-  icon: string;
+  icon: IconDefinition;
   id: string;
   title: string;
   description: string;
@@ -19,6 +22,8 @@ export default function PortalSidebar({
   onItemClick: (item: MenuItem) => void;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const iconColor = "#044421";
 
   const activeItem = useMemo(() => {
     return items.find((it) => it.id === activeId) ?? items[0];
@@ -30,7 +35,12 @@ export default function PortalSidebar({
   };
 
   return (
-    <aside className="w-full lg:w-[280px] lg:min-h-screen bg-white border-b lg:border-b-0 lg:border-r border-[#044421]/10">
+    <aside
+      className={[
+        "w-full lg:min-h-screen bg-white border-b lg:border-b-0 lg:border-r border-[#044421]/10 transition-all duration-200",
+        collapsed ? "lg:w-[88px]" : "lg:w-[280px]",
+      ].join(" ")}
+    >
       <div className="p-4 lg:p-5">
         {/* header */}
 
@@ -51,11 +61,9 @@ export default function PortalSidebar({
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <span className="flex items-center justify-center w-10 h-10 rounded-xl bg-[#044421]/15 shrink-0">
-                      <img
-                        src={activeItem?.icon}
-                        alt=""
-                        className="w-6 h-6 opacity-90"
-                      />
+                      {activeItem?.icon && (
+                        <FontAwesomeIcon icon={activeItem.icon} style={{ color: iconColor }} />
+                      )}
                     </span>
 
                     <span className="min-w-0">
@@ -124,11 +132,7 @@ export default function PortalSidebar({
                                   ${isActive ? "bg-[#044421]/15" : "bg-[#044421]/10"}
                                 `}
                               >
-                                <img
-                                  src={item.icon}
-                                  alt=""
-                                  className="w-6 h-6 opacity-90"
-                                />
+                                <FontAwesomeIcon icon={item.icon} style={{ color: iconColor }} />
                               </span>
 
                               <span className="min-w-0 text-left">
@@ -153,6 +157,28 @@ export default function PortalSidebar({
               DESKTOP: your current list
              ========================= */}
           <div className="hidden lg:flex lg:flex-col">
+            <div className="mb-4 flex items-center justify-between border-b border-[#044421]/10 pb-3">
+              <div className={collapsed ? "hidden" : "min-w-0"}>
+                <p className="text-xs font-semibold uppercase tracking-wide text-[#044421]/50">
+                  Portal
+                </p>
+                <p className="text-sm font-bold text-[#044421] truncate">Navigation</p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setCollapsed((value) => !value)}
+                className="h-10 w-10 rounded-xl border border-[#044421]/10 bg-[#f6faf7] inline-flex items-center justify-center hover:bg-white transition"
+                title={collapsed ? "Show menu" : "Hide menu"}
+                aria-label={collapsed ? "Show portal menu" : "Hide portal menu"}
+              >
+                <FontAwesomeIcon
+                  icon={collapsed ? faChevronRight : faChevronLeft}
+                  className="text-[#044421]"
+                />
+              </button>
+            </div>
+
             {items.map((item) => {
               const isActive = item.mode === "tab" && item.id === activeId;
 
@@ -161,6 +187,7 @@ export default function PortalSidebar({
                   key={item.id}
                   type="button"
                   onClick={() => onItemClick(item)}
+                  title={collapsed ? item.title : undefined}
                   className={`
                     group rounded-xl transition border
                     ${
@@ -169,7 +196,8 @@ export default function PortalSidebar({
                         : "bg-white border-transparent hover:border-[#044421]/15 hover:bg-[#f6faf7]"
                     }
                     flex items-center p-2 justify-start gap-3
-                    lg:w-full lg:px-3 lg:py-3
+                    lg:w-full lg:py-3
+                    ${collapsed ? "lg:justify-center lg:px-2" : "lg:px-3"}
                   `}
                 >
                   <span
@@ -178,10 +206,10 @@ export default function PortalSidebar({
                       ${isActive ? "bg-[#044421]/15" : "bg-[#044421]/10"}
                     `}
                   >
-                    <img src={item.icon} alt="" className="w-6 h-6 opacity-90" />
+                    <FontAwesomeIcon icon={item.icon} style={{ color: iconColor }} />
                   </span>
 
-                  <span className="min-w-0 hidden lg:block">
+                  <span className={collapsed ? "hidden" : "min-w-0 hidden lg:block"}>
                     <span className="block text-sm font-semibold text-[#044421] leading-tight">
                       {item.title}
                     </span>

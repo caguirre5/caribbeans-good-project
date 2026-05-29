@@ -245,11 +245,14 @@ const TeamMembersDashboard: React.FC = () => {
     return (
         <div className="bg-white p-4 rounded-lg shadow-md w-full">
             {/* Tabs */}
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">Team Members</h2>
+            <div className="flex items-center justify-between gap-3 mb-4 border-b pb-3">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Team Members</h2>
+                <p className="text-sm text-gray-500">Manage public team profiles and display order.</p>
+              </div>
                 <button
                     onClick={() => setActiveTab(activeTab === 'list' ? 'add' : 'list')}
-                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center gap-2"
+                    className="h-9 px-3 rounded-md text-sm font-medium inline-flex items-center gap-2 border bg-[#174B3D] text-white border-[#174B3D] hover:bg-[#0f3a2d]"
                 >
                     <FontAwesomeIcon icon={activeTab === 'list' ? faPlus : faEye} />
                     {activeTab === 'list' ? 'Add Member' : 'View Members'}
@@ -273,11 +276,11 @@ const TeamMembersDashboard: React.FC = () => {
                             <Reorder.Item
                                 key={member.id}
                                 value={member}
-                                className="flex flex-col lg:flex-row lg:justify-between items-center p-4 border rounded-md shadow-sm bg-white"
+                                className="flex flex-col lg:flex-row lg:justify-between items-center py-3 border-b bg-white"
                             >
                                 <div className="flex flex-col lg:flex-row lg:items-center lg:gap-4 w-full">
                                     {/* Drag handle */}
-                                    <button className="cursor-grab active:cursor-grabbing p-2 rounded-full bg-gray-100 hover:bg-gray-200">
+                                    <button className="cursor-grab active:cursor-grabbing h-9 w-9 rounded-md border border-gray-200 bg-white hover:bg-gray-50 inline-flex items-center justify-center">
                                         <FontAwesomeIcon icon={faBars} className="text-gray-500" />
                                     </button>
 
@@ -286,15 +289,15 @@ const TeamMembersDashboard: React.FC = () => {
                                     </span> */}
 
                                     <div className="flex flex-col">
-                                        <h3 className="text-lg font-bold">{member.name}</h3>
-                                        <p className="text-gray-500">{member.position}</p>
+                                        <h3 className="text-sm font-semibold text-gray-900">{member.name}</h3>
+                                        <p className="text-sm text-gray-500">{member.position}</p>
                                     </div>
 
                                     <button
                                         onClick={() => setSelectedPhotoUrl(member.photoUrl)}
-                                        className="ml-0 lg:ml-4 mt-2 lg:mt-0 inline-flex items-center justify-center p-2 rounded-full bg-blue-50 hover:bg-blue-100"
+                                        className="ml-0 lg:ml-4 mt-2 lg:mt-0 h-9 w-9 rounded-md border border-gray-200 bg-white hover:bg-gray-50 inline-flex items-center justify-center"
                                     >
-                                        <FontAwesomeIcon icon={faEye} className="text-blue-600" />
+                                        <FontAwesomeIcon icon={faEye} className="text-gray-600" />
                                     </button>
                                 </div>
 
@@ -305,10 +308,10 @@ const TeamMembersDashboard: React.FC = () => {
                                             setEditName(member.name);
                                             setEditPosition(member.position);
                                         }}
-                                        className="p-2 rounded-full bg-blue-50 hover:bg-blue-100 transition"
+                                        className="h-9 w-9 rounded-md border border-gray-200 bg-white hover:bg-gray-50 inline-flex items-center justify-center"
                                         title="Edit"
                                     >
-                                        <FontAwesomeIcon icon={faEdit} className="text-blue-600" />
+                                        <FontAwesomeIcon icon={faEdit} className="text-gray-600" />
                                     </button>
                                     <button
                                         onClick={() => {
@@ -316,7 +319,7 @@ const TeamMembersDashboard: React.FC = () => {
                                                 handleDeleteTeamMember(member.id, member.fileKey);
                                             }
                                         }}
-                                        className="p-2 rounded-full bg-red-50 hover:bg-red-100 transition"
+                                        className="h-9 w-9 rounded-md border border-red-200 bg-white hover:bg-red-50 inline-flex items-center justify-center"
                                         title="Delete"
                                     >
                                         <FontAwesomeIcon icon={faTrash} className="text-red-600" />
@@ -332,39 +335,39 @@ const TeamMembersDashboard: React.FC = () => {
             {activeTab === 'add' && (
                 <div className="space-y-4">
                     <div>
-                        <label className="block mb-1 font-medium">First Name</label>
+                        <label className="block mb-1 text-xs font-semibold text-gray-700">First Name</label>
                         <input
                             type="text"
                             value={firstName}
                             onChange={(e) => setFirstName(e.target.value)}
-                            className="border px-3 py-2 w-full rounded text-sm"
+                            className="border border-gray-300 px-3 py-2 w-full rounded-md text-sm"
                         />
                     </div>
                     <div>
-                        <label className="block mb-1 font-medium">Last Name</label>
+                        <label className="block mb-1 text-xs font-semibold text-gray-700">Last Name</label>
                         <input
                             type="text"
                             value={lastName}
                             onChange={(e) => setLastName(e.target.value)}
-                            className="border px-3 py-2 w-full rounded text-sm"
+                            className="border border-gray-300 px-3 py-2 w-full rounded-md text-sm"
                         />
                     </div>
                     <div>
-                        <label className="block mb-1 font-medium">Position</label>
+                        <label className="block mb-1 text-xs font-semibold text-gray-700">Position</label>
                         <input
                             type="text"
                             value={position}
                             onChange={(e) => setPosition(e.target.value)}
-                            className="border px-3 py-2 w-full rounded text-sm"
+                            className="border border-gray-300 px-3 py-2 w-full rounded-md text-sm"
                         />
                     </div>
                     <div>
-                        <label className="block mb-1 font-medium">Upload Photo</label>
+                        <label className="block mb-1 text-xs font-semibold text-gray-700">Upload Photo</label>
                         <input
                             type="file"
                             accept="image/*"
                             onChange={handleFileChange}
-                            className="border px-3 py-2 w-full rounded text-sm"
+                            className="border border-gray-300 px-3 py-2 w-full rounded-md text-sm"
                         />
                         {selectedFile && (
                             <p className="mt-2 text-sm text-green-600">Selected: {selectedFile.name}</p>
@@ -373,7 +376,7 @@ const TeamMembersDashboard: React.FC = () => {
                     <button
                         onClick={handleUpload}
                         disabled={uploading}
-                        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50"
+                        className="h-9 px-3 rounded-md text-sm font-medium inline-flex items-center gap-2 border bg-[#174B3D] text-white border-[#174B3D] hover:bg-[#0f3a2d] disabled:opacity-50"
                     >
                         <FontAwesomeIcon icon={faUpload} />
                         {uploading ? 'Uploading...' : 'Submit'}

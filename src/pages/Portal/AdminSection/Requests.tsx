@@ -147,20 +147,27 @@ const Requests: React.FC = () => {
   
   
 
-  if (loading) return <p>Loading users...</p>;
-  if (error) return <p>{error}</p>;
-
   return (
     <div className="bg-white p-4 rounded-lg shadow-md">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">Pending Requests</h2>
-        <button onClick={fetchUsers} className="text-gray-500 hover:text-gray-700">
+      <div className="flex items-center justify-between gap-3 mb-4 border-b pb-3">
+        <div>
+          <h2 className="text-lg font-bold text-gray-900">Pending Requests</h2>
+          <p className="text-sm text-gray-500">
+            Review verified users waiting for portal access.
+          </p>
+        </div>
+        <button onClick={fetchUsers} className="text-gray-500 hover:text-gray-700" title="Refresh">
           <FontAwesomeIcon icon={faSyncAlt} className="h-5 w-5" />
         </button>
       </div>
-  
-      {users.length > 0 ? (
-        users.map((user) => {
+
+      {loading ? (
+        <p className="text-sm text-gray-500">Loading users...</p>
+      ) : error ? (
+        <p className="text-sm text-red-600">{error}</p>
+      ) : users.length > 0 ? (
+        <div className="divide-y divide-gray-100">
+        {users.map((user) => {
           const raw = user.createdAt ?? user.metadata?.creationTime;
           let created: string | null = null;
   
@@ -182,14 +189,14 @@ const Requests: React.FC = () => {
           return (
             <div
               key={user.uid}
-              className="flex flex-col lg:flex-row lg:justify-between items-center mb-4 p-2 border-b"
+              className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 py-3"
             >
-              <div className="flex flex-col lg:flex-row lg:items-center lg:gap-4">
+              <div className="min-w-0">
                 <div>
-                  <h3 className="text-lg font-bold">
+                  <h3 className="text-sm font-semibold text-gray-900">
                     {user.firstName} {user.lastName}
                   </h3>
-                  <p className="text-gray-500">{user.email}</p>
+                  <p className="text-sm text-gray-500 truncate">{user.email}</p>
                   <p className="text-sm text-gray-500">
                     Requested:&nbsp;
                     <span className="font-medium">{relative}</span>
@@ -197,7 +204,7 @@ const Requests: React.FC = () => {
                 </div>
               </div>
   
-              <div className="flex gap-2">
+              <div className="flex gap-2 shrink-0">
                 <button
                   onClick={() =>
                     handleAccept(
@@ -206,7 +213,7 @@ const Requests: React.FC = () => {
                       `${user.firstName} ${user.lastName}`
                     )
                   }
-                  className="mt-2 lg:mt-0 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded"
+                  className="h-9 px-3 rounded-md text-sm font-medium inline-flex items-center justify-center border bg-[#174B3D] text-white border-[#174B3D] hover:bg-[#0f3a2d] disabled:opacity-60"
                   disabled={updating[user.uid] === "accept"}
                 >
                   {updating[user.uid] === "accept" ? (
@@ -218,7 +225,7 @@ const Requests: React.FC = () => {
   
                 <button
                   onClick={() => handleDecline(user.uid)}
-                  className="mt-2 lg:mt-0 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded"
+                  className="h-9 px-3 rounded-md text-sm font-medium inline-flex items-center justify-center border border-red-200 bg-white text-red-700 hover:bg-red-50 disabled:opacity-60"
                   disabled={updating[user.uid] === "decline"}
                 >
                   {updating[user.uid] === "decline" ? (
@@ -230,10 +237,11 @@ const Requests: React.FC = () => {
               </div>
             </div>
           );
-        })
+        })}
+        </div>
       ) : (
         <div className="text-center py-10">
-          <p className="text-lg text-gray-500">No pending requests.</p>
+          <p className="text-sm font-semibold text-gray-700">No pending requests.</p>
           <p className="text-sm text-gray-400">
             There are currently no users with pending requests.
           </p>

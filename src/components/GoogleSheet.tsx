@@ -1,39 +1,81 @@
 import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
-import { doc, getDoc, getFirestore } from "firebase/firestore";
-import { useAuth } from "../contexts/AuthContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faXmark,
   faCodeCompare,
   faTrash,
+  faXmark,
 } from "@fortawesome/free-solid-svg-icons";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  getFirestore,
+  orderBy,
+  query,
+} from "firebase/firestore";
+import { useAuth } from "../contexts/AuthContext";
 
-interface SheetData {
+interface InventoryTableRow {
+  id: string;
   Farm: string;
   Variety: string;
   Process: string;
   "Our Tasting Notes": string;
-  "30 KG Sacks": string; // en UI lo muestras como 24 KG Bags
+  Bags: string;
   Price: string;
-  "12 bags Bundle + 1 Free": string;
   Group?: string;
+  groupNames: string[];
+  isActive: boolean;
+  availableBags: number;
 }
 
-// ✅ Normaliza strings para keys / comparación simple
 const norm = (s: any) => String(s ?? "").trim().toLowerCase();
 
-// ✅ crea una key estable SOLO con data del sheet
-const makeCoffeeKey = (row: SheetData) =>
-  [
-    norm(row.Farm),
-    norm(row.Variety),
-    norm(row.Process),
-    norm(row.Price),
-    norm(row["30 KG Sacks"]),
-  ].join("|");
+const toNum = (value: unknown, fallback = 0) => {
+  const n =
+    typeof value === "number"
+      ? value
+      : Number(String(value ?? "").replace(/[^\d.-]/g, ""));
+  return Number.isFinite(n) ? n : fallback;
+};
 
-const isExclusive = (row: SheetData) => Boolean(norm(row.Group));
+const normalizeGroups = (raw: any) => {
+  if (Array.isArray(raw)) {
+    return raw
+      .map((g: any) => {
+        if (typeof g === "string") return g.trim();
+        if (g && typeof g === "object") return String(g.name ?? g.id ?? g.value ?? "").trim();
+        return "";
+      })
+      .filter(Boolean);
+  }
+
+  if (typeof raw === "string") {
+    return raw
+      .split(",")
+      .map((x) => x.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+};
+
+const formatPrice = (value: unknown) => {
+  const price = toNum(value);
+  if (!price) return "";
+  return `£ ${price.toFixed(2)}`;
+};
+
+const formatVariety = (row: any) => {
+  const variety = String(row.variety ?? "").trim();
+  const harvestYear = String(row.harvestYear ?? "").trim();
+  return harvestYear ? `${harvestYear} - ${variety}` : variety;
+};
+
+const makeCoffeeKey = (row: InventoryTableRow) => row.id;
+
+const isExclusive = (row: InventoryTableRow) => row.groupNames.length > 0;
 
 const CompareModal = ({
   open,
@@ -43,8 +85,8 @@ const CompareModal = ({
 }: {
   open: boolean;
   onClose: () => void;
-  left: SheetData;
-  right: SheetData;
+  left: InventoryTableRow;
+  right: InventoryTableRow;
 }) => {
   if (!open) return null;
 
@@ -80,15 +122,12 @@ const CompareModal = ({
         className="bg-white rounded-xl shadow-2xl w-full max-w-3xl border border-gray-200"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="p-5 border-b flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h3 className="text-base font-semibold text-gray-900">
               Compare coffees
             </h3>
-            <p className="text-sm text-gray-600 mt-1">
-              Side-by-side comparison (sheet data only)
-            </p>
+            <p className="text-sm text-gray-600 mt-1">Side-by-side comparison</p>
           </div>
 
           <button
@@ -101,9 +140,7 @@ const CompareModal = ({
           </button>
         </div>
 
-        {/* Body */}
         <div className="p-5">
-          {/* Top titles */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pb-3 border-b border-gray-100">
             <div />
             <div className="min-w-0">
@@ -134,11 +171,10 @@ const CompareModal = ({
             a={<span className="text-sm">{left["Our Tasting Notes"]}</span>}
             b={<span className="text-sm">{right["Our Tasting Notes"]}</span>}
           />
-          <Row label="24 KG bags" a={left["30 KG Sacks"]} b={right["30 KG Sacks"]} />
+          <Row label="Bags available" a={left.Bags} b={right.Bags} />
           <Row label="Price / kg" a={left.Price} b={right.Price} />
         </div>
 
-        {/* Footer */}
         <div className="p-5 border-t flex justify-end">
           <button
             onClick={onClose}
@@ -155,23 +191,20 @@ const CompareModal = ({
 const GoogleSheetTable: React.FC = () => {
   const { currentUser } = useAuth();
 
-  const [data, setData] = useState<SheetData[]>([]);
+  const [data, setData] = useState<InventoryTableRow[]>([]);
   const [userGroups, setUserGroups] = useState<string[]>([]);
-
-  // Compare state
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [compareOpen, setCompareOpen] = useState(false);
 
-  const SHEET_ID = "1ee9mykWz7RPDuerdYphfTqNRmDaJQ6sNomhyppCt2mE";
-  const API_KEY = "AIzaSyCFEBX2kLtYtyCBFrcCY4YN_uutqqQPC-k";
-  const RANGE = "Sheet1!A:G";
-
-  // 1) Groups desde Firestore (users/{uid}) - igual que ya tenías
   useEffect(() => {
-    const fetchUserGroups = async () => {
+    const fetchUserAccess = async () => {
       try {
         if (!currentUser?.uid) {
           setUserGroups([]);
+          setIsAdmin(false);
           return;
         }
 
@@ -181,98 +214,94 @@ const GoogleSheetTable: React.FC = () => {
 
         if (!snap.exists()) {
           setUserGroups([]);
+          setIsAdmin(false);
           return;
         }
 
-        const raw = snap.data()?.groups;
-
-        let groups: string[] = [];
-
-        if (Array.isArray(raw)) {
-          groups = raw
-            .map((g: any) => {
-              if (typeof g === "string") return g.trim();
-              if (g && typeof g === "object")
-                return String(g.name ?? g.id ?? g.value ?? "").trim();
-              return "";
-            })
-            .filter(Boolean);
-        } else if (typeof raw === "string") {
-          groups = raw
-            .split(",")
-            .map((x) => x.trim())
-            .filter(Boolean);
-        }
-
-        setUserGroups(groups);
+        const userData = snap.data();
+        setUserGroups(normalizeGroups(userData?.groups));
+        setIsAdmin(Array.isArray(userData?.roles) && userData.roles.includes("admin"));
       } catch (e) {
-        console.error("Error fetching user groups:", e);
+        console.error("Error fetching user access:", e);
         setUserGroups([]);
+        setIsAdmin(false);
       }
     };
 
-    fetchUserGroups();
+    fetchUserAccess();
   }, [currentUser?.uid]);
 
-  // 2) Sheet data
   useEffect(() => {
-    const fetchData = async () => {
-      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`;
+    const fetchInventory = async () => {
       try {
-        const response = await axios.get(url);
-        const rows = response.data.values || [];
+        setLoading(true);
+        setError(null);
 
-        const formattedData: SheetData[] = rows.slice(1).map((row: string[]) => ({
-          Farm: row[0] || "",
-          Variety: row[1] || "",
-          Process: row[2] || "",
-          "Our Tasting Notes": row[3] || "",
-          "30 KG Sacks": row[4] || "",
-          Price: row[5] || "",
-          "12 bags Bundle + 1 Free": "",
-          Group: (row[6] || "").trim(),
-        }));
+        const db = getFirestore();
+        const snap = await getDocs(query(collection(db, "inventoryItems"), orderBy("farm")));
+        const formattedData: InventoryTableRow[] = snap.docs.map((docSnap) => {
+          const row = docSnap.data() as any;
+          const groupNames = normalizeGroups(row.groupNames);
+          const availableBags = Math.max(0, toNum(row.availableBags) - toNum(row.reservedBags));
+
+          return {
+            id: docSnap.id,
+            Farm: String(row.farm ?? "").trim(),
+            Variety: formatVariety(row),
+            Process: String(row.process ?? "").trim(),
+            "Our Tasting Notes": String(row.tastingNotes ?? "").trim(),
+            Bags: String(availableBags),
+            Price: formatPrice(row.pricePerKg),
+            Group: groupNames.join(", "),
+            groupNames,
+            isActive: row.isActive !== false,
+            availableBags,
+          };
+        });
 
         setData(formattedData);
-      } catch (error) {
-        console.error("Error fetching data:", error);
+      } catch (e) {
+        console.error("Error fetching inventory:", e);
+        setError("We couldn't load availability right now.");
+        setData([]);
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchData();
+    fetchInventory();
   }, []);
 
-  // 3) Filtrado por groups (sin cambiar tu lógica)
   const visibleData = useMemo(() => {
-    return data.filter((item) => {
-      const g = norm(item.Group);
-      if (!g) return true;
-      return userGroups.some((ug) => norm(ug) === g);
-    });
-  }, [data, userGroups]);
+    return data
+      .filter((item) => {
+        if (!item.isActive) return false;
+        if (!item.groupNames.length) return true;
+        if (isAdmin) return true;
 
-  // Map para resolver key -> row rápido
+        return item.groupNames.some((groupName) =>
+          userGroups.some((userGroup) => norm(userGroup) === norm(groupName))
+        );
+      })
+      .sort((a, b) => b.availableBags - a.availableBags);
+  }, [data, isAdmin, userGroups]);
+
   const rowByKey = useMemo(() => {
-    const m = new Map<string, SheetData>();
-    for (const r of visibleData) m.set(makeCoffeeKey(r), r);
-    return m;
+    const map = new Map<string, InventoryTableRow>();
+    for (const row of visibleData) map.set(makeCoffeeKey(row), row);
+    return map;
   }, [visibleData]);
 
   const selectedRows = useMemo(() => {
-    return selectedKeys.map((k) => rowByKey.get(k)).filter(Boolean) as SheetData[];
+    return selectedKeys.map((key) => rowByKey.get(key)).filter(Boolean) as InventoryTableRow[];
   }, [selectedKeys, rowByKey]);
 
-  const toggleSelect = (row: SheetData) => {
+  const toggleSelect = (row: InventoryTableRow) => {
     const key = makeCoffeeKey(row);
     setSelectedKeys((prev) => {
       const exists = prev.includes(key);
-      if (exists) return prev.filter((k) => k !== key);
-
-      // max 2
-      if (prev.length >= 2) {
-        // reemplaza el más antiguo (UX simple)
-        return [prev[1], key];
-      }
+      if (exists) return prev.filter((current) => current !== key);
+      if (prev.length >= 2) return [prev[1], key];
       return [...prev, key];
     });
   };
@@ -286,85 +315,108 @@ const GoogleSheetTable: React.FC = () => {
 
   return (
     <div className="container mx-auto p-4 relative">
-      {/* Table */}
-      <table className="min-w-full bg-white border border-gray-300">
-        <thead className="text-xs">
-          <tr>
-            <th className="py-2 px-2 border-b bg-[#9da793] text-center w-[110px]">
-              Compare
-            </th>
-            <th className="py-2 px-4 border-b bg-[#9da793] text-center">Farm</th>
-            <th className="py-2 px-4 border-b bg-[#9da793] text-center">Variety</th>
-            <th className="py-2 px-4 border-b bg-[#9da793] text-center">Process</th>
-            <th className="py-2 px-4 border-b bg-[#9da793] text-center">
-              Our Tasting Notes
-            </th>
-            <th className="py-2 px-4 border-b bg-[#9da793] text-center">
-              24 KG Bags
-            </th>
-            <th className="py-2 px-8 border-b bg-[#9da793] text-center">
-              Price / kg
-            </th>
-          </tr>
-        </thead>
+      {loading && (
+        <div className="w-full rounded-lg border border-[#044421]/10 bg-white p-6 text-center text-sm text-[#044421]/70">
+          Loading availability...
+        </div>
+      )}
 
-        <tbody>
-          {visibleData.map((row, index) => {
-            const exclusive = isExclusive(row);
-            const key = makeCoffeeKey(row);
-            const selected = selectedKeys.includes(key);
+      {!loading && error && (
+        <div className="w-full rounded-lg border border-red-200 bg-red-50 p-6 text-center text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
-            return (
-              <tr
-                key={key + "|" + index}
-                className={[
-                  index % 2 === 0 ? "bg-[#c9d3c0]" : "bg-white",
-                  "hover:bg-[#e6a318] text-xs",
-                  exclusive ? "border-2 border-yellow-500" : "",
-                ].join(" ")}
-                title={exclusive ? `Exclusive for group: ${row.Group}` : undefined}
-              >
-                {/* Compare toggle */}
-                <td className="py-2 px-2 border-b">
-                  <button
-                    type="button"
-                    onClick={() => toggleSelect(row)}
-                    className={[
-                      "h-8 w-full rounded-md text-xs font-semibold border transition",
-                      selected
-                        ? "bg-[#174B3D] text-white border-[#174B3D]"
-                        : "bg-white text-[#174B3D] border-[#174B3D]/30 hover:bg-[#174B3D]/10",
-                    ].join(" ")}
-                    title={selected ? "Remove from compare" : "Add to compare"}
-                  >
-                    {selected ? "Selected" : "Compare"}
-                  </button>
-                </td>
+      {!loading && !error && visibleData.length === 0 && (
+        <div className="w-full rounded-lg border border-[#044421]/10 bg-white p-6 text-center text-sm text-[#044421]/70">
+          No coffee availability to show right now.
+        </div>
+      )}
 
-                <td className="py-2 px-4 border-b">{row.Farm}</td>
+      {!loading && !error && visibleData.length > 0 && (
+        <table className="min-w-full bg-white border border-gray-300">
+          <thead className="text-xs">
+            <tr>
+              <th className="py-2 px-2 border-b bg-[#9da793] text-center w-[110px]">
+                Compare
+              </th>
+              <th className="py-2 px-4 border-b bg-[#9da793] text-center">Farm</th>
+              <th className="py-2 px-4 border-b bg-[#9da793] text-center">Variety</th>
+              <th className="py-2 px-4 border-b bg-[#9da793] text-center">Process</th>
+              <th className="py-2 px-4 border-b bg-[#9da793] text-center">
+                Our Tasting Notes
+              </th>
+              <th className="py-2 px-4 border-b bg-[#9da793] text-center">
+                Bags available
+              </th>
+              <th className="py-2 px-8 border-b bg-[#9da793] text-center">
+                Price / kg
+              </th>
+            </tr>
+          </thead>
 
-                <td className="py-2 px-4 border-b">
-                  <div className="flex items-center gap-2">
-                    <span>{row.Variety}</span>
-                    {exclusive && (
-                      <span className="text-[10px] font-semibold px-2 py-[2px] rounded bg-yellow-100 text-yellow-800 border border-yellow-400">
-                        EXCLUSIVE
-                      </span>
+          <tbody>
+            {visibleData.map((row, index) => {
+              const exclusive = isExclusive(row);
+              const key = makeCoffeeKey(row);
+              const selected = selectedKeys.includes(key);
+
+              return (
+                <tr
+                  key={key}
+                  className={[
+                    index % 2 === 0 ? "bg-[#c9d3c0]" : "bg-white",
+                    "hover:bg-[#e6a318] text-xs",
+                    exclusive ? "border-2 border-yellow-500" : "",
+                  ].join(" ")}
+                  title={exclusive ? `Exclusive for: ${row.Group}` : undefined}
+                >
+                  <td className="py-2 px-2 border-b">
+                    <button
+                      type="button"
+                      onClick={() => toggleSelect(row)}
+                      className={[
+                        "h-8 w-full rounded-md text-xs font-semibold border transition",
+                        selected
+                          ? "bg-[#174B3D] text-white border-[#174B3D]"
+                          : "bg-white text-[#174B3D] border-[#174B3D]/30 hover:bg-[#174B3D]/10",
+                      ].join(" ")}
+                      title={selected ? "Remove from compare" : "Add to compare"}
+                    >
+                      {selected ? "Selected" : "Compare"}
+                    </button>
+                  </td>
+
+                  <td className="py-2 px-4 border-b">{row.Farm}</td>
+
+                  <td className="py-2 px-4 border-b">
+                    <div className="flex items-center gap-2">
+                      <span>{row.Variety}</span>
+                      {exclusive && (
+                        <span className="text-[10px] font-semibold px-2 py-[2px] rounded bg-yellow-100 text-yellow-800 border border-yellow-400">
+                          EXCLUSIVE
+                        </span>
+                      )}
+                    </div>
+                  </td>
+
+                  <td className="py-2 px-4 border-b">{row.Process}</td>
+                  <td className="py-2 px-4 border-b">{row["Our Tasting Notes"]}</td>
+                  <td className="py-2 px-4 border-b">
+                    {row.availableBags > 0 ? (
+                      row.Bags
+                    ) : (
+                      <span className="font-semibold text-red-700">Sold Out</span>
                     )}
-                  </div>
-                </td>
+                  </td>
+                  <td className="py-2 px-4 border-b">{row.Price}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
 
-                <td className="py-2 px-4 border-b">{row.Process}</td>
-                <td className="py-2 px-4 border-b">{row["Our Tasting Notes"]}</td>
-                <td className="py-2 px-4 border-b">{row["30 KG Sacks"]}</td>
-                <td className="py-2 px-4 border-b">{row.Price}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-
-      {/* Sticky compare bar (mobile-friendly) */}
       {selectedRows.length > 0 && (
         <div className="fixed left-0 right-0 bottom-0 z-40 p-3">
           <div
@@ -377,17 +429,16 @@ const GoogleSheetTable: React.FC = () => {
               </div>
 
               <div className="mt-1 flex flex-wrap gap-1">
-                {selectedRows.map((r) => (
+                {selectedRows.map((row) => (
                   <span
-                    key={makeCoffeeKey(r)}
-                    className="text-xs pl-2 pr-1 py-[2px] rounded-full border bg-white border-gray-200 text-gray-700
-                               inline-flex items-center gap-2"
-                    title={r.Variety}
+                    key={makeCoffeeKey(row)}
+                    className="text-xs pl-2 pr-1 py-[2px] rounded-full border bg-white border-gray-200 text-gray-700 inline-flex items-center gap-2"
+                    title={row.Variety}
                   >
-                    {r.Variety}
+                    {row.Variety}
                     <button
                       type="button"
-                      onClick={() => toggleSelect(r)}
+                      onClick={() => toggleSelect(row)}
                       className="h-5 w-5 rounded-full hover:bg-gray-100 inline-flex items-center justify-center"
                       title="Remove"
                     >
@@ -424,8 +475,7 @@ const GoogleSheetTable: React.FC = () => {
               <button
                 type="button"
                 onClick={clearSelection}
-                className="h-9 px-3 rounded-md text-sm font-medium inline-flex items-center gap-2
-                           border border-red-200 bg-white text-red-700 hover:bg-red-50"
+                className="h-9 px-3 rounded-md text-sm font-medium inline-flex items-center gap-2 border border-red-200 bg-white text-red-700 hover:bg-red-50"
                 title="Clear selection"
               >
                 <FontAwesomeIcon icon={faTrash} />
@@ -436,7 +486,6 @@ const GoogleSheetTable: React.FC = () => {
         </div>
       )}
 
-      {/* Compare modal */}
       {selectedRows.length === 2 && (
         <CompareModal
           open={compareOpen}

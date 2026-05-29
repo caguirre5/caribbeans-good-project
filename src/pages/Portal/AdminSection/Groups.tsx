@@ -95,11 +95,18 @@ const GroupsManager: React.FC = () => {
   };
 
   return (
-    <div className="w-full">
-      {/* Card: más angosto y compacto */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 ">
+    <div className="bg-white p-4 rounded-lg shadow-md">
+      <div className="flex items-center justify-between gap-3 mb-4 border-b pb-3">
+        <div>
+          <h2 className="text-lg font-bold text-gray-900">Groups</h2>
+          <p className="text-sm text-gray-500">Create access groups used by users and exclusive coffees.</p>
+        </div>
+        <span className="text-xs text-gray-500">{groups.length} total</span>
+      </div>
+
+      <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
         <div className="flex items-center justify-between gap-3 mb-3">
-          <h2 className="text-base font-semibold text-gray-900">Groups</h2>
+          <h3 className="text-sm font-semibold text-gray-900">New group</h3>
           <span className="text-xs text-gray-500">{groups.length} total</span>
         </div>
 
@@ -158,8 +165,7 @@ const GroupsManager: React.FC = () => {
             {groups.map((g) => (
               <div
                 key={g.id}
-                className="bg-white rounded-xl border border-gray-200 shadow-sm
-                           px-4 py-3 flex items-center justify-between"
+                className="border-b last:border-b-0 px-1 py-3 flex items-center justify-between"
               >
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-gray-900 truncate">

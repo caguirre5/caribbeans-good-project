@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { User } from "firebase/auth";
 import { db } from "../../firebase/firebase";
-import { doc, getDoc } from "firebase/firestore";
-import axios from "axios";
+import { collection, doc, getDoc, getDocs, orderBy, query } from "firebase/firestore";
 
 interface Replacements {
   ENTITY: string;
@@ -36,6 +35,7 @@ interface Props {
 }
 
 interface SheetData {
+  id?: string;
   Farm: string;
   Variety: string;
   Process: string;
@@ -44,12 +44,17 @@ interface SheetData {
   Price: string;
   "12 bags Bundle + 1 Free": string;
   Group?: string;
+  groupNames?: string[];
+  isActive?: boolean;
+  bagKg?: number;
 }
 
 interface CoffeeSelection {
+  inventoryItemId?: string | null;
   variety: string;
   amount: number;
   price: number;
+  bagKg?: number;
 }
 
 type PortalUser = {
@@ -135,39 +140,74 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
   const pricePerKgValue = 24;
 
   const norm = (s: any) => String(s ?? "").trim().toLowerCase();
+  const toNum = (value: unknown, fallback = 0) => {
+    const n =
+      typeof value === "number"
+        ? value
+        : Number(String(value ?? "").replace(/[^\d.-]/g, ""));
+    return Number.isFinite(n) ? n : fallback;
+  };
+  const normalizeGroups = (raw: any) => {
+    if (Array.isArray(raw)) {
+      return raw
+        .map((g: any) => {
+          if (typeof g === "string") return g.trim();
+          if (g && typeof g === "object") return String(g.name ?? g.id ?? g.value ?? "").trim();
+          return "";
+        })
+        .filter(Boolean);
+    }
+
+    if (typeof raw === "string") {
+      return raw
+        .split(",")
+        .map((g) => g.trim())
+        .filter(Boolean);
+    }
+
+    return [];
+  };
+
+  const [hasCredit, setHasCredit] = useState(false);
+  const [creditAmount, setCreditAmount] = useState("");
 
   // -------------------------
-  // Load sheet data
+  // Load inventory data
   // -------------------------
   useEffect(() => {
-    const SHEET_ID = "1ee9mykWz7RPDuerdYphfTqNRmDaJQ6sNomhyppCt2mE";
-    const API_KEY = "AIzaSyCFEBX2kLtYtyCBFrcCY4YN_uutqqQPC-k";
-    const RANGE = "Sheet1!A:G";
-
-    const fetchSheetData = async () => {
+    const fetchInventoryData = async () => {
       try {
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`;
-        const response = await axios.get(url);
-        const rows = response.data.values;
+        const snap = await getDocs(query(collection(db, "inventoryItems"), orderBy("farm")));
+        const formatted: SheetData[] = snap.docs.map((docSnap) => {
+          const row = docSnap.data() as any;
+          const groupNames = normalizeGroups(row.groupNames);
+          const harvestYear = String(row.harvestYear ?? "").trim();
+          const variety = String(row.variety ?? "").trim();
+          const sellableBags = Math.max(0, toNum(row.availableBags) - toNum(row.reservedBags));
 
-        const formatted: SheetData[] = rows.slice(1).map((row: string[]) => ({
-          Farm: row[0] || "",
-          Variety: row[1] || "",
-          Process: row[2] || "",
-          "Our Tasting Notes": row[3] || "",
-          "30 KG Sacks": row[4] || "",
-          Price: row[5] || "",
-          "12 bags Bundle + 1 Free": "",
-          Group: (row[6] || "").trim(),
-        }));
+          return {
+            id: docSnap.id,
+            Farm: String(row.farm ?? "").trim(),
+            Variety: harvestYear ? `${harvestYear} - ${variety}` : variety,
+            Process: String(row.process ?? "").trim(),
+            "Our Tasting Notes": String(row.tastingNotes ?? "").trim(),
+            "30 KG Sacks": String(sellableBags),
+            Price: toNum(row.pricePerKg).toString(),
+            "12 bags Bundle + 1 Free": "",
+            Group: groupNames.join(", "),
+            groupNames,
+            isActive: row.isActive !== false,
+            bagKg: toNum(row.bagSizeKg, 24),
+          };
+        });
 
         setSheetData(formatted);
       } catch (error) {
-        console.error("Error loading sheet data:", error);
+        console.error("Error loading inventory data:", error);
       }
     };
 
-    fetchSheetData();
+    fetchInventoryData();
   }, []);
 
   // -------------------------
@@ -211,13 +251,7 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
           return;
         }
 
-        const raw = snap.data()?.groups;
-
-        const groups = Array.isArray(raw)
-          ? raw.map((g: any) => String(g).trim()).filter(Boolean)
-          : [];
-
-        setUserGroups(groups);
+        setUserGroups(normalizeGroups(snap.data()?.groups));
       } catch (e) {
         console.error("Error fetching user groups:", e);
         setUserGroups([]);
@@ -273,11 +307,18 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
   // -------------------------
   const visibleSheetData = useMemo(() => {
     return sheetData.filter((item) => {
-      const g = norm(item.Group);
-      if (!g) return true;
-      return userGroups.some((ug) => norm(ug) === g);
+      const availableBags = toNum(item["30 KG Sacks"]);
+      if (item.isActive === false || availableBags <= 0) return false;
+
+      const groupNames = item.groupNames || normalizeGroups(item.Group);
+      if (!groupNames.length) return true;
+      if (isAdmin) return true;
+
+      return groupNames.some((groupName) =>
+        userGroups.some((userGroup) => norm(userGroup) === norm(groupName))
+      );
     });
-  }, [sheetData, userGroups]);
+  }, [sheetData, userGroups, isAdmin]);
 
   // -------------------------
   // Admin: filtered customer list based on search
@@ -369,8 +410,7 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
     );
 
     if (selected) {
-      const pricePerKg =
-        parseFloat(String(selected.Price).replace("£", "").trim()) || 0;
+      const pricePerKg = toNum(selected.Price);
       const availableBags = parseInt(String(selected["30 KG Sacks"]), 10) || 0;
 
       setStockAvailable(availableBags);
@@ -580,11 +620,11 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
       // Firestore contract via backend
       try {
         const totalAmountNumber = coffeeSelections.reduce(
-          (acc, item) => acc + item.amount * 24 * item.price,
+          (acc, item) => acc + item.amount * (item.bagKg || 24) * item.price,
           0
         );
         const totalKgNumber = coffeeSelections.reduce(
-          (acc, item) => acc + item.amount * 24,
+          (acc, item) => acc + item.amount * (item.bagKg || 24),
           0
         );
 
@@ -616,13 +656,15 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
               generatedAtUK: todayUK,
             },
             selections: coffeeSelections.map((s) => ({
+              inventoryItemId: s.inventoryItemId || null,
               variety: s.variety,
               bags: s.amount,
+              bagKg: s.bagKg || 24,
               unitPricePerKg: s.price,
-              lineKg: s.amount * 24,
-              lineSubtotal: s.amount * 24 * s.price,
+              lineKg: s.amount * (s.bagKg || 24),
+              lineSubtotal: s.amount * (s.bagKg || 24) * s.price,
               remainingBags: s.amount,
-              remainingKg: s.amount * 24,
+              remainingKg: s.amount * (s.bagKg || 24),
             })),
             totals: {
               totalKg: totalKgNumber,
@@ -1032,6 +1074,8 @@ return (
                 />
               </div>
 
+              
+
               <div className="lg:col-span-3">
                 <button
                   type="button"
@@ -1053,9 +1097,17 @@ return (
                     setCoffeeSelections((prev) => [
                       ...prev,
                       {
+                        inventoryItemId:
+                          visibleSheetData.find(
+                            (item) => `${item.Variety} (${item.Farm})` === formData.VARIETY
+                          )?.id || null,
                         variety: formData.VARIETY,
                         amount: parseInt(formData.AMOUNT, 10),
                         price: parseFloat(formData.PRICE),
+                        bagKg:
+                          visibleSheetData.find(
+                            (item) => `${item.Variety} (${item.Farm})` === formData.VARIETY
+                          )?.bagKg || 24,
                       },
                     ]);
 
@@ -1156,6 +1208,59 @@ return (
                     />
                   </div>
                 </div>
+              </div>
+
+
+              <div className="border border-gray-200 rounded-xl p-4 bg-white">
+                <h4 className="font-semibold mb-3 text-gray-800">Credit</h4>
+
+                <div className="flex gap-4 mb-3">
+                  <label className="inline-flex items-center gap-2 text-sm text-gray-800">
+                    <input
+                      type="radio"
+                      name="credit"
+                      checked={hasCredit === true}
+                      onChange={() => setHasCredit(true)}
+                      className="accent-blue-600"
+                    />
+                    <span>Yes</span>
+                  </label>
+
+                  <label className="inline-flex items-center gap-2 text-sm text-gray-800">
+                    <input
+                      type="radio"
+                      name="credit"
+                      checked={hasCredit === false}
+                      onChange={() => {
+                        setHasCredit(false);
+                        setCreditAmount("0"); // 👈 importante
+                      }}
+                      className="accent-blue-600"
+                    />
+                    <span>No</span>
+                  </label>
+                </div>
+
+                {hasCredit && (
+                  <div>
+                    <label className="block font-medium mb-1 text-sm">
+                      Credit Amount (£)
+                    </label>
+                    <input
+                      type="number"
+                      value={creditAmount}
+                      onChange={(e) => setCreditAmount(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                      min={0}
+                    />
+                  </div>
+                )}
+
+                {!hasCredit && (
+                  <p className="text-sm text-gray-500">
+                    Credit amount will be £0
+                  </p>
+                )}
               </div>
             </div>
           </section>
