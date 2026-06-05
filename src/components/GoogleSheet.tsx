@@ -6,15 +6,12 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import {
-  collection,
   doc,
   getDoc,
-  getDocs,
   getFirestore,
-  orderBy,
-  query,
 } from "firebase/firestore";
 import { useAuth } from "../contexts/AuthContext";
+import { fetchReadableInventoryDocs } from "../utils/inventoryVisibility";
 
 interface InventoryTableRow {
   id: string;
@@ -194,6 +191,7 @@ const GoogleSheetTable: React.FC = () => {
   const [data, setData] = useState<InventoryTableRow[]>([]);
   const [userGroups, setUserGroups] = useState<string[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [accessLoaded, setAccessLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
@@ -205,9 +203,11 @@ const GoogleSheetTable: React.FC = () => {
         if (!currentUser?.uid) {
           setUserGroups([]);
           setIsAdmin(false);
+          setAccessLoaded(true);
           return;
         }
 
+        setAccessLoaded(false);
         const db = getFirestore();
         const userRef = doc(db, "users", currentUser.uid);
         const snap = await getDoc(userRef);
@@ -215,6 +215,7 @@ const GoogleSheetTable: React.FC = () => {
         if (!snap.exists()) {
           setUserGroups([]);
           setIsAdmin(false);
+          setAccessLoaded(true);
           return;
         }
 
@@ -225,6 +226,8 @@ const GoogleSheetTable: React.FC = () => {
         console.error("Error fetching user access:", e);
         setUserGroups([]);
         setIsAdmin(false);
+      } finally {
+        setAccessLoaded(true);
       }
     };
 
@@ -233,13 +236,20 @@ const GoogleSheetTable: React.FC = () => {
 
   useEffect(() => {
     const fetchInventory = async () => {
+      if (!currentUser?.uid) {
+        setData([]);
+        setLoading(false);
+        return;
+      }
+      if (!accessLoaded) return;
+
       try {
         setLoading(true);
         setError(null);
 
         const db = getFirestore();
-        const snap = await getDocs(query(collection(db, "inventoryItems"), orderBy("farm")));
-        const formattedData: InventoryTableRow[] = snap.docs.map((docSnap) => {
+        const inventoryDocs = await fetchReadableInventoryDocs(db, { isAdmin, userGroups });
+        const formattedData: InventoryTableRow[] = inventoryDocs.map((docSnap) => {
           const row = docSnap.data() as any;
           const groupNames = normalizeGroups(row.groupNames);
           const availableBags = Math.max(0, toNum(row.availableBags) - toNum(row.reservedBags));
@@ -262,7 +272,11 @@ const GoogleSheetTable: React.FC = () => {
         setData(formattedData);
       } catch (e) {
         console.error("Error fetching inventory:", e);
-        setError("We couldn't load availability right now.");
+        const detail =
+          import.meta.env.DEV && e instanceof Error
+            ? ` ${e.message}`
+            : "";
+        setError(`We couldn't load availability right now.${detail}`);
         setData([]);
       } finally {
         setLoading(false);
@@ -270,7 +284,7 @@ const GoogleSheetTable: React.FC = () => {
     };
 
     fetchInventory();
-  }, []);
+  }, [accessLoaded, currentUser?.uid, isAdmin, userGroups]);
 
   const visibleData = useMemo(() => {
     return data

@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { User } from "firebase/auth";
 import { db } from "../../firebase/firebase";
-import { collection, doc, getDoc, getDocs, orderBy, query } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
+import { fetchReadableInventoryDocs } from "../../utils/inventoryVisibility";
 
 interface Replacements {
   ENTITY: string;
@@ -176,9 +177,14 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
   // -------------------------
   useEffect(() => {
     const fetchInventoryData = async () => {
+      if (!currentUser?.uid) {
+        setSheetData([]);
+        return;
+      }
+
       try {
-        const snap = await getDocs(query(collection(db, "inventoryItems"), orderBy("farm")));
-        const formatted: SheetData[] = snap.docs.map((docSnap) => {
+        const inventoryDocs = await fetchReadableInventoryDocs(db, { isAdmin, userGroups });
+        const formatted: SheetData[] = inventoryDocs.map((docSnap) => {
           const row = docSnap.data() as any;
           const groupNames = normalizeGroups(row.groupNames);
           const harvestYear = String(row.harvestYear ?? "").trim();
@@ -208,7 +214,7 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
     };
 
     fetchInventoryData();
-  }, []);
+  }, [currentUser?.uid, isAdmin, userGroups]);
 
   // -------------------------
   // Determine admin from Firestore roles

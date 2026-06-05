@@ -2,15 +2,13 @@ import {
   collection,
   doc,
   getDoc,
-  getDocs,
   getFirestore,
-  orderBy,
-  query,
   runTransaction,
   serverTimestamp,
 } from 'firebase/firestore';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { fetchReadableInventoryDocs } from '../utils/inventoryVisibility';
 import {
   buildRulesFromSheetValues,
   calcDeliveryFeeByTariff,
@@ -610,10 +608,15 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
 
   useEffect(() => {
     const fetchInventoryData = async () => {
+      if (!currentUser?.uid) {
+        setSheetData([]);
+        return;
+      }
+
       try {
         const db = getFirestore();
-        const snap = await getDocs(query(collection(db, 'inventoryItems'), orderBy('farm')));
-        const formatted: SheetData[] = snap.docs.map((docSnap) => {
+        const inventoryDocs = await fetchReadableInventoryDocs(db, { isAdmin, userGroups });
+        const formatted: SheetData[] = inventoryDocs.map((docSnap) => {
           const row = docSnap.data() as any;
           const groupNames = normalizeGroups(row.groupNames);
           const harvestYear = String(row.harvestYear ?? '').trim();
@@ -661,7 +664,7 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
     };
 
     fetchInventoryData();
-  }, []);
+  }, [currentUser?.uid, isAdmin, userGroups]);
 
   const handleVarietySelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
