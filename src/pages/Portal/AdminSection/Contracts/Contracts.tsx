@@ -14,7 +14,7 @@ type ContractLoaderProps = {
   contractNo?: string;         // ← para mostrar en el email/título
   recipientName?: string | null;
   recipientEmail?: string | null;
-  onUploaded?: (payload: { id: string; fileKey: string; s3Url: string; status?: "active" }) => void;
+  onUploaded?: (payload: { id: string; fileKey: string; s3Url: string; status?: "active" }) => void | Promise<void>;
   onBack?: () => void;
 };
 
@@ -174,6 +174,19 @@ const ContractLoader: React.FC<ContractLoaderProps> = ({ contractId, contractNo,
         }
 
         // ✅ Vista de éxito + callback al padre
+        try {
+          await onUploaded?.({
+            id: contractId,
+            fileKey: uploadData.fileKey,
+            s3Url,
+            status: 'active',
+          });
+        } catch (e: any) {
+          throw new Error(
+            `File attached, but stock reservation failed: ${e?.message || 'Unknown error'}`
+          );
+        }
+
         setUploadedInfo({ fileKey: uploadData.fileKey, s3Url });
         setSuccess(true);
 
@@ -216,7 +229,7 @@ const ContractLoader: React.FC<ContractLoaderProps> = ({ contractId, contractNo,
         const created = await createRes.json();
         setUploadedInfo({ fileKey: uploadData.fileKey, s3Url });
         setSuccess(true);
-        onUploaded?.({ id: created.contractId, fileKey: uploadData.fileKey, s3Url, status: 'active' });
+        await onUploaded?.({ id: created.contractId, fileKey: uploadData.fileKey, s3Url, status: 'active' });
       }
 
       setSelectedFile(null);
@@ -252,14 +265,6 @@ const ContractLoader: React.FC<ContractLoaderProps> = ({ contractId, contractNo,
           <button
             className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
             onClick={() => {
-              // primero notifica al padre (actualiza la lista)
-              onUploaded?.({
-                id: contractId!,
-                fileKey: uploadedInfo.fileKey,
-                s3Url: uploadedInfo.s3Url,
-                status: 'active',
-              });
-              // luego cierra la vista
               onBack?.();
             }}
           >

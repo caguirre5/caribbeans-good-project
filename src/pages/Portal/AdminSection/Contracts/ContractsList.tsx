@@ -120,17 +120,18 @@ const parseMaybeNumber = (v: any): number | undefined => {
   return undefined;
 };
 
+const getSelectionBagKg = (selection: any): number => {
+  const bags = parseMaybeNumber(selection?.bags) ?? 0;
+  const lineKg = parseMaybeNumber(selection?.lineKg);
+  return parseMaybeNumber(selection?.bagKg) ?? (bags > 0 && lineKg ? lineKg / bags : 24);
+};
+
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 
 const contractReportMetrics = (selections: any[]) => {
   const rows = selections.map((it: any) => {
     const totalBags = parseMaybeNumber(it.bags) ?? 0;
-    const bagKg =
-      parseMaybeNumber(it.bagKg) ??
-      (() => {
-        const lineKg = parseMaybeNumber(it.lineKg);
-        return totalBags > 0 && lineKg ? lineKg / totalBags : 24;
-      })();
+    const bagKg = getSelectionBagKg(it);
     const totalKg = parseMaybeNumber(it.lineKg) ?? totalBags * bagKg;
     const remainingBags = parseMaybeNumber(it.remainingBags) ?? totalBags;
     const remainingKg = parseMaybeNumber(it.remainingKg) ?? remainingBags * bagKg;
@@ -173,13 +174,40 @@ const contractReportMetrics = (selections: any[]) => {
   return { rows, totals, completion };
 };
 
+const dispatchHistoryTime = (entry: DispatchHistoryEntry) =>
+  (entry.createdAt as any)?.seconds ??
+  (entry.createdAt as any)?._seconds ??
+  0;
+
+const formatDispatchReportDate = (entry: DispatchHistoryEntry) => {
+  const seconds = dispatchHistoryTime(entry);
+  if (!seconds) return "—";
+
+  return new Date(seconds * 1000).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const getContractDispatchHistory = (contract: Contract) => {
+  const direct = Array.isArray(contract.dispatchHistory) ? contract.dispatchHistory : [];
+  if (direct.length > 0) return direct;
+
+  const nested = Array.isArray(contract.details?.dispatchHistory)
+    ? (contract.details?.dispatchHistory as DispatchHistoryEntry[])
+    : [];
+  return nested;
+};
+
 const buildContractStatusReportHTML = (opts: {
   roasterName: string;
   contractNo: string;
   monthYear: string;
   metrics: ReturnType<typeof contractReportMetrics>;
+  dispatchHistory?: DispatchHistoryEntry[];
 }) => {
-  const { roasterName, contractNo, monthYear, metrics } = opts;
+  const { roasterName, contractNo, monthYear, metrics, dispatchHistory = [] } = opts;
   const { totals, rows, completion } = metrics;
 
   const lineRows = rows
@@ -193,6 +221,70 @@ const buildContractStatusReportHTML = (opts: {
         </tr>`
     )
     .join("");
+
+  const sortedDispatchHistory = dispatchHistory
+    .slice()
+    .sort((a, b) => dispatchHistoryTime(b) - dispatchHistoryTime(a));
+
+  const dispatchRows = sortedDispatchHistory
+    .map((entry, index) => {
+      const meta = [
+        entry.dispatchId ? `ID: ${entry.dispatchId}` : "",
+        entry.deliveryPostcode ? `Postcode: ${entry.deliveryPostcode}` : "",
+        entry.consignmentNumber ? `Consignment: ${entry.consignmentNumber}` : "",
+        entry.referenceNumber ? `Reference: ${entry.referenceNumber}` : "",
+      ]
+        .filter(Boolean)
+        .join("<br />");
+
+      const lines = (entry.lines || [])
+        .map(
+          (line) => `
+            <div style="margin:0 0 6px;">
+              <b>${line.variety || "Coffee"}:</b>
+              ${fmtNum(line.kg)} kg / ${fmtNum(line.bags)} bags
+            </div>`
+        )
+        .join("");
+
+      const remaining = (entry.lines || [])
+        .map(
+          (line) => `
+            <div style="margin:0 0 6px;">
+              ${fmtNum(line.remainingKg)} kg / ${fmtNum(line.remainingBags)} bags
+            </div>`
+        )
+        .join("");
+
+      return `
+        <tr>
+          <td style="padding:8px 10px;border:1px solid #eaecef;vertical-align:top;">${formatDispatchReportDate(entry)}</td>
+          <td style="padding:8px 10px;border:1px solid #eaecef;vertical-align:top;">${meta || `Dispatch ${sortedDispatchHistory.length - index}`}</td>
+          <td style="padding:8px 10px;border:1px solid #eaecef;vertical-align:top;">${lines || "—"}</td>
+          <td style="padding:8px 10px;border:1px solid #eaecef;vertical-align:top;">${remaining || "—"}</td>
+        </tr>`;
+    })
+    .join("");
+
+  const dispatchHistoryBlock = sortedDispatchHistory.length
+    ? `
+              <tr>
+                <td style="padding:0 24px 16px;">
+                  <h2 style="margin:0 0 10px;font-size:16px;line-height:1.4;color:#111;">Dispatch history</h2>
+                  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;border:1px solid #eaecef;font-size:13px;">
+                    <thead>
+                      <tr style="background:#fafafa;text-align:left;">
+                        <th style="padding:8px 10px;border:1px solid #eaecef;">Date</th>
+                        <th style="padding:8px 10px;border:1px solid #eaecef;">Dispatch details</th>
+                        <th style="padding:8px 10px;border:1px solid #eaecef;">Dispatched</th>
+                        <th style="padding:8px 10px;border:1px solid #eaecef;">Remaining after dispatch</th>
+                      </tr>
+                    </thead>
+                    <tbody>${dispatchRows}</tbody>
+                  </table>
+                </td>
+              </tr>`
+    : "";
 
   return `
   <html>
@@ -240,6 +332,8 @@ const buildContractStatusReportHTML = (opts: {
                 </td>
               </tr>
 
+              ${dispatchHistoryBlock}
+
               <tr>
                 <td style="padding:0 24px 18px;">
                   <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:#444;">You can also review your contract status and place new orders anytime through the Roaster's Portal.</p>
@@ -275,7 +369,7 @@ const inventoryLinesFromContract = (contract: Contract | any): InventoryStockLin
       inventoryItemId: item.inventoryItemId || null,
       label: item.variety || "(Unknown variety)",
       bags,
-      bagKg: parseMaybeNumber(item.bagKg) ?? 24,
+      bagKg: getSelectionBagKg(item),
       unitPricePerKg: parseMaybeNumber(item.unitPricePerKg),
       selectionIndex: index,
     };
@@ -292,7 +386,7 @@ const inventoryLinesFromDispatch = (
       inventoryItemId: selection.inventoryItemId || null,
       label: selection.variety || "(Unknown variety)",
       bags: item.bags,
-      bagKg: parseMaybeNumber(selection.bagKg) ?? 24,
+      bagKg: getSelectionBagKg(selection),
       unitPricePerKg: parseMaybeNumber(selection.unitPricePerKg),
       selectionIndex: item.index,
     };
@@ -353,7 +447,7 @@ const ContractsList: React.FC = () => {
   const [dispatchModalOpen, setDispatchModalOpen] = useState(false);
   const [dispatchConfirmChecked, setDispatchConfirmChecked] = useState(false);
   const [pendingDispatches, setPendingDispatches] = useState<
-    { index: number; bags: number; variety?: string }[]
+    { index: number; bags: number; variety?: string; bagKg: number }[]
   >([]);
   const [dispatchSubmitting, setDispatchSubmitting] = useState(false);
 
@@ -485,7 +579,18 @@ const ContractsList: React.FC = () => {
         console.log("No fileKey: skipping S3 deletion");
       }
 
-      // 2) delete from Firestore
+      // 2) release any remaining reserved stock before deleting the contract record
+      if (["active", "completed"].includes(String(contractToDelete.status))) {
+        await releaseInventoryReservation({
+          sourceType: "contract",
+          sourceId: contractToDelete.id,
+          lines: inventoryLinesFromContract(contractToDelete),
+          createdBy: currentUser?.uid || null,
+          createdByEmail: currentUser?.email || null,
+        });
+      }
+
+      // 3) delete from Firestore
       const firestoreResponse = await fetch(
         `${import.meta.env.VITE_FULL_ENDPOINT}/api/contracts/${contractToDelete.id}/delete`,
         {
@@ -496,7 +601,7 @@ const ContractsList: React.FC = () => {
       if (!firestoreResponse.ok)
         throw new Error("Failed to delete from Firestore");
 
-      // 3) local
+      // 4) local
       setContracts((prev) => prev.filter((c) => c.id !== contractToDelete.id));
       if (selected?.id === contractToDelete.id) {
         setSelected(null);
@@ -726,6 +831,7 @@ const ContractsList: React.FC = () => {
 
     try {
       const { contract, metrics, contractNo, roasterName, monthYear } = reportTarget;
+      const dispatchHistory = getContractDispatchHistory(contract);
       setReportSendingId(contract.id);
       const token = await currentUser?.getIdToken();
       const html = buildContractStatusReportHTML({
@@ -733,6 +839,7 @@ const ContractsList: React.FC = () => {
         contractNo,
         monthYear,
         metrics,
+        dispatchHistory,
       });
 
       const res = await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/email/sendCustomEmail`, {
@@ -767,7 +874,7 @@ const ContractsList: React.FC = () => {
   };
 
   const openDispatchModal = (detailsSelections: any[]) => {
-    const planned: { index: number; bags: number; variety?: string }[] = [];
+    const planned: { index: number; bags: number; variety?: string; bagKg: number }[] = [];
     const errors: string[] = [];
 
     detailsSelections.forEach((it, idx) => {
@@ -787,7 +894,7 @@ const ContractsList: React.FC = () => {
         return;
       }
 
-      planned.push({ index: idx, bags, variety: it.variety });
+      planned.push({ index: idx, bags, variety: it.variety, bagKg: getSelectionBagKg(it) });
     });
 
     if (errors.length) {
@@ -898,7 +1005,7 @@ const ContractsList: React.FC = () => {
 
       const emailLines: DispatchEmailLine[] = pendingDispatches.map((item) => {
         const sel = selections[item.index] || {};
-        const kgPerBag = 24;
+        const kgPerBag = getSelectionBagKg(sel);
 
         const dispatchedBags = item.bags;
         const totalKg = dispatchedBags * kgPerBag;
@@ -1164,21 +1271,16 @@ const ContractsList: React.FC = () => {
               ? selections.reduce((acc: number, it: any) => acc + (parseMaybeNumber(it.lineSubtotal) ?? 0), 0)
               : undefined);
 
+          const bagSizesKg = selections.map(getSelectionBagKg).filter((n) => Number.isFinite(n));
+          const uniqueBagSizesKg = Array.from(new Set(bagSizesKg));
           const pricePerBagKg =
-            parseMaybeNumber(totals?.pricePerBagKg) ??
-            (selections.length &&
-            selections.every((it: any) => parseMaybeNumber(it.lineKg) && parseMaybeNumber(it.bags))
-              ? (() => {
-                  const nums = selections
-                    .map((it: any) => {
-                      const kg = parseMaybeNumber(it.lineKg)!;
-                      const bags = parseMaybeNumber(it.bags)!;
-                      return bags > 0 ? kg / bags : undefined;
-                    })
-                    .filter(Boolean) as number[];
-                  return nums.length ? nums[0] : undefined;
-                })()
-              : undefined);
+            uniqueBagSizesKg.length === 1
+              ? uniqueBagSizesKg[0]
+              : parseMaybeNumber(totals?.pricePerBagKg);
+          const bagSizeLabel =
+            uniqueBagSizesKg.length > 1
+              ? `Mixed (${uniqueBagSizesKg.map((n) => fmtNum(n)).join(", ")} kg)`
+              : fmtNum(pricePerBagKg);
 
           if (!totals && !reservation && !selections.length && !repl) {
             return null;
@@ -1200,7 +1302,7 @@ const ContractsList: React.FC = () => {
                     </div>
                     <div className="border rounded p-3">
                       <p className="text-xs uppercase text-gray-600">KG per bag</p>
-                      <p className="text-base font-medium">{fmtNum(pricePerBagKg)}</p>
+                      <p className="text-base font-medium">{bagSizeLabel}</p>
                     </div>
                   </div>
                 </div>
@@ -1334,7 +1436,7 @@ const ContractsList: React.FC = () => {
                           selections.reduce((acc: number, it: any) => {
                             const kg = parseMaybeNumber(it.lineKg);
                             const bags = parseMaybeNumber(it.bags);
-                            return acc + (kg ?? (bags ?? 0) * 24);
+                            return acc + (kg ?? (bags ?? 0) * getSelectionBagKg(it));
                           }, 0)
                         )}
                       </p>
@@ -1365,7 +1467,8 @@ const ContractsList: React.FC = () => {
                       <tbody>
                         {selections.map((it: any, idx: number) => {
                           const totalBags = parseMaybeNumber(it.bags) ?? 0;
-                          const totalKg = parseMaybeNumber(it.lineKg) ?? totalBags * 24;
+                          const bagKg = getSelectionBagKg(it);
+                          const totalKg = parseMaybeNumber(it.lineKg) ?? totalBags * bagKg;
 
                           const remBags = parseMaybeNumber(it.remainingBags) ?? totalBags;
                           const remKg = parseMaybeNumber(it.remainingKg) ?? totalKg;
@@ -1416,7 +1519,7 @@ const ContractsList: React.FC = () => {
                                   />
                                 </div>
                                 <p className="text-[10px] text-gray-500 mt-1">
-                                  Dispatch is in 24kg bags. Fill the bags for this batch.
+                                  Dispatch is in {fmtNum(bagKg)}kg bags. Fill the bags for this batch.
                                 </p>
                               </td>
                             </tr>
@@ -1583,6 +1686,12 @@ const ContractsList: React.FC = () => {
                     <span className="text-gray-600">Completion</span>
                     <span className="font-medium">{reportTarget.metrics.completion}%</span>
                   </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-600">Dispatch history</span>
+                    <span className="font-medium">
+                      {getContractDispatchHistory(reportTarget.contract).length} dispatches
+                    </span>
+                  </div>
                 </div>
 
                 {reportError && (
@@ -1748,7 +1857,7 @@ const ContractsList: React.FC = () => {
                       <tr className="text-left">
                         <th className="px-2 py-1 font-semibold">Variety</th>
                         <th className="px-2 py-1 font-semibold">Bags</th>
-                        <th className="px-2 py-1 font-semibold">KG (24kg/bag)</th>
+                        <th className="px-2 py-1 font-semibold">KG</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1756,7 +1865,10 @@ const ContractsList: React.FC = () => {
                         <tr key={i} className="border-t">
                           <td className="px-2 py-1">{d.variety || `(Line ${d.index + 1})`}</td>
                           <td className="px-2 py-1">{d.bags}</td>
-                          <td className="px-2 py-1">{d.bags * 24}</td>
+                          <td className="px-2 py-1">
+                            {fmtNum(d.bags * d.bagKg)}{" "}
+                            <span className="text-gray-500">({fmtNum(d.bagKg)}kg/bag)</span>
+                          </td>
                         </tr>
                       ))}
                     </tbody>

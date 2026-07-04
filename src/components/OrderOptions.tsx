@@ -2,9 +2,12 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
   getFirestore,
+  query,
   runTransaction,
   serverTimestamp,
+  where,
 } from 'firebase/firestore';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
@@ -31,6 +34,13 @@ interface SheetData {
   groupNames?: string[];
   isActive?: boolean;
   bagKg?: number;
+  optionValue?: string;
+  sourceType?: 'inventory' | 'contract_reserved';
+  contractId?: string;
+  contractNo?: string;
+  contractSelectionIndex?: number;
+  reservedBags?: number;
+  reservedKg?: number;
 }
 
 interface CoffeeSelection {
@@ -39,6 +49,10 @@ interface CoffeeSelection {
   amount: number;
   price: number;
   bagKg?: number;
+  sourceType?: 'inventory' | 'contract_reserved';
+  contractId?: string;
+  contractNo?: string;
+  contractSelectionIndex?: number;
 }
 
 interface DonationsData {
@@ -65,6 +79,10 @@ type OrderItem = {
   bags: number;
   bagKg?: number;
   unitPricePerKg: number;
+  sourceType?: 'inventory' | 'contract_reserved';
+  contractId?: string;
+  contractNo?: string;
+  contractSelectionIndex?: number;
 };
 
 type CreateOrderBody = {
@@ -118,7 +136,7 @@ function computeDeliveryQuote(params: {
     return {
       status: 'flat' as QuoteStatus,
       fee: 42.5,
-      message: 'Flat delivery fee for a single 24kg bag.',
+      message: 'Flat delivery fee for this single-bag order.',
     };
   }
 
@@ -234,6 +252,7 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
   const { currentUser } = useAuth();
 
   const [sheetData, setSheetData] = useState<SheetData[]>([]);
+  const [contractCoffeeOptions, setContractCoffeeOptions] = useState<SheetData[]>([]);
   const [selectedVariety, setSelectedVariety] = useState('');
   const [amount, setAmount] = useState<number>(0);
   const [price, setPrice] = useState<number>(0);
@@ -277,13 +296,13 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
   const [userSearch, setUserSearch] = useState('');
   const [adminOrderMode, setAdminOrderMode] = useState<'self' | 'customer'>('self');
   const [selectedCustomerUid, setSelectedCustomerUid] = useState<string | null>(null);
+  const [showCustomerOptions, setShowCustomerOptions] = useState(false);
   const [sendCustomerConfirmationEmail, setSendCustomerConfirmationEmail] = useState(true);
 
   const DONATION_BAG_KG = 24;
   const minDateStr = toLocalYMD(addBusinessDays(new Date(), 4));
   const formRef = useRef<HTMLDivElement>(null);
 
-  const norm = (s: any) => String(s ?? '').trim().toLowerCase();
   const lineKg = (item: CoffeeSelection) => item.amount * (item.bagKg || BAG_KG);
   const lineSubtotal = (item: CoffeeSelection) => lineKg(item) * item.price;
   const toNum = (value: unknown, fallback = 0) => {
@@ -309,6 +328,11 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
     }
 
     return [];
+  };
+
+  const customerLabel = (user: PortalUser) => {
+    const name = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+    return `${name || 'Unnamed customer'} - ${user.email}`;
   };
 
   const selectedCustomer = useMemo(() => {
@@ -340,19 +364,23 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
   }, [isAdmin, adminOrderMode, allUsers, userSearch]);
 
   const visibleSheetData = useMemo(() => {
-    return sheetData.filter((item) => {
+    const inventoryOptions = sheetData.filter((item) => {
       const availableBags = toNum(item['30 KG Sacks']);
       if (item.isActive === false || availableBags <= 0) return false;
-
-      const groupNames = item.groupNames || normalizeGroups(item.Group);
-      if (!groupNames.length) return true;
-      if (isAdmin) return true;
-
-      return groupNames.some((groupName) =>
-        userGroups.some((userGroup) => norm(userGroup) === norm(groupName))
-      );
+      return true;
     });
-  }, [sheetData, userGroups, isAdmin]);
+
+    return [...contractCoffeeOptions, ...inventoryOptions];
+  }, [contractCoffeeOptions, sheetData]);
+
+  const selectedCoffee = useMemo(
+    () =>
+      visibleSheetData.find(
+        (item) => (item.optionValue || `${item.Variety} (${item.Farm})`) === selectedVariety
+      ) || null,
+    [selectedVariety, visibleSheetData]
+  );
+  const selectedBagKg = selectedCoffee ? toNum(selectedCoffee.bagKg, BAG_KG) : null;
 
   const isAtLeast3DaysFromToday = (dateStr: string) => {
     if (!dateStr) return false;
@@ -438,6 +466,7 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
                 <tr>
                   <th className="text-left p-2">Variety</th>
                   <th className="text-right p-2">Bags</th>
+                  <th className="text-right p-2">Bag kg</th>
                   <th className="text-right p-2">£/kg</th>
                   <th className="text-right p-2">Subtotal</th>
                 </tr>
@@ -447,6 +476,7 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
                   <tr key={i} className="border-t">
                     <td className="p-2">{it.variety}</td>
                     <td className="p-2 text-right">{it.amount}</td>
+                    <td className="p-2 text-right">{it.bagKg || BAG_KG}</td>
                     <td className="p-2 text-right">£{it.price.toFixed(2)}</td>
                     <td className="p-2 text-right">£{lineSubtotal(it).toFixed(2)}</td>
                   </tr>
@@ -615,7 +645,10 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
 
       try {
         const db = getFirestore();
-        const inventoryDocs = await fetchReadableInventoryDocs(db, { isAdmin, userGroups });
+        const inventoryDocs = await fetchReadableInventoryDocs(db, {
+          isAdmin,
+          currentUserId: currentUser.uid,
+        });
         const formatted: SheetData[] = inventoryDocs.map((docSnap) => {
           const row = docSnap.data() as any;
           const groupNames = normalizeGroups(row.groupNames);
@@ -666,12 +699,83 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
     fetchInventoryData();
   }, [currentUser?.uid, isAdmin, userGroups]);
 
+  useEffect(() => {
+    const fetchContractCoffeeOptions = async () => {
+      if (!currentUser?.uid || !orderCustomerEmail) {
+        setContractCoffeeOptions([]);
+        return;
+      }
+
+      try {
+        const db = getFirestore();
+        const snap = await getDocs(
+          query(collection(db, 'contracts'), where('email', '==', orderCustomerEmail))
+        );
+
+        const options: SheetData[] = [];
+
+        snap.docs.forEach((contractDoc) => {
+          const contract = contractDoc.data() as any;
+          if (String(contract.status || '').toLowerCase() !== 'active') return;
+
+          const selections = Array.isArray(contract.details?.selections)
+            ? contract.details.selections
+            : Array.isArray(contract.selections)
+              ? contract.selections
+              : [];
+
+          selections.forEach((selection: any, selectionIndex: number) => {
+            const inventoryItemId = String(selection.inventoryItemId || '').trim();
+            const remainingBags = toNum(selection.remainingBags ?? selection.bags);
+            const bagKg = toNum(selection.bagKg, toNum(contract.details?.totals?.pricePerBagKg, BAG_KG));
+            const remainingKg = toNum(selection.remainingKg, remainingBags * bagKg);
+            if (!inventoryItemId || remainingBags <= 0) return;
+
+            const inventoryMatch = sheetData.find((item) => item.id === inventoryItemId);
+            const variety = String(selection.variety || inventoryMatch?.Variety || '').trim();
+            const farm = inventoryMatch?.Farm || 'Contract reserved coffee';
+            const optionValue = `${variety} (${farm}) - Contract ${contract.contractNo || contractDoc.id}`;
+
+            options.push({
+              id: inventoryItemId,
+              Farm: farm,
+              Variety: variety,
+              Process: inventoryMatch?.Process || '',
+              'Our Tasting Notes': inventoryMatch?.['Our Tasting Notes'] || '',
+              '30 KG Sacks': String(remainingBags),
+              Price: String(toNum(selection.unitPricePerKg, toNum(inventoryMatch?.Price))),
+              '12 bags Bundle + 1 Free': '',
+              Group: inventoryMatch?.Group || '',
+              groupNames: inventoryMatch?.groupNames || [],
+              isActive: true,
+              bagKg,
+              optionValue,
+              sourceType: 'contract_reserved',
+              contractId: contractDoc.id,
+              contractNo: contract.contractNo || contractDoc.id,
+              contractSelectionIndex: selectionIndex,
+              reservedBags: remainingBags,
+              reservedKg: remainingKg,
+            });
+          });
+        });
+
+        setContractCoffeeOptions(options);
+      } catch (error) {
+        console.error('Error loading contract reserved coffees:', error);
+        setContractCoffeeOptions([]);
+      }
+    };
+
+    fetchContractCoffeeOptions();
+  }, [currentUser?.uid, orderCustomerEmail, sheetData]);
+
   const handleVarietySelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
     setSelectedVariety(value);
 
     const selected = visibleSheetData.find(
-      (item) => `${item.Variety} (${item.Farm})` === value
+      (item) => (item.optionValue || `${item.Variety} (${item.Farm})`) === value
     );
 
     if (selected) {
@@ -691,7 +795,7 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
     }
 
     const selected = visibleSheetData.find(
-      (item) => `${item.Variety} (${item.Farm})` === selectedVariety
+      (item) => (item.optionValue || `${item.Variety} (${item.Farm})`) === selectedVariety
     );
 
     setCoffeeSelections((prev) => [
@@ -702,6 +806,10 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
         amount,
         price,
         bagKg: selected?.bagKg || BAG_KG,
+        sourceType: selected?.sourceType || 'inventory',
+        contractId: selected?.contractId,
+        contractNo: selected?.contractNo,
+        contractSelectionIndex: selected?.contractSelectionIndex,
       },
     ]);
     setSelectedVariety('');
@@ -743,6 +851,7 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
       <tr>
         <td style="padding:6px 8px;border:1px solid #eee;">${it.variety}</td>
         <td style="padding:6px 8px;border:1px solid #eee;text-align:right;">${it.amount}</td>
+        <td style="padding:6px 8px;border:1px solid #eee;text-align:right;">${it.bagKg || BAG_KG}</td>
         <td style="padding:6px 8px;border:1px solid #eee;text-align:right;">£${it.price.toFixed(2)}</td>
         <td style="padding:6px 8px;border:1px solid #eee;text-align:right;">£${(it.amount * (it.bagKg || BAG_KG) * it.price).toFixed(2)}</td>
       </tr>
@@ -780,12 +889,13 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
               <tr style="background:#f8f8f8;">
                 <th style="padding:6px 8px;border:1px solid #eee;text-align:left;">Variety</th>
                 <th style="padding:6px 8px;border:1px solid #eee;text-align:right;">Bags</th>
+                <th style="padding:6px 8px;border:1px solid #eee;text-align:right;">Bag kg</th>
                 <th style="padding:6px 8px;border:1px solid #eee;text-align:right;">£/kg</th>
                 <th style="padding:6px 8px;border:1px solid #eee;text-align:right;">Subtotal</th>
               </tr>
             </thead>
             <tbody>
-              ${itemsRows || `<tr><td colspan="4" style="padding:8px;border:1px solid #eee;">No items</td></tr>`}
+              ${itemsRows || `<tr><td colspan="5" style="padding:8px;border:1px solid #eee;">No items</td></tr>`}
             </tbody>
           </table>
 
@@ -842,13 +952,26 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
       setIsSubmitting(true);
       setSubmitError('');
 
-      const items: OrderItem[] = coffeeSelections.map((item) => ({
-        inventoryItemId: item.inventoryItemId || null,
-        varietyName: item.variety,
-        bags: item.amount,
-        bagKg: item.bagKg || BAG_KG,
-        unitPricePerKg: item.price,
-      }));
+      const items: OrderItem[] = coffeeSelections.map((item) => {
+        const orderItem: OrderItem = {
+          inventoryItemId: item.inventoryItemId || null,
+          varietyName: item.variety,
+          bags: item.amount,
+          bagKg: item.bagKg || BAG_KG,
+          unitPricePerKg: item.price,
+          sourceType: item.sourceType || 'inventory',
+        };
+
+        if (item.sourceType === 'contract_reserved') {
+          if (item.contractId) orderItem.contractId = item.contractId;
+          if (item.contractNo) orderItem.contractNo = item.contractNo;
+          if (typeof item.contractSelectionIndex === 'number') {
+            orderItem.contractSelectionIndex = item.contractSelectionIndex;
+          }
+        }
+
+        return orderItem;
+      });
 
       const missingInventoryId = items.find((item) => !item.inventoryItemId);
       if (missingInventoryId) {
@@ -862,12 +985,26 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
         const lineKg = item.bags * bagKg;
         const lineSubtotal = lineKg * item.unitPricePerKg;
 
-        return {
-          ...item,
+        const normalizedItem: OrderItem & { lineKg: number; lineSubtotal: number } = {
+          inventoryItemId: item.inventoryItemId || null,
+          varietyName: item.varietyName,
+          bags: item.bags,
           bagKg,
+          unitPricePerKg: item.unitPricePerKg,
+          sourceType: item.sourceType || 'inventory',
           lineKg,
           lineSubtotal,
         };
+
+        if (item.sourceType === 'contract_reserved') {
+          if (item.contractId) normalizedItem.contractId = item.contractId;
+          if (item.contractNo) normalizedItem.contractNo = item.contractNo;
+          if (typeof item.contractSelectionIndex === 'number') {
+            normalizedItem.contractSelectionIndex = item.contractSelectionIndex;
+          }
+        }
+
+        return normalizedItem;
       });
 
       const totalBags = normalizedItems.reduce((acc, item) => acc + item.bags, 0);
@@ -1178,6 +1315,7 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
                   setAdminOrderMode('self');
                   setSelectedCustomerUid(null);
                   setUserSearch('');
+                  setShowCustomerOptions(false);
                 }}
                 className={
                   'px-3 py-2 rounded-lg text-sm font-semibold transition ' +
@@ -1190,7 +1328,10 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
               </button>
               <button
                 type="button"
-                onClick={() => setAdminOrderMode('customer')}
+                onClick={() => {
+                  setAdminOrderMode('customer');
+                  setShowCustomerOptions(true);
+                }}
                 className={
                   'px-3 py-2 rounded-lg text-sm font-semibold transition ' +
                   (adminOrderMode === 'customer'
@@ -1212,36 +1353,73 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
               </div>
             )}
 
-            <div className={`mt-3 grid-cols-1 lg:grid-cols-2 gap-3 ${adminOrderMode === 'customer' ? 'grid' : 'hidden'}`}>
-              <div>
+            <div className={`mt-3 ${adminOrderMode === 'customer' ? '' : 'hidden'}`}>
+              <div className="relative">
                 <label className="block font-medium mb-1 text-sm text-amber-900">
-                  Search customer
+                  Customer
                 </label>
                 <input
                   type="text"
                   value={userSearch}
-                  onChange={(e) => setUserSearch(e.target.value)}
+                  onChange={(e) => {
+                    setUserSearch(e.target.value);
+                    setSelectedCustomerUid(null);
+                    setShowCustomerOptions(true);
+                  }}
+                  onFocus={() => setShowCustomerOptions(true)}
+                  onBlur={() => window.setTimeout(() => setShowCustomerOptions(false), 150)}
                   placeholder="Search by name or email..."
+                  role="combobox"
+                  aria-expanded={showCustomerOptions}
+                  aria-controls="admin-customer-options"
                   className="w-full border border-amber-200 rounded-xl px-3 py-2.5 bg-white"
                 />
-              </div>
 
-              <div>
-                <label className="block font-medium mb-1 text-sm text-amber-900">
-                  Select customer
-                </label>
-                <select
-                  value={selectedCustomerUid || ''}
-                  onChange={(e) => setSelectedCustomerUid(e.target.value || null)}
-                  className="w-full border border-amber-200 rounded-xl px-3 py-2.5 bg-white"
-                >
-                  <option value="">-- Select a customer --</option>
-                  {filteredCustomers.map((u) => (
-                    <option key={u.uid} value={u.uid}>
-                      {(u.firstName || '').trim()} {(u.lastName || '').trim()} — {u.email}
-                    </option>
-                  ))}
-                </select>
+                {showCustomerOptions && (
+                  <div
+                    id="admin-customer-options"
+                    role="listbox"
+                    className="absolute z-30 mt-2 max-h-64 w-full overflow-y-auto rounded-xl border border-amber-200 bg-white shadow-lg"
+                  >
+                    {filteredCustomers.length > 0 ? (
+                      filteredCustomers.map((u) => (
+                        <button
+                          key={u.uid}
+                          type="button"
+                          role="option"
+                          aria-selected={selectedCustomerUid === u.uid}
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            setSelectedCustomerUid(u.uid);
+                            setUserSearch(customerLabel(u));
+                            setShowCustomerOptions(false);
+                          }}
+                          className={
+                            'block w-full px-3 py-2.5 text-left text-sm transition ' +
+                            (selectedCustomerUid === u.uid
+                              ? 'bg-emerald-50 text-emerald-900'
+                              : 'text-gray-800 hover:bg-amber-50')
+                          }
+                        >
+                          <span className="block font-semibold">
+                            {`${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Unnamed customer'}
+                          </span>
+                          <span className="block text-xs text-gray-500">{u.email}</span>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-3 py-3 text-sm text-gray-500">
+                        No customers found.
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {selectedCustomer && (
+                  <p className="mt-2 text-xs font-semibold text-emerald-800">
+                    Selected: {customerLabel(selectedCustomer)}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -1278,25 +1456,32 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
             <option value="">-- Select a coffee --</option>
             {visibleSheetData.map((item, i) => {
               const stockBags = parseInt(item['30 KG Sacks'] as any) || 0;
-              const label = `${item.Variety} (${item.Farm})`;
+              const label = item.optionValue || `${item.Variety} (${item.Farm})`;
               const isSoldOut = stockBags <= 0;
+              const isContractReserved = item.sourceType === 'contract_reserved';
 
               return (
                 <option key={i} value={label} disabled={isSoldOut}>
-                  {label} {isSoldOut ? '— SOLD OUT' : ''} {item.Process ? `- ${item.Process}` : ''}
+                  {isContractReserved ? '[Reserved contract] ' : ''}
+                  {label}
+                  {isContractReserved ? ` - ${stockBags} reserved bags` : ''}
+                  {isSoldOut ? ' - SOLD OUT' : ''}
+                  {!isContractReserved && item.Process ? ` - ${item.Process}` : ''}
                 </option>
               );
             })}
           </select>
 
           <p className="text-xs text-gray-500 mt-2">
-            Sold out coffees are shown as “SOLD OUT” and cannot be selected.
+            Contract reserved coffees appear first when you have remaining contracted volume.
           </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label className="block font-semibold mb-2 text-sm text-gray-800">Bags (24kg each)</label>
+            <label className="block font-semibold mb-2 text-sm text-gray-800">
+              {selectedBagKg ? `Bags (${selectedBagKg}kg each)` : 'Bags'}
+            </label>
             <input
               type="number"
               value={amount}
@@ -1312,6 +1497,11 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
             />
             {stockAvailable !== null && (
               <p className="text-xs text-gray-500 mt-2">Available: {stockAvailable} bags</p>
+            )}
+            {selectedBagKg && (
+              <p className="text-xs text-gray-500 mt-1">
+                Bag size: {selectedBagKg} kg each
+              </p>
             )}
           </div>
 
@@ -1355,8 +1545,13 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
                     ×
                   </button>
                   <div className="font-semibold text-gray-900">{item.variety}</div>
+                  {item.sourceType === 'contract_reserved' && (
+                    <div className="mt-1 inline-flex rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                      Reserved contract {item.contractNo || ''}
+                    </div>
+                  )}
                   <div className="text-gray-600 text-sm mt-1">
-                    {item.amount} bags × £{item.price} = £{lineSubtotal(item).toFixed(2)}
+                    {item.amount} bags × {item.bagKg || BAG_KG} kg × £{item.price}/kg = £{lineSubtotal(item).toFixed(2)}
                   </div>
                 </li>
               ))}
@@ -1720,7 +1915,8 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
                       <tr className="bg-gray-50">
                         <th className="border-b border-gray-100 p-2 text-left font-semibold text-gray-700">Farm</th>
                         <th className="border-b border-gray-100 p-2 text-left font-semibold text-gray-700">Variety</th>
-                        <th className="border-b border-gray-100 p-2 text-right font-semibold text-gray-700">24kg bags</th>
+                        <th className="border-b border-gray-100 p-2 text-right font-semibold text-gray-700">Bag size</th>
+                        <th className="border-b border-gray-100 p-2 text-right font-semibold text-gray-700">Bags available</th>
                         <th className="border-b border-gray-100 p-2 text-right font-semibold text-gray-700">Price</th>
                       </tr>
                     </thead>
@@ -1731,6 +1927,9 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
                           <tr key={i} className="hover:bg-gray-50">
                             <td className="border-b border-gray-100 p-2 text-gray-800">{item.Farm}</td>
                             <td className="border-b border-gray-100 p-2 text-gray-800">{item.Variety}</td>
+                            <td className="border-b border-gray-100 p-2 text-right text-gray-800">
+                              {toNum(item.bagKg, BAG_KG)} kg
+                            </td>
                             <td className="border-b border-gray-100 p-2 text-right text-gray-800">{stockBags}</td>
                             <td className="border-b border-gray-100 p-2 text-right text-gray-800">{item.Price}</td>
                           </tr>

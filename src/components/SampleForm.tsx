@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from "react";
+import { doc, getDoc, getFirestore } from "firebase/firestore";
 import { useAuth } from "../contexts/AuthContext";
+import { fetchReadableInventoryDocs } from "../utils/inventoryVisibility";
 
 interface SheetData {
+  id?: string;
   Farm: string;
   Variety: string;
   Process: string;
@@ -9,6 +12,10 @@ interface SheetData {
   "30 KG Sacks": string;
   Price: string;
   "12 bags Bundle + 1 Free": string;
+  Group?: string;
+  groupNames?: string[];
+  isActive?: boolean;
+  bagKg?: number;
 }
 
 interface SampleSelection {
@@ -19,10 +26,26 @@ interface SampleSelection {
 type SubmitStatus = "idle" | "submitting" | "success" | "error";
 type SampleFormType = "Green" | "Roasted";
 
+const toNum = (value: unknown, fallback = 0) => {
+  const n =
+    typeof value === "number"
+      ? value
+      : Number(String(value ?? "").replace(/[^\d.-]/g, ""));
+  return Number.isFinite(n) ? n : fallback;
+};
+
+const normalizeGroups = (raw: unknown): string[] => {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((group) => String(group ?? "").trim())
+    .filter(Boolean);
+};
+
 const SampleForm: React.FC = () => {
   const { currentUser } = useAuth();
 
   const [sheetData, setSheetData] = useState<SheetData[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [selectedVariety, setSelectedVariety] = useState("");
   const [amount, setAmount] = useState<number>(1);
   const [stockAvailable, setStockAvailable] = useState<number | null>(null);
@@ -51,47 +74,81 @@ const SampleForm: React.FC = () => {
 
   const MAX_SAMPLE_BAGS = 6;
 
-  // =============================
-  // 1) Cargar variedades del Sheet
-  // =============================
   useEffect(() => {
-    const SHEET_ID = "1ee9mykWz7RPDuerdYphfTqNRmDaJQ6sNomhyppCt2mE";
-    const API_KEY = "AIzaSyCFEBX2kLtYtyCBFrcCY4YN_uutqqQPC-k";
-    const RANGE = "Sheet1!A:G";
+    setEmail(currentUser?.email || "");
+    setName(currentUser?.displayName || "");
+  }, [currentUser?.displayName, currentUser?.email]);
 
-    const fetchSheetData = async () => {
+  useEffect(() => {
+    const checkAdmin = async () => {
+      if (!currentUser?.uid) {
+        setIsAdmin(false);
+        return;
+      }
+
       try {
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`;
-        const response = await fetch(url);
-        const data = await response.json();
-        const rows: string[][] = data.values || [];
-
-        if (!rows.length) {
-          setSheetData([]);
-          return;
-        }
-
-        const formatted: SheetData[] = rows.slice(1).map((row) => ({
-          Farm: row[0] || "",
-          Variety: row[1] || "",
-          Process: row[2] || "",
-          "Our Tasting Notes": row[3] || "",
-          "30 KG Sacks": row[4] || "",
-          Price: row[5] || "",
-          "12 bags Bundle + 1 Free": row[6] || "",
-        }));
-
-        setSheetData(formatted);
+        const db = getFirestore();
+        const snap = await getDoc(doc(db, "users", currentUser.uid));
+        const roles = (snap.data()?.roles ?? []) as unknown[];
+        setIsAdmin(Array.isArray(roles) && roles.includes("admin"));
       } catch (error) {
-        console.error("Error fetching sheet data for samples:", error);
+        console.error("Error checking admin role for samples:", error);
+        setIsAdmin(false);
       }
     };
 
-    setEmail(currentUser?.email || "")
-    fetchSheetData();
-    
-  }, []);
+    checkAdmin();
+  }, [currentUser?.uid]);
 
+  // =============================
+  // 1) Cargar variedades desde inventario
+  // =============================
+  useEffect(() => {
+    const fetchInventoryData = async () => {
+      if (!currentUser?.uid) {
+        setSheetData([]);
+        return;
+      }
+
+      try {
+        const db = getFirestore();
+        const inventoryDocs = await fetchReadableInventoryDocs(db, {
+          isAdmin,
+          currentUserId: currentUser.uid,
+        });
+
+        const formatted: SheetData[] = inventoryDocs.map((docSnap) => {
+          const row = docSnap.data() as any;
+          const groupNames = normalizeGroups(row.groupNames);
+          const harvestYear = String(row.harvestYear ?? "").trim();
+          const variety = String(row.variety ?? "").trim();
+          const sellableBags = Math.max(0, toNum(row.availableBags) - toNum(row.reservedBags));
+
+          return {
+            id: docSnap.id,
+            Farm: String(row.farm ?? "").trim(),
+            Variety: harvestYear ? `${harvestYear} - ${variety}` : variety,
+            Process: String(row.process ?? "").trim(),
+            "Our Tasting Notes": String(row.tastingNotes ?? "").trim(),
+            "30 KG Sacks": String(sellableBags),
+            Price: toNum(row.pricePerKg).toString(),
+            "12 bags Bundle + 1 Free": "",
+            Group: groupNames.join(", "),
+            groupNames,
+            isActive: row.isActive !== false,
+            bagKg: toNum(row.bagSizeKg, 24),
+          };
+        });
+
+        setSheetData(formatted);
+      } catch (error) {
+        console.error("Error fetching inventory data for samples:", error);
+        setSheetData([]);
+      }
+    };
+
+    fetchInventoryData();
+  }, [currentUser?.uid, isAdmin]);
   // Solo variedades con stock y no SOLD OUT
   const inStockVarieties = sheetData.filter((item) => {
     const rawStock = String(item["30 KG Sacks"] ?? "").trim().toUpperCase();

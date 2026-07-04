@@ -6,6 +6,7 @@ import {
   faCalendarDays,
   faChevronLeft,
   faChevronRight,
+  faClipboardList,
   faFileContract,
   faFolderTree,
   faLayerGroup,
@@ -23,6 +24,7 @@ import OrdersList from './OrdersList';
 import GroupsManager from './Groups';
 import CompaniesManager from './Companies';
 import EventsManager from './EventsManager';
+import SystemLogs from './SystemLogs';
 
 type AdminTab =
   | 'users'
@@ -33,13 +35,15 @@ type AdminTab =
   | 'contracts'
   | 'teammembers'
   | 'companies'
-  | 'events';
+  | 'events'
+  | 'logs';
 
 const tabs: { id: AdminTab; label: string; description: string; icon: any }[] = [
   { id: 'users', label: 'Users', description: 'Accounts, groups and roles', icon: faUsers },
   { id: 'requests', label: 'Requests', description: 'Pending access approvals', icon: faUserCheck },
   { id: 'contracts', label: 'Contracts', description: 'Reservations and dispatches', icon: faFileContract },
   { id: 'orders', label: 'Orders', description: 'Fulfilment workflow', icon: faReceipt },
+  { id: 'logs', label: 'Logs', description: 'Actions and errors', icon: faClipboardList },
   { id: 'events', label: 'Events', description: 'Portal announcements', icon: faCalendarDays },
   { id: 'companies', label: 'Companies', description: 'Company memberships', icon: faBriefcase },
   { id: 'groups', label: 'Groups', description: 'Exclusive access groups', icon: faLayerGroup },
@@ -168,6 +172,7 @@ const Dashboard: React.FC = () => {
           {activeTab === 'groups' && <GroupsManager />}
           {activeTab === 'companies' && <CompaniesManager />}
           {activeTab === 'events' && <EventsManager />}
+          {activeTab === 'logs' && <SystemLogs />}
         </div>
       </div>
     </div>

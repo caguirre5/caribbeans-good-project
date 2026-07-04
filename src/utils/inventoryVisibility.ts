@@ -10,7 +10,7 @@ import {
 
 type InventoryVisibilityOptions = {
   isAdmin?: boolean;
-  userGroups?: string[];
+  currentUserId?: string | null;
 };
 
 type InventoryQuery = {
@@ -18,20 +18,9 @@ type InventoryQuery = {
   run: () => Promise<QueryDocumentSnapshot<DocumentData>[]>;
 };
 
-const normalizeGroupName = (group: unknown) => String(group ?? "").trim();
-
-const uniqueGroups = (groups: string[] = []) =>
-  Array.from(new Set(groups.map(normalizeGroupName).filter(Boolean)));
-
-const chunksOf = <T,>(items: T[], size: number) => {
-  const chunks: T[][] = [];
-  for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));
-  return chunks;
-};
-
 export const fetchReadableInventoryDocs = async (
   db: Firestore,
-  { isAdmin = false, userGroups = [] }: InventoryVisibilityOptions = {}
+  { isAdmin = false, currentUserId = null }: InventoryVisibilityOptions = {}
 ): Promise<QueryDocumentSnapshot<DocumentData>[]> => {
   const inventoryRef = collection(db, "inventoryItems");
 
@@ -57,15 +46,15 @@ export const fetchReadableInventoryDocs = async (
     },
   ];
 
-  for (const groupChunk of chunksOf(uniqueGroups(userGroups), 30)) {
+  if (currentUserId) {
     visibleQueries.push({
-      label: `group inventory query (${groupChunk.join(", ")})`,
+      label: `user inventory query (${currentUserId})`,
       run: async () => {
         const snap = await getDocs(
           query(
             inventoryRef,
             where("isActive", "==", true),
-            where("groupNames", "array-contains-any", groupChunk)
+            where("allowedUserIds", "array-contains", currentUserId)
           )
         );
         return snap.docs;

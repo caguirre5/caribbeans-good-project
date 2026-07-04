@@ -5,6 +5,7 @@ import {
   deleteDoc,
   doc,
   getDocs,
+  runTransaction,
   serverTimestamp,
   updateDoc,
 } from "firebase/firestore";
@@ -16,6 +17,10 @@ import {
   reverseInventoryOutForSource,
   type InventoryStockLine,
 } from "../../../utils/inventoryStock";
+import {
+  auditErrorMessage,
+  writeAuditLog,
+} from "../../../utils/auditLog";
 
 interface OrderItem {
   bagKg?: number;
@@ -24,6 +29,10 @@ interface OrderItem {
   unitPricePerKg?: number;
   lineSubtotal?: number;
   varietyName?: string;
+  sourceType?: string;
+  contractId?: string;
+  contractNo?: string;
+  contractSelectionIndex?: number;
   [k: string]: any;
 }
 
@@ -62,6 +71,11 @@ function prettyStatus(status?: string | null, deliveryMethod?: string | null): s
   return mode === "pickup" ? "Ready for pickup" : "On the way";
 }
 
+function isOrderStockAffectingStatus(status?: string | null): boolean {
+  const st = (status ?? "").toLowerCase().trim();
+  return st === "handoff" || st === "completed";
+}
+
 
 const labelForEmail = (o: Order, st: string) => {
   if (st !== "handoff") return st;
@@ -79,8 +93,14 @@ const statusColors: Record<string, string> = {
 const toMaybeDate = (v: any): Date | null =>
   v?.toDate?.() ?? (v ? new Date(v) : null);
 
-const inventoryLinesFromOrder = (order: Order): InventoryStockLine[] =>
-  (order.items || []).map((item) => ({
+const isContractReservedItem = (item: OrderItem) =>
+  item.sourceType === "contract_reserved" && !!item.contractId;
+
+const inventoryLinesFromOrder = (
+  order: Order,
+  filter?: (item: OrderItem) => boolean
+): InventoryStockLine[] =>
+  (order.items || []).filter((item) => (filter ? filter(item) : true)).map((item) => ({
     inventoryItemId: item.inventoryItemId || null,
     label: item.varietyName || "(Unknown variety)",
     bags: Number(item.bags) || 0,
@@ -109,8 +129,11 @@ const inventoryItemLabels = (item: any) => {
   ].filter(Boolean);
 };
 
-const resolveInventoryLinesFromOrder = async (order: Order): Promise<InventoryStockLine[]> => {
-  const lines = inventoryLinesFromOrder(order);
+const resolveInventoryLinesFromOrder = async (
+  order: Order,
+  filter?: (item: OrderItem) => boolean
+): Promise<InventoryStockLine[]> => {
+  const lines = inventoryLinesFromOrder(order, filter);
   if (lines.every((line) => line.inventoryItemId)) return lines;
 
   const db = getFirestore();
@@ -158,6 +181,66 @@ const resolveInventoryLinesFromOrder = async (order: Order): Promise<InventorySt
   });
 };
 
+const adjustContractRemainingForOrder = async (order: Order, direction: -1 | 1) => {
+  const reservedItems = (order.items || []).filter(isContractReservedItem);
+  if (!reservedItems.length) return;
+
+  const byContract = new Map<string, OrderItem[]>();
+  reservedItems.forEach((item) => {
+    if (!item.contractId) return;
+    byContract.set(item.contractId, [...(byContract.get(item.contractId) || []), item]);
+  });
+
+  const db = getFirestore();
+
+  for (const [contractId, items] of byContract.entries()) {
+    const contractRef = doc(db, "contracts", contractId);
+
+    await runTransaction(db, async (transaction) => {
+      const snap = await transaction.get(contractRef);
+      if (!snap.exists()) throw new Error(`Contract not found: ${contractId}`);
+
+      const contract = snap.data() as any;
+      const details = contract.details || {};
+      const selections = Array.isArray(details.selections) ? [...details.selections] : [];
+
+      items.forEach((item) => {
+        const index = Number(item.contractSelectionIndex);
+        if (!Number.isInteger(index) || index < 0 || index >= selections.length) {
+          throw new Error(`Contract selection is missing for ${item.varietyName || "reserved coffee"}.`);
+        }
+
+        const selection = { ...selections[index] };
+        const bags = Number(item.bags) || 0;
+        const bagKg = Number(item.bagKg) || 24;
+        const kg = bags * bagKg;
+        const currentRemainingBags = Number(selection.remainingBags ?? selection.bags ?? 0) || 0;
+        const currentRemainingKg = Number(selection.remainingKg ?? currentRemainingBags * bagKg) || 0;
+        const nextRemainingBags = currentRemainingBags + direction * bags;
+        const nextRemainingKg = currentRemainingKg + direction * kg;
+
+        if (nextRemainingBags < 0 || nextRemainingKg < 0) {
+          throw new Error(`Not enough contract reserved coffee remaining for ${item.varietyName || "reserved coffee"}.`);
+        }
+
+        selections[index] = {
+          ...selection,
+          remainingBags: nextRemainingBags,
+          remainingKg: nextRemainingKg,
+        };
+      });
+
+      transaction.update(contractRef, {
+        details: {
+          ...details,
+          selections,
+        },
+        updatedAt: serverTimestamp(),
+      });
+    });
+  }
+};
+
 function useDebounced<T>(value: T, delay = 250) {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {
@@ -186,12 +269,15 @@ const OrdersList: React.FC = () => {
   const [statusToApply, setStatusToApply] = useState<"" | "pending" | "processing" | "handoff" | "completed" | "cancelled">("");
   const [statusConfirm, setStatusConfirm] = useState(false);
   const [statusSubmitting, setStatusSubmitting] = useState(false);
+  const [statusError, setStatusError] = useState("");
+  const [sendStatusEmail, setSendStatusEmail] = useState(true);
 
   // Delete confirmation
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Order | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   const searchDebounced = useDebounced(search, 250);
 
@@ -468,10 +554,33 @@ const OrdersList: React.FC = () => {
     const orderId = selectedOrder.id;
     const orderLabel = selectedOrder.orderNoShort || selectedOrder.id;
     const recipientEmail = selectedOrder.customerEmail || "";
+    const auth = getAuth();
+    const actor = {
+      uid: auth.currentUser?.uid || null,
+      email: auth.currentUser?.email || null,
+    };
 
   
     try {
       setStatusSubmitting(true);
+      setStatusError("");
+
+      await writeAuditLog({
+        action: "order_status_change",
+        status: "started",
+        actor,
+        targetType: "order",
+        targetId: orderId,
+        targetLabel: orderLabel,
+        before: { status: selectedOrder.status },
+        after: { status: statusToApply },
+        context: {
+          customerEmail: recipientEmail,
+          sendStatusEmail,
+          deliveryMethod: selectedOrder.deliveryMethod || null,
+          trackingNumberProvided: isOnTheWayChange ? !!trackingNumber.trim() : null,
+        },
+      });
   
       // 1) Actualizar estado en backend (ya tienes updateStatus)
       await updateStatus(
@@ -481,10 +590,9 @@ const OrdersList: React.FC = () => {
       );
 
   
-      // 2) Enviar correo al cliente (si hay email)
-      if (recipientEmail) {
+      // 2) Enviar correo al cliente (si se solicita y hay email)
+      if (sendStatusEmail && recipientEmail) {
         try {
-          const auth = getAuth();
           const token = await auth.currentUser?.getIdToken();
           const newStatusLabel = labelForEmail(selectedOrder, statusToApply);
           const trackingToSend = isOnTheWayChange ? trackingNumber.trim() : "";
@@ -515,26 +623,95 @@ const OrdersList: React.FC = () => {
   
           if (!res.ok) {
             const t = await res.text().catch(() => "");
-            console.error("Email send failed:", t);
+            throw new Error(t || "Email send failed.");
           }
+
+          await writeAuditLog({
+            action: "order_status_email",
+            status: "success",
+            actor,
+            targetType: "order",
+            targetId: orderId,
+            targetLabel: orderLabel,
+            context: {
+              recipientEmail,
+              status: statusToApply,
+              statusLabel: newStatusLabel,
+              sendStatusEmail,
+            },
+          });
         } catch (e) {
           console.error("Email send error:", e);
+          await writeAuditLog({
+            action: "order_status_email",
+            level: "warning",
+            status: "failed",
+            actor,
+            targetType: "order",
+            targetId: orderId,
+            targetLabel: orderLabel,
+            context: {
+              recipientEmail,
+              status: statusToApply,
+              sendStatusEmail,
+            },
+            error: e,
+          });
         }
       }
-    } catch (e) {
-      console.error(e);
-      alert("There was a problem updating the status.");
-    } finally {
-      setStatusSubmitting(false);
+
+      await writeAuditLog({
+        action: "order_status_change",
+        status: "success",
+        actor,
+        targetType: "order",
+        targetId: orderId,
+        targetLabel: orderLabel,
+        before: { status: selectedOrder.status },
+        after: { status: statusToApply },
+        context: {
+          customerEmail: recipientEmail,
+          sendStatusEmail,
+          deliveryMethod: selectedOrder.deliveryMethod || null,
+        },
+      });
+
       setStatusModalOpen(false);
       setStatusToApply("");
       setStatusConfirm(false);
+      setSendStatusEmail(true);
+      setTrackingNumber("");
+    } catch (e) {
+      console.error(e);
+      const message = auditErrorMessage(e, "There was a problem updating the status.");
+      setStatusError(`Status was not updated. ${message}`);
+      await writeAuditLog({
+        action: "order_status_change",
+        level: "error",
+        status: "failed",
+        actor,
+        targetType: "order",
+        targetId: orderId,
+        targetLabel: orderLabel,
+        before: { status: selectedOrder.status },
+        after: { status: statusToApply },
+        context: {
+          customerEmail: recipientEmail,
+          sendStatusEmail,
+          deliveryMethod: selectedOrder.deliveryMethod || null,
+          trackingNumberProvided: isOnTheWayChange ? !!trackingNumber.trim() : null,
+        },
+        error: e,
+      });
+    } finally {
+      setStatusSubmitting(false);
     }
   };
   
   const openDeleteModal = (order: Order) => {
     setDeleteTarget(order);
     setDeleteConfirmText("");
+    setDeleteError("");
     setDeleteModalOpen(true);
   };
 
@@ -543,6 +720,7 @@ const OrdersList: React.FC = () => {
     setDeleteModalOpen(false);
     setDeleteTarget(null);
     setDeleteConfirmText("");
+    setDeleteError("");
   };
 
   const handleDeleteOrder = async () => {
@@ -550,16 +728,49 @@ const OrdersList: React.FC = () => {
 
     if (deleteConfirmText !== "delete permanently") return;
 
-    if (deleteTarget.status === "handoff") {
+    if (isOrderStockAffectingStatus(deleteTarget.status)) {
       alert(
-        "This order has already affected inventory. Move it out of handoff first so stock is restored, then delete it."
+        "This order has already affected inventory. Move it to pending, processing, or cancelled first so stock is restored, then delete it."
       );
       return;
     }
 
     try {
       setDeleting(true);
+      setDeleteError("");
+      const auth = getAuth();
+      const actor = {
+        uid: auth.currentUser?.uid || null,
+        email: auth.currentUser?.email || null,
+      };
+
+      await writeAuditLog({
+        action: "order_delete",
+        status: "started",
+        actor,
+        targetType: "order",
+        targetId: deleteTarget.id,
+        targetLabel: deleteTarget.orderNoShort || deleteTarget.id,
+        before: {
+          status: deleteTarget.status,
+          customerEmail: deleteTarget.customerEmail,
+        },
+      });
+
       await deleteDoc(doc(getFirestore(), "orders", deleteTarget.id));
+
+      await writeAuditLog({
+        action: "order_delete",
+        status: "success",
+        actor,
+        targetType: "order",
+        targetId: deleteTarget.id,
+        targetLabel: deleteTarget.orderNoShort || deleteTarget.id,
+        before: {
+          status: deleteTarget.status,
+          customerEmail: deleteTarget.customerEmail,
+        },
+      });
 
       setOrders((prev) => prev.filter((order) => order.id !== deleteTarget.id));
 
@@ -572,7 +783,26 @@ const OrdersList: React.FC = () => {
       setDeleteConfirmText("");
     } catch (err) {
       console.error(err);
-      alert("Failed to delete order.");
+      const message = auditErrorMessage(err, "Failed to delete order.");
+      setDeleteError(message);
+      const auth = getAuth();
+      await writeAuditLog({
+        action: "order_delete",
+        level: "error",
+        status: "failed",
+        actor: {
+          uid: auth.currentUser?.uid || null,
+          email: auth.currentUser?.email || null,
+        },
+        targetType: "order",
+        targetId: deleteTarget.id,
+        targetLabel: deleteTarget.orderNoShort || deleteTarget.id,
+        before: {
+          status: deleteTarget.status,
+          customerEmail: deleteTarget.customerEmail,
+        },
+        error: err,
+      });
     } finally {
       setDeleting(false);
     }
@@ -583,29 +813,109 @@ const OrdersList: React.FC = () => {
     try {
       setUpdating(true);
       const auth = getAuth();
+      const actor = {
+        uid: auth.currentUser?.uid || null,
+        email: auth.currentUser?.email || null,
+      };
       const orderBeforeUpdate = orders.find((o) => o.id === orderId) || selectedOrder || null;
       const previousStatus = orderBeforeUpdate?.status;
       const appliedStatus = newStatus;
 
       if (orderBeforeUpdate && previousStatus !== appliedStatus) {
-        if (appliedStatus === "handoff" && previousStatus !== "handoff") {
+        const previouslyAffectedStock = isOrderStockAffectingStatus(previousStatus);
+        const willAffectStock = isOrderStockAffectingStatus(appliedStatus);
+
+        if (willAffectStock && !previouslyAffectedStock) {
+          const normalLines = await resolveInventoryLinesFromOrder(
+            orderBeforeUpdate,
+            (item) => !isContractReservedItem(item)
+          );
+          const reservedLines = await resolveInventoryLinesFromOrder(
+            orderBeforeUpdate,
+            isContractReservedItem
+          );
+
           await applyInventoryOutForSource({
             sourceType: "order",
             sourceId: orderId,
-            lines: await resolveInventoryLinesFromOrder(orderBeforeUpdate),
+            lines: normalLines,
             movementType: "order_out",
             createdBy: auth.currentUser?.uid || null,
             createdByEmail: auth.currentUser?.email || null,
           });
+
+          await applyInventoryOutForSource({
+            sourceType: "order",
+            sourceId: orderId,
+            lines: reservedLines,
+            movementType: "reservation_fulfillment",
+            releaseReserved: true,
+            createdBy: auth.currentUser?.uid || null,
+            createdByEmail: auth.currentUser?.email || null,
+          });
+
+          await adjustContractRemainingForOrder(orderBeforeUpdate, -1);
+
+          await writeAuditLog({
+            action: "order_inventory_apply",
+            status: "success",
+            actor,
+            targetType: "order",
+            targetId: orderId,
+            targetLabel: orderBeforeUpdate.orderNoShort || orderId,
+            before: { status: previousStatus },
+            after: { status: appliedStatus },
+            context: {
+              movement: "out",
+              normalLines,
+              reservedLines,
+            },
+          });
         }
 
-        if (previousStatus === "handoff" && appliedStatus !== "handoff") {
+        if (previouslyAffectedStock && !willAffectStock) {
+          const normalLines = await resolveInventoryLinesFromOrder(
+            orderBeforeUpdate,
+            (item) => !isContractReservedItem(item)
+          );
+          const reservedLines = await resolveInventoryLinesFromOrder(
+            orderBeforeUpdate,
+            isContractReservedItem
+          );
+
           await reverseInventoryOutForSource({
             sourceType: "order",
             sourceId: orderId,
-            lines: await resolveInventoryLinesFromOrder(orderBeforeUpdate),
+            lines: normalLines,
             createdBy: auth.currentUser?.uid || null,
             createdByEmail: auth.currentUser?.email || null,
+          });
+
+          await reverseInventoryOutForSource({
+            sourceType: "order",
+            sourceId: orderId,
+            lines: reservedLines,
+            restoreReserved: true,
+            createdBy: auth.currentUser?.uid || null,
+            createdByEmail: auth.currentUser?.email || null,
+          });
+
+          await adjustContractRemainingForOrder(orderBeforeUpdate, 1);
+
+          await writeAuditLog({
+            action: "order_inventory_reverse",
+            status: "success",
+            actor,
+            targetType: "order",
+            targetId: orderId,
+            targetLabel: orderBeforeUpdate.orderNoShort || orderId,
+            before: { status: previousStatus },
+            after: { status: appliedStatus },
+            context: {
+              movement: "reversal",
+              normalLines,
+              reservedLines,
+            },
           });
         }
       }
@@ -614,6 +924,20 @@ const OrdersList: React.FC = () => {
         status: appliedStatus,
         updatedAt: serverTimestamp(),
         ...(extra?.trackingNumber ? { trackingNumber: extra.trackingNumber } : {}),
+      });
+
+      await writeAuditLog({
+        action: "order_firestore_update",
+        status: "success",
+        actor,
+        targetType: "order",
+        targetId: orderId,
+        targetLabel: orderBeforeUpdate?.orderNoShort || orderId,
+        before: { status: previousStatus },
+        after: {
+          status: appliedStatus,
+          trackingNumberUpdated: !!extra?.trackingNumber,
+        },
       });
 
       setOrders((prev) =>
@@ -629,7 +953,25 @@ const OrdersList: React.FC = () => {
       }
     } catch (err) {
       console.error(err);
-      alert("Error updating status");
+      const auth = getAuth();
+      await writeAuditLog({
+        action: "order_status_internal_step",
+        level: "error",
+        status: "failed",
+        actor: {
+          uid: auth.currentUser?.uid || null,
+          email: auth.currentUser?.email || null,
+        },
+        targetType: "order",
+        targetId: orderId,
+        targetLabel: selectedOrder?.orderNoShort || orderId,
+        context: {
+          attemptedStatus: newStatus,
+          trackingNumberUpdated: !!extra?.trackingNumber,
+        },
+        error: err,
+      });
+      throw err;
     } finally {
       setUpdating(false);
     }
@@ -753,6 +1095,8 @@ if (selectedOrder) {
             onChange={(e) => {
               setStatusToApply(e.target.value as any);
               setStatusConfirm(false);
+              setStatusError("");
+              setSendStatusEmail(true);
               setTrackingNumber("");
               setStatusModalOpen(true);
             }}
@@ -996,13 +1340,19 @@ if (selectedOrder) {
               <b>#{deleteTarget.orderNoShort || deleteTarget.id}</b>.
             </p>
 
-            {deleteTarget.status === "handoff" ? (
+            {isOrderStockAffectingStatus(deleteTarget.status) ? (
               <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-3 mb-4">
-                This order has already affected inventory. Move it out of handoff first so stock is restored, then delete it.
+                This order has already affected inventory. Move it to pending, processing, or cancelled first so stock is restored, then delete it.
               </p>
             ) : (
               <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-3 mb-4">
                 This cannot be undone. Type <strong>delete permanently</strong> to confirm.
+              </p>
+            )}
+
+            {deleteError && (
+              <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-3 mb-4">
+                {deleteError}
               </p>
             )}
 
@@ -1011,7 +1361,7 @@ if (selectedOrder) {
               value={deleteConfirmText}
               onChange={(e) => setDeleteConfirmText(e.target.value)}
               className="border px-3 py-2 w-full rounded mb-4 text-sm"
-              disabled={deleting || deleteTarget.status === "handoff"}
+              disabled={deleting || isOrderStockAffectingStatus(deleteTarget.status)}
               placeholder="delete permanently"
             />
 
@@ -1028,7 +1378,7 @@ if (selectedOrder) {
                 className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 text-sm disabled:opacity-50"
                 disabled={
                   deleting ||
-                  deleteTarget.status === "handoff" ||
+                  isOrderStockAffectingStatus(deleteTarget.status) ||
                   deleteConfirmText !== "delete permanently"
                 }
               >
@@ -1060,10 +1410,24 @@ if (selectedOrder) {
               </span>
             </div>
 
-            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2 mb-3">
-              A notification email will be sent to{" "}
-              <b>{selectedOrder.customerEmail || "(no email on file)"}</b>.
-            </p>
+            <label className="flex items-start gap-3 text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded p-3 mb-3">
+              <input
+                type="checkbox"
+                checked={sendStatusEmail && !!selectedOrder.customerEmail}
+                disabled={!selectedOrder.customerEmail}
+                onChange={(e) => setSendStatusEmail(e.target.checked)}
+                className="mt-0.5 h-4 w-4"
+              />
+              <span>
+                Send status notification email to{" "}
+                <b>{selectedOrder.customerEmail || "(no email on file)"}</b>.
+                {!selectedOrder.customerEmail && (
+                  <span className="block text-xs text-amber-700 mt-1">
+                    This order does not have a customer email.
+                  </span>
+                )}
+              </span>
+            </label>
 
             <label className="flex items-start gap-2 text-sm mb-3">
               <input
@@ -1082,14 +1446,23 @@ if (selectedOrder) {
                 </label>
                 <input
                   value={trackingNumber}
-                  onChange={(e) => setTrackingNumber(e.target.value)}
+                  onChange={(e) => {
+                    setTrackingNumber(e.target.value);
+                    setStatusError("");
+                  }}
                   placeholder="e.g. WAX123456789GB"
                   className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm bg-white"
                 />
                 <p className="text-xs text-gray-500">
-                  This will be included in the email sent to the customer.
+                  This will be included if the notification email is sent to the customer.
                 </p>
               </div>
+            )}
+
+            {statusError && (
+              <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-3 mb-3">
+                {statusError}
+              </p>
             )}
 
             <div className="flex justify-end gap-2 mt-5">
@@ -1100,6 +1473,8 @@ if (selectedOrder) {
                   setStatusModalOpen(false);
                   setStatusToApply("");
                   setStatusConfirm(false);
+                  setSendStatusEmail(true);
+                  setStatusError("");
                 }}
               >
                 Cancel

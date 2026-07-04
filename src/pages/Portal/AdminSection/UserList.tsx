@@ -21,6 +21,9 @@ import {
   updateDoc,
   arrayUnion,
   arrayRemove,
+  serverTimestamp,
+  where,
+  writeBatch,
 } from "firebase/firestore";
 
 const getRelativeTime = (dateString: string) => {
@@ -143,8 +146,45 @@ const UserList: React.FC = () => {
   );
 
   const userGroups = (u: any): string[] =>
-    Array.isArray(u.groups) ? u.groups : [];
+    Array.isArray(u?.groups) ? u.groups : [];
   const hasAnyGroup = (u: any) => userGroups(u).length > 0;
+
+  const normalizeGroupName = (value: unknown) =>
+    String(value ?? "").trim().toLowerCase();
+
+  const syncInventoryAccessForUserGroup = async ({
+    uid,
+    groupName,
+    nextGroups,
+  }: {
+    uid: string;
+    groupName: string;
+    nextGroups: string[];
+  }) => {
+    const inventorySnap = await getDocs(
+      query(collection(db, "inventoryItems"), where("groupNames", "array-contains", groupName))
+    );
+
+    if (inventorySnap.empty) return;
+
+    const nextGroupSet = new Set(nextGroups.map(normalizeGroupName).filter(Boolean));
+    const batch = writeBatch(db);
+
+    inventorySnap.docs.forEach((inventoryDoc) => {
+      const data = inventoryDoc.data() as any;
+      const itemGroups = Array.isArray(data.groupNames) ? data.groupNames : [];
+      const shouldHaveAccess = itemGroups.some((itemGroup: unknown) =>
+        nextGroupSet.has(normalizeGroupName(itemGroup))
+      );
+
+      batch.update(doc(db, "inventoryItems", inventoryDoc.id), {
+        allowedUserIds: shouldHaveAccess ? arrayUnion(uid) : arrayRemove(uid),
+        updatedAt: serverTimestamp(),
+      });
+    });
+
+    await batch.commit();
+  };
 
   // --- DELETE (backend) ---
   const handleDelete = async (uid: string) => {
@@ -234,10 +274,17 @@ const UserList: React.FC = () => {
         [uid]: { ...(prev[uid] || {}), add: true },
       }));
 
+      const targetUser = users.find((u) => u.uid === uid);
+      const currentGroups = userGroups(targetUser);
+      const nextGroups = currentGroups.includes(groupName)
+        ? currentGroups
+        : [...currentGroups, groupName];
+
       const userRef = doc(db, "users", uid);
       await updateDoc(userRef, {
         groups: arrayUnion(groupName),
       });
+      await syncInventoryAccessForUserGroup({ uid, groupName, nextGroups });
 
       // update local UI
       setUsers((prev) =>
@@ -268,10 +315,14 @@ const UserList: React.FC = () => {
         [uid]: { ...(prev[uid] || {}), remove: true },
       }));
 
+      const targetUser = users.find((u) => u.uid === uid);
+      const nextGroups = userGroups(targetUser).filter((g) => g !== groupName);
+
       const userRef = doc(db, "users", uid);
       await updateDoc(userRef, {
         groups: arrayRemove(groupName),
       });
+      await syncInventoryAccessForUserGroup({ uid, groupName, nextGroups });
 
       setUsers((prev) =>
         prev.map((u) =>

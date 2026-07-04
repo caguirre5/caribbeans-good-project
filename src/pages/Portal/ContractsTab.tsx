@@ -22,6 +22,12 @@ const parseMaybeNumber = (v: any): number | undefined => {
   return undefined;
 };
 
+const getSelectionBagKg = (selection: any): number => {
+  const bags = parseMaybeNumber(selection?.bags) ?? 0;
+  const lineKg = parseMaybeNumber(selection?.lineKg);
+  return parseMaybeNumber(selection?.bagKg) ?? (bags > 0 && lineKg ? lineKg / bags : 24);
+};
+
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 
 // ─────────────────────────────
@@ -78,6 +84,7 @@ export interface Contract {
   selections?: Array<{
     variety?: string;
     bags?: number;
+    bagKg?: number;
     lineKg?: number;
     unitPricePerKg?: number;
     lineSubtotal?: number;
@@ -218,23 +225,16 @@ const ContractsTab: React.FC = () => {
           )
         : undefined);
 
+    const bagSizesKg = selections.map(getSelectionBagKg).filter((n) => Number.isFinite(n));
+    const uniqueBagSizesKg = Array.from(new Set(bagSizesKg));
     const pricePerBagKg =
-      parseMaybeNumber(totals?.pricePerBagKg) ??
-      (selections.length &&
-      selections.every(
-        (it: any) => parseMaybeNumber(it.lineKg) && parseMaybeNumber(it.bags)
-      )
-        ? (() => {
-            const nums = selections
-              .map((it: any) => {
-                const kg = parseMaybeNumber(it.lineKg)!;
-                const bags = parseMaybeNumber(it.bags)!;
-                return bags > 0 ? kg / bags : undefined;
-              })
-              .filter(Boolean) as number[];
-            return nums.length ? nums[0] : undefined;
-          })()
-        : undefined);
+      uniqueBagSizesKg.length === 1
+        ? uniqueBagSizesKg[0]
+        : parseMaybeNumber(totals?.pricePerBagKg);
+    const bagSizeLabel =
+      uniqueBagSizesKg.length > 1
+        ? `Mixed (${uniqueBagSizesKg.map((n) => fmtNum(n)).join(", ")} kg)`
+        : fmtNum(pricePerBagKg);
 
     const hasDetailsBlock = Boolean(
       totals ||
@@ -350,7 +350,7 @@ const ContractsTab: React.FC = () => {
                       KG per bag
                     </p>
                     <p className="text-base font-medium">
-                      {fmtNum(pricePerBagKg)}
+                      {bagSizeLabel}
                     </p>
                   </div>
                 </div>
@@ -526,7 +526,7 @@ const ContractsTab: React.FC = () => {
                         selections.reduce((acc: number, it: any) => {
                           const kg = parseMaybeNumber(it.lineKg);
                           const bags = parseMaybeNumber(it.bags);
-                          return acc + (kg ?? ((bags ?? 0) * 24));
+                          return acc + (kg ?? ((bags ?? 0) * getSelectionBagKg(it)));
                         }, 0)
                       )}
                     </p>
@@ -572,8 +572,9 @@ const ContractsTab: React.FC = () => {
                     <tbody>
                       {selections.map((it: any, idx: number) => {
                         const totalBags = parseMaybeNumber(it.bags) ?? 0;
+                        const bagKg = getSelectionBagKg(it);
                         const totalKg =
-                          parseMaybeNumber(it.lineKg) ?? totalBags * 24;
+                          parseMaybeNumber(it.lineKg) ?? totalBags * bagKg;
 
                         const remBags =
                           parseMaybeNumber(it.remainingBags) ?? totalBags;

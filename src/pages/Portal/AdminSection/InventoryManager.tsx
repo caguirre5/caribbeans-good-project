@@ -15,6 +15,7 @@ import {
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -24,14 +25,23 @@ import {
   runTransaction,
   serverTimestamp,
   updateDoc,
+  where,
 } from "firebase/firestore";
 import { useAuth } from "../../../contexts/AuthContext";
+import { reserveInventoryForSource } from "../../../utils/inventoryStock";
+import { writeAuditLog } from "../../../utils/auditLog";
 
 type InventoryView = "stock" | "variety" | "invoice" | "adjust" | "migration";
 
 type GroupDoc = {
   id: string;
   name: string;
+};
+
+type InventoryAccessUser = {
+  id: string;
+  uid: string;
+  groups: string[];
 };
 
 type InventoryItem = {
@@ -44,6 +54,7 @@ type InventoryItem = {
   bagSizeKg: number;
   pricePerKg: number;
   groupNames: string[];
+  allowedUserIds?: string[];
   isActive: boolean;
   availableBags: number;
   availableKg: number;
@@ -106,6 +117,33 @@ type MigrationRow = {
   bagKg: number;
 };
 
+type ReservationRepairLine = {
+  key: string;
+  inventoryItemId: string | null;
+  label: string;
+  selectionIndex: number;
+  bagKg: number;
+  requiredBags: number;
+  requiredKg: number;
+  reservedBags: number;
+  missingBags: number;
+  missingKg: number;
+};
+
+type ReservationRepairRow = {
+  contractId: string;
+  contractNo: string;
+  customerName: string;
+  customerEmail: string;
+  requiredBags: number;
+  reservedBags: number;
+  missingBags: number;
+  missingKg: number;
+  hasMissingInventoryIds: boolean;
+  hasSurplusReservation: boolean;
+  lines: ReservationRepairLine[];
+};
+
 type InvoiceLine = {
   inventoryItemId: string;
   label: string;
@@ -143,6 +181,51 @@ const emptyItemForm: ItemForm = {
 const toNum = (value: string | number, fallback = 0) => {
   const n = typeof value === "number" ? value : Number(String(value).replace(/[^\d.]/g, ""));
   return Number.isFinite(n) ? n : fallback;
+};
+
+const toOptionalNum = (value: unknown): number | null => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+};
+
+const normalizeGroupValue = (value: unknown) => String(value ?? "").trim().toLowerCase();
+
+const normalizeGroupList = (raw: unknown): string[] => {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((group) => {
+      if (typeof group === "string") return group.trim();
+      if (group && typeof group === "object") {
+        const data = group as Record<string, unknown>;
+        return String(data.name ?? data.id ?? data.value ?? "").trim();
+      }
+      return "";
+    })
+    .filter(Boolean);
+};
+
+const allowedUsersForGroups = (users: InventoryAccessUser[], groupNames: string[]) => {
+  const normalizedGroups = new Set(groupNames.map(normalizeGroupValue).filter(Boolean));
+  if (!normalizedGroups.size) return [];
+
+  return users
+    .filter((user) =>
+      user.groups.some((groupName) => normalizedGroups.has(normalizeGroupValue(groupName)))
+    )
+    .map((user) => user.uid);
+};
+
+const sortedUnique = (values: string[]) =>
+  Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b));
+
+const sameStringList = (a: string[] = [], b: string[] = []) => {
+  const aa = sortedUnique(a);
+  const bb = sortedUnique(b);
+  return aa.length === bb.length && aa.every((value, index) => value === bb[index]);
 };
 
 const applyBagDelta = (
@@ -221,6 +304,12 @@ const suggestInventoryMatch = (items: InventoryItem[], variety: string) => {
   return loose?.id || "";
 };
 
+const reservationLineKey = (
+  inventoryItemId: string | null,
+  bagKg: number,
+  selectionIndex: number | null
+) => `${selectionIndex ?? "line"}:${inventoryItemId || "missing"}:${bagKg}`;
+
 const InventoryManager: React.FC = () => {
   const db = getFirestore();
   const { currentUser } = useAuth();
@@ -228,6 +317,7 @@ const InventoryManager: React.FC = () => {
   const [activeView, setActiveView] = useState<InventoryView>("stock");
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [groups, setGroups] = useState<GroupDoc[]>([]);
+  const [accessUsers, setAccessUsers] = useState<InventoryAccessUser[]>([]);
   const [entries, setEntries] = useState<StockEntry[]>([]);
   const [lots, setLots] = useState<StockLot[]>([]);
   const [loading, setLoading] = useState(true);
@@ -236,6 +326,10 @@ const InventoryManager: React.FC = () => {
   const [savingAdjustment, setSavingAdjustment] = useState(false);
   const [search, setSearch] = useState("");
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
+  const [deleteItemTarget, setDeleteItemTarget] = useState<InventoryItem | null>(null);
+  const [deleteItemModalOpen, setDeleteItemModalOpen] = useState(false);
+  const [deletingItem, setDeletingItem] = useState(false);
+  const [deleteItemError, setDeleteItemError] = useState("");
 
   const [itemForm, setItemForm] = useState<ItemForm>(emptyItemForm);
 
@@ -260,26 +354,58 @@ const InventoryManager: React.FC = () => {
   const [migrationSelections, setMigrationSelections] = useState<Record<string, string>>({});
   const [loadingMigration, setLoadingMigration] = useState(false);
   const [migratingKey, setMigratingKey] = useState<string | null>(null);
+  const [repairRows, setRepairRows] = useState<ReservationRepairRow[]>([]);
+  const [loadingRepair, setLoadingRepair] = useState(false);
+  const [repairingContractId, setRepairingContractId] = useState<string | null>(null);
 
   const fetchAll = async () => {
     try {
       setLoading(true);
-      const [itemsSnap, groupsSnap, entriesSnap, lotsSnap] = await Promise.all([
+      const [itemsSnap, groupsSnap, entriesSnap, lotsSnap, usersSnap] = await Promise.all([
         getDocs(query(collection(db, "inventoryItems"), orderBy("farm"))),
         getDocs(query(collection(db, "groups"), orderBy("name"))),
         getDocs(query(collection(db, "stockEntries"), orderBy("createdAt", "desc"))),
         getDocs(query(collection(db, "stockLots"), orderBy("createdAt", "desc"))),
+        getDocs(collection(db, "users")),
       ]);
 
-      setItems(
-        itemsSnap.docs.map((d) => ({
+      const users: InventoryAccessUser[] = usersSnap.docs.map((d) => {
+        const data = d.data() as any;
+        return {
+          id: d.id,
+          uid: String(data.uid || d.id),
+          groups: normalizeGroupList(data.groups),
+        };
+      });
+      setAccessUsers(users);
+
+      const inventoryItems = itemsSnap.docs.map((d) => ({
           id: d.id,
           availableBags: 0,
           availableKg: 0,
           groupNames: [],
+          allowedUserIds: [],
           isActive: true,
           ...(d.data() as any),
-        }))
+        }));
+
+      setItems(inventoryItems);
+
+      await Promise.all(
+        inventoryItems.map((item) => {
+          const nextAllowedUserIds = sortedUnique(
+            allowedUsersForGroups(users, item.groupNames || [])
+          );
+
+          if (sameStringList(item.allowedUserIds || [], nextAllowedUserIds)) {
+            return Promise.resolve();
+          }
+
+          return updateDoc(doc(db, "inventoryItems", item.id), {
+            allowedUserIds: nextAllowedUserIds,
+            updatedAt: serverTimestamp(),
+          });
+        })
       );
 
       setGroups(groupsSnap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })));
@@ -383,9 +509,129 @@ const InventoryManager: React.FC = () => {
     }
   };
 
+  const fetchReservationRepairRows = async () => {
+    try {
+      setLoadingRepair(true);
+      const contractsSnap = await getDocs(collection(db, "contracts"));
+      const activeContracts = contractsSnap.docs.filter(
+        (contractDoc) =>
+          String((contractDoc.data() as any).status || "").toLowerCase() === "active"
+      );
+
+      const rows = await Promise.all(
+        activeContracts.map(async (contractDoc) => {
+          const contract = contractDoc.data() as any;
+          const selections = contract.details?.selections || contract.selections || [];
+          if (!Array.isArray(selections)) return null;
+
+          const requiredLines: ReservationRepairLine[] = selections
+            .map((selection: any, selectionIndex: number) => {
+              const requiredBags = toNum(selection.remainingBags ?? selection.bags ?? 0);
+              if (requiredBags <= 0) return null;
+
+              const bagKg = toNum(
+                selection.bagKg ?? contract.details?.totals?.pricePerBagKg ?? 24,
+                24
+              );
+              const inventoryItemId = selection.inventoryItemId
+                ? String(selection.inventoryItemId)
+                : null;
+              const requiredKg = toNum(selection.remainingKg ?? requiredBags * bagKg);
+              const label = String(selection.variety || selection.label || "Contract coffee");
+              const key = reservationLineKey(inventoryItemId, bagKg, selectionIndex);
+
+              return {
+                key,
+                inventoryItemId,
+                label,
+                selectionIndex,
+                bagKg,
+                requiredBags,
+                requiredKg,
+                reservedBags: 0,
+                missingBags: requiredBags,
+                missingKg: requiredKg,
+              };
+            })
+            .filter(Boolean) as ReservationRepairLine[];
+
+          if (!requiredLines.length) return null;
+
+          const reservationsSnap = await getDocs(
+            query(
+              collection(db, "stockReservations"),
+              where("sourceType", "==", "contract"),
+              where("sourceId", "==", contractDoc.id)
+            )
+          );
+
+          const reservedByLine = new Map<string, number>();
+          reservationsSnap.docs.forEach((reservationDoc) => {
+            const reservation = reservationDoc.data() as any;
+            if (String(reservation.status || "active").toLowerCase() !== "active") return;
+
+            const inventoryItemId = reservation.inventoryItemId
+              ? String(reservation.inventoryItemId)
+              : null;
+            const bagKg = toNum(reservation.bagKg ?? reservation.bagSizeKg ?? 24, 24);
+            const selectionIndex = toOptionalNum(reservation.selectionIndex);
+            const key = reservationLineKey(inventoryItemId, bagKg, selectionIndex);
+            reservedByLine.set(key, (reservedByLine.get(key) || 0) + toNum(reservation.bagsReserved));
+          });
+
+          const lines = requiredLines.map((line) => {
+            const reservedBags = reservedByLine.get(line.key) || 0;
+            const missingBags = Math.max(0, line.requiredBags - reservedBags);
+            return {
+              ...line,
+              reservedBags,
+              missingBags,
+              missingKg: missingBags * line.bagKg,
+            };
+          });
+
+          const requiredBags = lines.reduce((sum, line) => sum + line.requiredBags, 0);
+          const reservedBags = lines.reduce((sum, line) => sum + line.reservedBags, 0);
+          const missingBags = lines.reduce((sum, line) => sum + line.missingBags, 0);
+          const missingKg = lines.reduce((sum, line) => sum + line.missingKg, 0);
+          const hasMissingInventoryIds = lines.some((line) => !line.inventoryItemId);
+          const hasSurplusReservation = lines.some((line) => line.reservedBags > line.requiredBags);
+
+          if (!hasMissingInventoryIds && missingBags <= 0 && !hasSurplusReservation) return null;
+
+          return {
+            contractId: contractDoc.id,
+            contractNo: contract.contractNo || contractDoc.id,
+            customerName: contract.name || contract.details?.customer?.fullName || "(No name)",
+            customerEmail: contract.email || contract.details?.customer?.email || "",
+            requiredBags,
+            reservedBags,
+            missingBags,
+            missingKg,
+            hasMissingInventoryIds,
+            hasSurplusReservation,
+            lines,
+          };
+        })
+      );
+
+      setRepairRows(
+        (rows.filter(Boolean) as ReservationRepairRow[]).sort((a, b) =>
+          a.contractNo.localeCompare(b.contractNo)
+        )
+      );
+    } catch (error) {
+      console.error("Error loading contract reservation repair rows:", error);
+      alert("Failed to load contract reservation repair data.");
+    } finally {
+      setLoadingRepair(false);
+    }
+  };
+
   useEffect(() => {
     if (activeView === "migration" && isDeveloper) {
       fetchMigrationRows();
+      fetchReservationRepairRows();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeView, isDeveloper]);
@@ -492,6 +738,7 @@ const InventoryManager: React.FC = () => {
         bagSizeKg,
         pricePerKg,
         groupNames: itemForm.groupNames,
+        allowedUserIds: sortedUnique(allowedUsersForGroups(accessUsers, itemForm.groupNames)),
         isActive: itemForm.isActive,
         updatedAt: serverTimestamp(),
       };
@@ -532,6 +779,97 @@ const InventoryManager: React.FC = () => {
     } catch (error) {
       console.error("Error updating item status:", error);
       alert("Failed to update item status.");
+    }
+  };
+
+  const getDeleteItemBlockers = (item: InventoryItem) => {
+    const blockers: string[] = [];
+    const reservedBags = toNum(item.reservedBags || 0);
+    const reservedKg = toNum(item.reservedKg || 0);
+
+    if (item.isActive !== false) {
+      blockers.push("Mark this variety as inactive before deleting it.");
+    }
+
+    if (reservedBags > 0 || reservedKg > 0) {
+      blockers.push(
+        `This variety still has reserved stock (${reservedBags} bags / ${reservedKg.toLocaleString()} kg). Release or fulfil those reservations first.`
+      );
+    }
+
+    return blockers;
+  };
+
+  const openDeleteItemModal = (item: InventoryItem) => {
+    setDeleteItemTarget(item);
+    setDeleteItemError("");
+    setDeleteItemModalOpen(true);
+  };
+
+  const closeDeleteItemModal = () => {
+    if (deletingItem) return;
+    setDeleteItemTarget(null);
+    setDeleteItemError("");
+    setDeleteItemModalOpen(false);
+  };
+
+  const confirmDeleteItem = async () => {
+    if (!deleteItemTarget) return;
+
+    const blockers = getDeleteItemBlockers(deleteItemTarget);
+    if (blockers.length) {
+      setDeleteItemError(blockers.join(" "));
+      return;
+    }
+
+    try {
+      setDeletingItem(true);
+      setDeleteItemError("");
+
+      await writeAuditLog({
+        action: "inventory_item_delete",
+        status: "started",
+        actor: { uid: currentUser?.uid || null, email: currentUser?.email || null },
+        targetType: "inventoryItem",
+        targetId: deleteItemTarget.id,
+        targetLabel: itemLabel(deleteItemTarget),
+        before: {
+          isActive: deleteItemTarget.isActive,
+          reservedBags: toNum(deleteItemTarget.reservedBags || 0),
+          reservedKg: toNum(deleteItemTarget.reservedKg || 0),
+          availableBags: toNum(deleteItemTarget.availableBags || 0),
+        },
+      });
+
+      await deleteDoc(doc(db, "inventoryItems", deleteItemTarget.id));
+
+      await writeAuditLog({
+        action: "inventory_item_delete",
+        status: "success",
+        actor: { uid: currentUser?.uid || null, email: currentUser?.email || null },
+        targetType: "inventoryItem",
+        targetId: deleteItemTarget.id,
+        targetLabel: itemLabel(deleteItemTarget),
+      });
+
+      setItems((prev) => prev.filter((item) => item.id !== deleteItemTarget.id));
+      setExpandedItemId((prev) => (prev === deleteItemTarget.id ? null : prev));
+      closeDeleteItemModal();
+    } catch (error: any) {
+      console.error("Error deleting inventory item:", error);
+      setDeleteItemError(error?.message || "Failed to delete variety. Check Firestore permissions.");
+      await writeAuditLog({
+        action: "inventory_item_delete",
+        level: "error",
+        status: "failed",
+        actor: { uid: currentUser?.uid || null, email: currentUser?.email || null },
+        targetType: "inventoryItem",
+        targetId: deleteItemTarget.id,
+        targetLabel: itemLabel(deleteItemTarget),
+        error,
+      });
+    } finally {
+      setDeletingItem(false);
     }
   };
 
@@ -898,6 +1236,86 @@ const InventoryManager: React.FC = () => {
     }
   };
 
+  const repairContractReservation = async (row: ReservationRepairRow) => {
+    const repairLines = row.lines.filter(
+      (line) => line.inventoryItemId && line.missingBags > 0
+    );
+
+    if (row.hasMissingInventoryIds) {
+      alert("This contract still has lines without an inventory item. Migrate those lines first.");
+      return;
+    }
+
+    if (!repairLines.length) {
+      alert("There is no missing reservation to repair for this contract.");
+      return;
+    }
+
+    if (
+      !window.confirm(
+        `Repair reservation for ${row.contractNo}?\n\nThis will reserve ${row.missingBags} missing bags.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setRepairingContractId(row.contractId);
+      await writeAuditLog({
+        action: "contract_reservation_repair",
+        status: "started",
+        actor: { uid: currentUser?.uid || null, email: currentUser?.email || null },
+        targetType: "contract",
+        targetId: row.contractId,
+        targetLabel: row.contractNo,
+        context: { missingBags: row.missingBags, missingKg: row.missingKg },
+      });
+
+      await reserveInventoryForSource({
+        sourceType: "contract",
+        sourceId: row.contractId,
+        lines: repairLines.map((line) => ({
+          inventoryItemId: line.inventoryItemId,
+          label: line.label,
+          bags: line.missingBags,
+          bagKg: line.bagKg,
+          selectionIndex: line.selectionIndex,
+        })),
+        createdBy: currentUser?.uid || null,
+        createdByEmail: currentUser?.email || null,
+      });
+
+      await writeAuditLog({
+        action: "contract_reservation_repair",
+        status: "success",
+        actor: { uid: currentUser?.uid || null, email: currentUser?.email || null },
+        targetType: "contract",
+        targetId: row.contractId,
+        targetLabel: row.contractNo,
+        context: { missingBags: row.missingBags, missingKg: row.missingKg },
+      });
+
+      await fetchAll();
+      await fetchReservationRepairRows();
+    } catch (error: any) {
+      console.error("Error repairing contract reservation:", error);
+      await writeAuditLog({
+        action: "contract_reservation_repair",
+        level: "error",
+        status: "failed",
+        actor: { uid: currentUser?.uid || null, email: currentUser?.email || null },
+        targetType: "contract",
+        targetId: row.contractId,
+        targetLabel: row.contractNo,
+        context: { missingBags: row.missingBags, missingKg: row.missingKg },
+        error,
+      });
+      alert(error?.message || "Failed to repair contract reservation.");
+    } finally {
+      setRepairingContractId(null);
+    }
+  };
+
   const renderStockView = () => (
     <>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
@@ -1106,6 +1524,14 @@ const InventoryManager: React.FC = () => {
                       >
                         {item.isActive ? "Mark inactive" : "Mark active"}
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => openDeleteItemModal(item)}
+                        className="h-9 px-3 rounded-md text-sm font-medium inline-flex items-center gap-2 border border-red-200 bg-white text-red-700 hover:bg-red-50"
+                      >
+                        <FontAwesomeIcon icon={faTrash} />
+                        Delete
+                      </button>
                     </div>
                   </div>
                           </td>
@@ -1119,6 +1545,77 @@ const InventoryManager: React.FC = () => {
           </div>
         </div>
       )}
+
+      {deleteItemModalOpen && deleteItemTarget && (() => {
+        const blockers = getDeleteItemBlockers(deleteItemTarget);
+        const canDelete = blockers.length === 0;
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+            <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Delete variety</h3>
+                  <p className="mt-1 text-sm text-gray-600">
+                    {itemLabel(deleteItemTarget)}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeDeleteItemModal}
+                  disabled={deletingItem}
+                  className="h-8 w-8 rounded-md border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-60"
+                  aria-label="Close"
+                >
+                  ×
+                </button>
+              </div>
+
+              {canDelete ? (
+                <p className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                  This will permanently delete the variety from inventory. This action cannot be undone.
+                </p>
+              ) : (
+                <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                  <p className="font-semibold">This variety cannot be deleted yet.</p>
+                  <ul className="mt-2 list-disc space-y-1 pl-5">
+                    {blockers.map((blocker) => (
+                      <li key={blocker}>{blocker}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {deleteItemError && (
+                <p className="mt-3 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  {deleteItemError}
+                </p>
+              )}
+
+              <div className="mt-5 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={closeDeleteItemModal}
+                  disabled={deletingItem}
+                  className="h-9 px-3 rounded-md border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                >
+                  {canDelete ? "Cancel" : "Close"}
+                </button>
+                {canDelete && (
+                  <button
+                    type="button"
+                    onClick={confirmDeleteItem}
+                    disabled={deletingItem}
+                    className="h-9 px-3 rounded-md border border-red-600 bg-red-600 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60"
+                  >
+                    {deletingItem ? "Deleting..." : "Delete variety"}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </>
   );
 
@@ -1642,6 +2139,115 @@ const InventoryManager: React.FC = () => {
                             className="h-9 px-3 rounded-md text-sm font-medium border bg-[#174B3D] text-white border-[#174B3D] hover:bg-[#0f3a2d] disabled:opacity-50"
                           >
                             {migratingKey === row.key ? "Migrating..." : "Migrate"}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-emerald-950">Reservation repair</h3>
+              <p className="text-sm text-emerald-900">
+                Find active contracts whose remaining coffee is not fully reserved in inventory.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={fetchReservationRepairRows}
+              disabled={loadingRepair}
+              className="h-9 px-3 rounded-md text-sm font-medium border border-emerald-300 bg-white text-emerald-950 hover:bg-emerald-100 disabled:opacity-60"
+            >
+              {loadingRepair ? "Loading..." : "Refresh repairs"}
+            </button>
+          </div>
+        </div>
+
+        {loadingRepair ? (
+          <p className="text-sm text-gray-500">Checking active contract reservations...</p>
+        ) : repairRows.length === 0 ? (
+          <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-600">
+            No active contracts need reservation repair.
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[980px] text-sm">
+                <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Contract</th>
+                    <th className="px-3 py-2 text-left">Customer</th>
+                    <th className="px-3 py-2 text-right">Required</th>
+                    <th className="px-3 py-2 text-right">Recorded reserve</th>
+                    <th className="px-3 py-2 text-right">Missing</th>
+                    <th className="px-3 py-2 text-left">Status</th>
+                    <th className="px-3 py-2 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {repairRows.map((row) => {
+                    const canRepair =
+                      !row.hasMissingInventoryIds &&
+                      !row.hasSurplusReservation &&
+                      row.missingBags > 0;
+
+                    return (
+                      <tr key={row.contractId} className="hover:bg-gray-50">
+                        <td className="px-3 py-2 align-top font-semibold text-gray-900">
+                          {row.contractNo}
+                        </td>
+                        <td className="px-3 py-2 align-top">
+                          <p className="font-medium text-gray-900">{row.customerName}</p>
+                          <p className="text-xs text-gray-500">{row.customerEmail || "-"}</p>
+                        </td>
+                        <td className="px-3 py-2 align-top text-right">
+                          <p className="font-semibold text-gray-900">{row.requiredBags} bags</p>
+                        </td>
+                        <td className="px-3 py-2 align-top text-right">
+                          <p className="font-semibold text-gray-900">{row.reservedBags} bags</p>
+                        </td>
+                        <td className="px-3 py-2 align-top text-right">
+                          <p className="font-semibold text-red-700">{row.missingBags} bags</p>
+                          <p className="text-xs text-gray-500">
+                            {row.missingKg.toLocaleString()} kg
+                          </p>
+                        </td>
+                        <td className="px-3 py-2 align-top">
+                          {row.hasMissingInventoryIds ? (
+                            <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800">
+                              Needs migration first
+                            </span>
+                          ) : row.hasSurplusReservation ? (
+                            <span className="rounded-full border border-gray-300 bg-gray-50 px-2 py-1 text-xs font-semibold text-gray-700">
+                              Review manually
+                            </span>
+                          ) : (
+                            <span className="rounded-full border border-red-200 bg-red-50 px-2 py-1 text-xs font-semibold text-red-700">
+                              Missing reserve
+                            </span>
+                          )}
+                          <div className="mt-2 space-y-1 text-xs text-gray-500">
+                            {row.lines.map((line) => (
+                              <p key={line.key}>
+                                {line.label}: {line.requiredBags} required / {line.reservedBags} reserved
+                              </p>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 align-top text-right">
+                          <button
+                            type="button"
+                            onClick={() => repairContractReservation(row)}
+                            disabled={!canRepair || repairingContractId === row.contractId}
+                            className="h-9 px-3 rounded-md text-sm font-medium border bg-[#174B3D] text-white border-[#174B3D] hover:bg-[#0f3a2d] disabled:opacity-50"
+                          >
+                            {repairingContractId === row.contractId ? "Repairing..." : "Repair"}
                           </button>
                         </td>
                       </tr>

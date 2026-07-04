@@ -92,20 +92,6 @@ const initialFormState: Replacements = {
 };
 
 // Helpers YYYY-MM y sumar meses
-const toYYYYMM = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-
-const addMonths = (base: Date, months: number) =>
-  new Date(base.getFullYear(), base.getMonth() + months, 1);
-
-// Rangos permitidos (start entre +1 y +4 meses desde hoy, según tu código original)
-const TODAY = new Date();
-const MIN_START = addMonths(TODAY, 1);
-const MAX_START = addMonths(TODAY, 4);
-
-const MIN_START_STR = toYYYYMM(MIN_START);
-const MAX_START_STR = toYYYYMM(MAX_START);
-
 const ContractForm: React.FC<Props> = ({ currentUser }) => {
   const [formData, setFormData] = useState<Replacements>(initialFormState);
   const [loading, setLoading] = useState(false);
@@ -129,18 +115,17 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
 
   // ✅ Admin mode
   const [isAdmin, setIsAdmin] = useState(false);
+  const [adminChecked, setAdminChecked] = useState(false);
   const [allUsers, setAllUsers] = useState<PortalUser[]>([]);
   const [userSearch, setUserSearch] = useState("");
   const [selectedCustomerUid, setSelectedCustomerUid] = useState<string | null>(
     null
   );
+  const [showCustomerOptions, setShowCustomerOptions] = useState(false);
 
   const [isSelfEmployed, setIsSelfEmployed] = useState(true); // true = self-employed (no company number)
 
 
-  const pricePerKgValue = 24;
-
-  const norm = (s: any) => String(s ?? "").trim().toLowerCase();
   const toNum = (value: unknown, fallback = 0) => {
     const n =
       typeof value === "number"
@@ -148,6 +133,16 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
         : Number(String(value ?? "").replace(/[^\d.-]/g, ""));
     return Number.isFinite(n) ? n : fallback;
   };
+
+  const DEFAULT_BAG_KG = 24;
+  const selectionBagKg = (item: Pick<CoffeeSelection, "bagKg">) =>
+    toNum(item.bagKg, DEFAULT_BAG_KG);
+
+  const customerLabel = (user: PortalUser) => {
+    const name = `${user.firstName || ""} ${user.lastName || ""}`.trim();
+    return `${name || "Unnamed customer"} - ${user.email}`;
+  };
+
   const normalizeGroups = (raw: any) => {
     if (Array.isArray(raw)) {
       return raw
@@ -183,7 +178,10 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
       }
 
       try {
-        const inventoryDocs = await fetchReadableInventoryDocs(db, { isAdmin, userGroups });
+        const inventoryDocs = await fetchReadableInventoryDocs(db, {
+          isAdmin,
+          currentUserId: currentUser.uid,
+        });
         const formatted: SheetData[] = inventoryDocs.map((docSnap) => {
           const row = docSnap.data() as any;
           const groupNames = normalizeGroups(row.groupNames);
@@ -221,8 +219,10 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
   // -------------------------
   useEffect(() => {
     const checkAdmin = async () => {
+      setAdminChecked(false);
       if (!currentUser?.uid) {
         setIsAdmin(false);
+        setAdminChecked(true);
         return;
       }
       try {
@@ -233,6 +233,8 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
       } catch (e) {
         console.error("Error checking admin:", e);
         setIsAdmin(false);
+      } finally {
+        setAdminChecked(true);
       }
     };
     checkAdmin();
@@ -315,16 +317,9 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
     return sheetData.filter((item) => {
       const availableBags = toNum(item["30 KG Sacks"]);
       if (item.isActive === false || availableBags <= 0) return false;
-
-      const groupNames = item.groupNames || normalizeGroups(item.Group);
-      if (!groupNames.length) return true;
-      if (isAdmin) return true;
-
-      return groupNames.some((groupName) =>
-        userGroups.some((userGroup) => norm(userGroup) === norm(groupName))
-      );
+      return true;
     });
-  }, [sheetData, userGroups, isAdmin]);
+  }, [sheetData]);
 
   // -------------------------
   // Admin: filtered customer list based on search
@@ -346,6 +341,11 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
       .slice(0, 30);
   }, [isAdmin, allUsers, userSearch]);
 
+  const selectedCustomer = useMemo(() => {
+    if (!isAdmin || !selectedCustomerUid) return null;
+    return allUsers.find((u) => u.uid === selectedCustomerUid) || null;
+  }, [isAdmin, selectedCustomerUid, allUsers]);
+
 
 // -------------------------
 // Fill form fields (normal user OR admin-selected user)
@@ -356,22 +356,19 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
 
       // ✅ Admin: solo llenar si ya eligió customer
       if (isAdmin) {
-        if (!selectedCustomerUid) return;
+        if (!selectedCustomer) return;
 
-        const selected = allUsers.find((u) => u.uid === selectedCustomerUid);
-        if (!selected) return;
-
-        const fullName = `${selected.firstName || ""} ${selected.lastName || ""}`.trim();
+        const fullName = `${selectedCustomer.firstName || ""} ${selectedCustomer.lastName || ""}`.trim();
 
         setFormData((prev) => ({
           ...prev,
-          ENTITY: selected.company || "",
-          CITY: selected.companyCity || "",
-          REGISTEREDOFFICE: selected.companyAddress || "",
-          CUSTOMERCOMPANYNAME: selected.company || "",
+          ENTITY: selectedCustomer.company || "",
+          CITY: selectedCustomer.companyCity || "",
+          REGISTEREDOFFICE: selectedCustomer.companyAddress || "",
+          CUSTOMERCOMPANYNAME: selectedCustomer.company || "",
           NAME: fullName,
-          EMAIL: selected.email || "",
-          NUMBER: selected.phoneNumber || "",
+          EMAIL: selectedCustomer.email || "",
+          NUMBER: selectedCustomer.phoneNumber || "",
           SIGNATORYNAME: fullName,
         }));
         return;
@@ -404,7 +401,7 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
 
     fill();
     // 👇 IMPORTANTE: NO uses `currentUser` (objeto) como dependencia
-  }, [currentUser?.uid, isAdmin, selectedCustomerUid, allUsers]);
+  }, [currentUser?.uid, isAdmin, selectedCustomer]);
 
 
   // -------------------------
@@ -467,6 +464,18 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
     const [endYear, endMonth] = end.split("-").map(Number);
 
     const months = (endYear - startYear) * 12 + (endMonth - startMonth) + 1;
+
+    if (months <= 0) {
+      setFormData((prev) => ({
+        ...prev,
+        MONTHS: "",
+        MONTH1: "",
+        YEAR1: "",
+        MONTH2: "",
+        YEAR2: "",
+      }));
+      return;
+    }
 
     const monthNames = [
       "January",
@@ -539,6 +548,12 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
     setLoading(true);
     setMessage("");
 
+    if (isAdmin && !selectedCustomer) {
+      setLoading(false);
+      setMessage("Please select a customer before creating the contract.");
+      return;
+    }
+
     const isValid = validateForm();
     if (!isValid) {
       setLoading(false);
@@ -546,13 +561,19 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
       return;
     }
 
-    if (!startDate || startDate < MIN_START_STR || startDate > MAX_START_STR) {
+    if (!startDate) {
       setLoading(false);
-      setMessage("Please choose a start month between 3 and 6 months from now.");
+      setMessage("Please choose a start month.");
       return;
     }
 
-    if (!endDate || endDate < startDate) {
+    if (!endDate) {
+      setLoading(false);
+      setMessage("Please choose an end month.");
+      return;
+    }
+
+    if (endDate < startDate) {
       setLoading(false);
       setMessage("End month must be the same or after the start month.");
       return;
@@ -566,12 +587,14 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
 
     const varietySummary = coffeeSelections
       .map(
-        (item) =>
-          `${item.amount} ${
+        (item) => {
+          const bagKg = selectionBagKg(item);
+          return `${item.amount} ${
             item.amount === 1 ? "bag" : "bags"
-          } 24 kg each of ${item.variety} green coffee beans equivalent to ${
-            item.amount * 24
+          } ${bagKg} kg each of ${item.variety} green coffee beans equivalent to ${
+            item.amount * bagKg
           } kg of ${item.variety} green coffee`
+        }
       )
       .join("; ");
 
@@ -584,7 +607,7 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
       ENTITY: formData.CUSTOMERCOMPANYNAME,
       SIGNATORYNAME: formData.NAME,
       TOTALAMOUNT: coffeeSelections
-        .reduce((acc, item) => acc + item.amount * 24 * item.price, 0)
+        .reduce((acc, item) => acc + item.amount * selectionBagKg(item) * item.price, 0)
         .toFixed(2),
       VARIETY: varietySummary,
       PRICE: priceBreakdown,
@@ -626,12 +649,15 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
       // Firestore contract via backend
       try {
         const totalAmountNumber = coffeeSelections.reduce(
-          (acc, item) => acc + item.amount * (item.bagKg || 24) * item.price,
+          (acc, item) => acc + item.amount * selectionBagKg(item) * item.price,
           0
         );
         const totalKgNumber = coffeeSelections.reduce(
-          (acc, item) => acc + item.amount * (item.bagKg || 24),
+          (acc, item) => acc + item.amount * selectionBagKg(item),
           0
+        );
+        const selectedBagSizes = Array.from(
+          new Set(coffeeSelections.map((item) => selectionBagKg(item)))
         );
 
         const simpleContractPayload = {
@@ -661,21 +687,25 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
               frequency: formData.FREQUENCY,
               generatedAtUK: todayUK,
             },
-            selections: coffeeSelections.map((s) => ({
-              inventoryItemId: s.inventoryItemId || null,
-              variety: s.variety,
-              bags: s.amount,
-              bagKg: s.bagKg || 24,
-              unitPricePerKg: s.price,
-              lineKg: s.amount * (s.bagKg || 24),
-              lineSubtotal: s.amount * (s.bagKg || 24) * s.price,
-              remainingBags: s.amount,
-              remainingKg: s.amount * (s.bagKg || 24),
-            })),
+            selections: coffeeSelections.map((s) => {
+              const bagKg = selectionBagKg(s);
+              return {
+                inventoryItemId: s.inventoryItemId || null,
+                variety: s.variety,
+                bags: s.amount,
+                bagKg,
+                unitPricePerKg: s.price,
+                lineKg: s.amount * bagKg,
+                lineSubtotal: s.amount * bagKg * s.price,
+                remainingBags: s.amount,
+                remainingKg: s.amount * bagKg,
+              };
+            }),
             totals: {
               totalKg: totalKgNumber,
               totalAmountGBP: Number(totalAmountNumber.toFixed(2)),
-              pricePerBagKg: 24,
+              pricePerBagKg: selectedBagSizes.length === 1 ? selectedBagSizes[0] : null,
+              bagSizesKg: selectedBagSizes,
             },
             replacementsSnapshot: replacementsToSend,
           },
@@ -695,45 +725,6 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
         console.error("Simple contract creation failed:", e);
       }
 
-      // Admin email dispatch (igual que tu código original)
-      try {
-        const adminEmails = ["caguirre.dt@gmail.com", "info@caribbeangoods.co.uk"];
-
-        const customerName = formData.NAME || "(No name)";
-        const customerEmail = formData.EMAIL || "(No email)";
-        const totalAmount = coffeeSelections
-          .reduce((acc, item) => acc + item.amount * 24 * item.price, 0)
-          .toFixed(2);
-
-        const msg =
-          `A new contract has been created and sent to the customer.\n\n` +
-          `Customer: ${customerName}\n` +
-          `Email: ${customerEmail}\n` +
-          `Total: £${totalAmount}\n\n` +
-          `Please review it in the admin dashboard.`;
-
-        await Promise.all(
-          adminEmails.map(async (email) => {
-            try {
-              await fetch(`${import.meta.env.VITE_FULL_ENDPOINT}/email/sendEmailMessage`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  recipientEmail: email,
-                  subject: "New Contract Created",
-                  message: msg,
-                }),
-              });
-              console.log(`✅ Email sent to ${email}`);
-            } catch (err) {
-              console.error(`❌ Failed to send email to ${email}:`, err);
-            }
-          })
-        );
-      } catch (e) {
-        console.error("Admin email dispatch failed:", e);
-      }
-
       setMessage(result.message || "Contract succesfully generated");
       setSuccess(true);
     } catch (error: any) {
@@ -747,6 +738,49 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
   // -------------------------
   // UI
   // -------------------------
+  if (!adminChecked) {
+    return (
+      <div className="w-full h-full">
+        <div className="w-full max-w-3xl mx-auto bg-white rounded-xl shadow-lg border border-gray-100 p-6 sm:p-8">
+          <p className="text-sm font-medium text-gray-700">Checking access...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="w-full h-full">
+        <div className="w-full max-w-3xl mx-auto bg-white rounded-xl shadow-lg border border-gray-100 p-6 sm:p-8">
+          <p className="text-xs uppercase tracking-[0.2em] text-[#044421]/70">
+            Contract requests
+          </p>
+          <h2 className="mt-2 text-2xl font-bold text-[#044421]">
+            Please contact us to arrange a coffee contract
+          </h2>
+          <p className="mt-4 text-sm leading-6 text-gray-700">
+            Contract creation is handled directly by the Caribbean Goods team so
+            we can confirm availability, reservation dates, pricing, delivery
+            needs, and any details specific to your business before preparing the
+            agreement.
+          </p>
+          <p className="mt-4 text-sm leading-6 text-gray-700">
+            If you would like to reserve coffee or discuss a supply agreement,
+            please contact us at{" "}
+            <a
+              href="mailto:info@caribbeangoods.co.uk"
+              className="font-semibold text-[#044421] underline underline-offset-4"
+            >
+              info@caribbeangoods.co.uk
+            </a>
+            . We will be happy to help you review the available coffees and set
+            up the right contract.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
 return (
   <div className="w-full h-full">
     {success ? (
@@ -791,39 +825,74 @@ return (
                 Admin mode — Create contract for a customer
               </div>
 
-              <div className="mt-3 grid grid-cols-1 lg:grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-medium mb-1 text-sm">
-                    Search customer
+              <div className="mt-3">
+                <div className="relative">
+                  <label className="block font-medium mb-1 text-sm text-amber-900">
+                    Customer
                   </label>
                   <input
                     type="text"
                     value={userSearch}
-                    onChange={(e) => setUserSearch(e.target.value)}
+                    onChange={(e) => {
+                      setUserSearch(e.target.value);
+                      setSelectedCustomerUid(null);
+                      setShowCustomerOptions(true);
+                    }}
+                    onFocus={() => setShowCustomerOptions(true)}
+                    onBlur={() => window.setTimeout(() => setShowCustomerOptions(false), 150)}
                     placeholder="Search by name or email..."
-                    className="w-full border border-amber-200 rounded-lg px-3 py-2 bg-white"
+                    role="combobox"
+                    aria-expanded={showCustomerOptions}
+                    aria-controls="contract-customer-options"
+                    className="w-full border border-amber-200 rounded-xl px-3 py-2.5 bg-white"
                   />
-                </div>
 
-                <div>
-                  <label className="block font-medium mb-1 text-sm">
-                    Select customer
-                  </label>
-                  <select
-                    value={selectedCustomerUid || ""}
-                    onChange={(e) =>
-                      setSelectedCustomerUid(e.target.value || null)
-                    }
-                    className="w-full border border-amber-200 rounded-lg px-3 py-2 bg-white"
-                  >
-                    <option value="">-- Select a customer --</option>
-                    {filteredCustomers.map((u) => (
-                      <option key={u.uid} value={u.uid}>
-                        {(u.firstName || "").trim()}{" "}
-                        {(u.lastName || "").trim()} — {u.email}
-                      </option>
-                    ))}
-                  </select>
+                  {showCustomerOptions && (
+                    <div
+                      id="contract-customer-options"
+                      role="listbox"
+                      className="absolute z-30 mt-2 max-h-64 w-full overflow-y-auto rounded-xl border border-amber-200 bg-white shadow-lg"
+                    >
+                      {filteredCustomers.length > 0 ? (
+                        filteredCustomers.map((u) => (
+                          <button
+                            key={u.uid}
+                            type="button"
+                            role="option"
+                            aria-selected={selectedCustomerUid === u.uid}
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => {
+                              setSelectedCustomerUid(u.uid);
+                              setUserSearch(customerLabel(u));
+                              setShowCustomerOptions(false);
+                            }}
+                            className={
+                              "block w-full px-3 py-2.5 text-left text-sm transition " +
+                              (selectedCustomerUid === u.uid
+                                ? "bg-emerald-50 text-emerald-900"
+                                : "text-gray-800 hover:bg-amber-50")
+                            }
+                          >
+                            <span className="block font-semibold">
+                              {`${u.firstName || ""} ${u.lastName || ""}`.trim() ||
+                                "Unnamed customer"}
+                            </span>
+                            <span className="block text-xs text-gray-500">{u.email}</span>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-3 py-3 text-sm text-gray-500">
+                          No customers found.
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {selectedCustomer && (
+                    <p className="mt-2 text-xs font-semibold text-emerald-800">
+                      Selected: {customerLabel(selectedCustomer)}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -1030,7 +1099,7 @@ return (
 
               <div>
                 <label className="block font-medium mb-1 text-sm">
-                  Bags (24kg each)
+                  Bags
                 </label>
                 <input
                   type="number"
@@ -1043,6 +1112,18 @@ return (
                 {stockAvailable !== null && (
                   <p className="text-sm text-gray-500 mt-1">
                     Available: {stockAvailable} bags
+                  </p>
+                )}
+                {formData.VARIETY && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Bag size:{" "}
+                    {toNum(
+                      visibleSheetData.find(
+                        (item) => `${item.Variety} (${item.Farm})` === formData.VARIETY
+                      )?.bagKg,
+                      DEFAULT_BAG_KG
+                    )}{" "}
+                    kg each
                   </p>
                 )}
               </div>
@@ -1070,7 +1151,12 @@ return (
                     formData.AMOUNT && formData.PRICE
                       ? (
                           parseInt(formData.AMOUNT, 10) *
-                          pricePerKgValue *
+                          toNum(
+                            visibleSheetData.find(
+                              (item) => `${item.Variety} (${item.Farm})` === formData.VARIETY
+                            )?.bagKg,
+                            DEFAULT_BAG_KG
+                          ) *
                           parseFloat(formData.PRICE)
                         ).toFixed(2)
                       : "0.00"
@@ -1110,10 +1196,12 @@ return (
                         variety: formData.VARIETY,
                         amount: parseInt(formData.AMOUNT, 10),
                         price: parseFloat(formData.PRICE),
-                        bagKg:
+                        bagKg: toNum(
                           visibleSheetData.find(
                             (item) => `${item.Variety} (${item.Farm})` === formData.VARIETY
-                          )?.bagKg || 24,
+                          )?.bagKg,
+                          DEFAULT_BAG_KG
+                        ),
                       },
                     ]);
 
@@ -1167,8 +1255,8 @@ return (
                         <div className="font-semibold pr-6">{item.variety}</div>
 
                         <div className="text-gray-700 text-sm mt-1">
-                          {item.amount} bags × £{item.price} = £
-                          {(item.amount * pricePerKgValue * item.price).toFixed(2)}
+                          {item.amount} bags × {selectionBagKg(item)} kg × £{item.price}/kg = £
+                          {(item.amount * selectionBagKg(item) * item.price).toFixed(2)}
                         </div>
                       </li>
                     ))}
@@ -1190,7 +1278,7 @@ return (
                       value={coffeeSelections
                         .reduce(
                           (acc, item) =>
-                            acc + item.amount * pricePerKgValue * item.price,
+                            acc + item.amount * selectionBagKg(item) * item.price,
                           0
                         )
                         .toFixed(2)}
@@ -1206,7 +1294,7 @@ return (
                     <input
                       type="text"
                       value={`${coffeeSelections.reduce(
-                        (acc, item) => acc + item.amount * pricePerKgValue,
+                        (acc, item) => acc + item.amount * selectionBagKg(item),
                         0
                       )} kg`}
                       disabled
@@ -1285,18 +1373,9 @@ return (
                 <input
                   type="month"
                   value={startDate}
-                  min={MIN_START_STR}
-                  max={MAX_START_STR}
                   onChange={(e) => {
-                    let v = e.target.value;
-                    if (v && v < MIN_START_STR) v = MIN_START_STR;
-                    if (v && v > MAX_START_STR) v = MAX_START_STR;
-
+                    const v = e.target.value;
                     setStartDate(v);
-
-                    if (endDate && v && endDate < v) {
-                      setEndDate(v);
-                    }
                     calculateReservationPeriod(v, endDate);
                   }}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2"
@@ -1310,16 +1389,8 @@ return (
                 <input
                   type="month"
                   value={endDate}
-                  min={(() => {
-                    const now = new Date();
-                    now.setMonth(now.getMonth() + 1);
-                    return `${now.getFullYear()}-${String(
-                      now.getMonth() + 1
-                    ).padStart(2, "0")}`;
-                  })()}
                   onChange={(e) => {
-                    let v = e.target.value;
-                    if (startDate && v < startDate) v = startDate;
+                    const v = e.target.value;
                     setEndDate(v);
                     calculateReservationPeriod(startDate, v);
                   }}
@@ -1327,11 +1398,6 @@ return (
                 />
               </div>
             </div>
-
-            <p className="text-xs text-gray-500">
-              You can start your reservation between <b>{MIN_START_STR}</b> and{" "}
-              <b>{MAX_START_STR}</b>.
-            </p>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div>
