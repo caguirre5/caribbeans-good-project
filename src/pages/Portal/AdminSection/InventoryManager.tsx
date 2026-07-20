@@ -5,11 +5,13 @@ import {
   faChevronDown,
   faChevronUp,
   faCodeBranch,
+  faEnvelope,
   faPen,
   faPlus,
   faReceipt,
   faRotate,
   faSave,
+  faSpinner,
   faTrash,
 } from "@fortawesome/free-solid-svg-icons";
 import {
@@ -31,7 +33,7 @@ import { useAuth } from "../../../contexts/AuthContext";
 import { reserveInventoryForSource } from "../../../utils/inventoryStock";
 import { writeAuditLog } from "../../../utils/auditLog";
 
-type InventoryView = "stock" | "variety" | "invoice" | "adjust" | "migration";
+type InventoryView = "stock" | "variety" | "invoice" | "adjust" | "migration" | "emailTest";
 
 type GroupDoc = {
   id: string;
@@ -56,6 +58,7 @@ type InventoryItem = {
   groupNames: string[];
   allowedUserIds?: string[];
   isActive: boolean;
+  availableForSamples?: boolean;
   availableBags: number;
   availableKg: number;
   reservedBags?: number;
@@ -164,6 +167,7 @@ type ItemForm = {
   pricePerKg: string;
   groupNames: string[];
   isActive: boolean;
+  availableForSamples: boolean;
 };
 
 const emptyItemForm: ItemForm = {
@@ -176,6 +180,7 @@ const emptyItemForm: ItemForm = {
   pricePerKg: "",
   groupNames: [],
   isActive: true,
+  availableForSamples: true,
 };
 
 const toNum = (value: string | number, fallback = 0) => {
@@ -330,6 +335,7 @@ const InventoryManager: React.FC = () => {
   const [deleteItemModalOpen, setDeleteItemModalOpen] = useState(false);
   const [deletingItem, setDeletingItem] = useState(false);
   const [deleteItemError, setDeleteItemError] = useState("");
+  const [updatingSampleItemIds, setUpdatingSampleItemIds] = useState<Record<string, boolean>>({});
 
   const [itemForm, setItemForm] = useState<ItemForm>(emptyItemForm);
 
@@ -357,6 +363,16 @@ const InventoryManager: React.FC = () => {
   const [repairRows, setRepairRows] = useState<ReservationRepairRow[]>([]);
   const [loadingRepair, setLoadingRepair] = useState(false);
   const [repairingContractId, setRepairingContractId] = useState<string | null>(null);
+  const [testEmailTo, setTestEmailTo] = useState("");
+  const [testEmailSubject, setTestEmailSubject] = useState("Caribbean Goods SES test");
+  const [testEmailMessage, setTestEmailMessage] = useState(
+    "This is a test email sent from the Caribbean Goods portal."
+  );
+  const [sendingTestEmail, setSendingTestEmail] = useState(false);
+  const [testEmailStatus, setTestEmailStatus] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
 
   const fetchAll = async () => {
     try {
@@ -699,6 +715,7 @@ const InventoryManager: React.FC = () => {
       pricePerKg: item.pricePerKg ? String(item.pricePerKg) : "",
       groupNames: item.groupNames || [],
       isActive: item.isActive !== false,
+      availableForSamples: item.availableForSamples !== false,
     });
     setActiveView("variety");
   };
@@ -740,6 +757,7 @@ const InventoryManager: React.FC = () => {
         groupNames: itemForm.groupNames,
         allowedUserIds: sortedUnique(allowedUsersForGroups(accessUsers, itemForm.groupNames)),
         isActive: itemForm.isActive,
+        availableForSamples: itemForm.availableForSamples,
         updatedAt: serverTimestamp(),
       };
 
@@ -779,6 +797,41 @@ const InventoryManager: React.FC = () => {
     } catch (error) {
       console.error("Error updating item status:", error);
       alert("Failed to update item status.");
+    }
+  };
+
+  const toggleItemSamples = async (item: InventoryItem) => {
+    if (updatingSampleItemIds[item.id]) return;
+
+    const previousAvailableForSamples = item.availableForSamples !== false;
+    const nextAvailableForSamples = !previousAvailableForSamples;
+
+    setUpdatingSampleItemIds((prev) => ({ ...prev, [item.id]: true }));
+    setItems((prev) =>
+      prev.map((x) =>
+        x.id === item.id ? { ...x, availableForSamples: nextAvailableForSamples } : x
+      )
+    );
+
+    try {
+      await updateDoc(doc(db, "inventoryItems", item.id), {
+        availableForSamples: nextAvailableForSamples,
+        updatedAt: serverTimestamp(),
+      });
+    } catch (error) {
+      setItems((prev) =>
+        prev.map((x) =>
+          x.id === item.id ? { ...x, availableForSamples: previousAvailableForSamples } : x
+        )
+      );
+      console.error("Error updating sample availability:", error);
+      alert("Failed to update sample availability.");
+    } finally {
+      setUpdatingSampleItemIds((prev) => {
+        const next = { ...prev };
+        delete next[item.id];
+        return next;
+      });
     }
   };
 
@@ -1385,6 +1438,11 @@ const InventoryManager: React.FC = () => {
                                 EXCLUSIVE
                               </span>
                             )}
+                            {item.availableForSamples === false && (
+                              <span className="text-[10px] font-semibold px-2 py-[1px] rounded-full bg-red-50 text-red-700 border border-red-200">
+                                NO SAMPLES
+                              </span>
+                            )}
                           </div>
                           <p className="mt-0.5 max-w-[360px] truncate text-xs text-gray-500">
                             {item.tastingNotes || "No tasting notes"}
@@ -1524,6 +1582,28 @@ const InventoryManager: React.FC = () => {
                       >
                         {item.isActive ? "Mark inactive" : "Mark active"}
                       </button>
+                      <label
+                        className={[
+                          "h-9 px-3 rounded-md text-sm font-medium border inline-flex items-center gap-2 select-none transition-colors",
+                          updatingSampleItemIds[item.id] ? "cursor-progress opacity-80" : "cursor-pointer",
+                          item.availableForSamples === false
+                            ? "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                            : "border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100",
+                        ].join(" ")}
+                        title="Show this coffee in Request samples"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={item.availableForSamples !== false}
+                          onChange={() => toggleItemSamples(item)}
+                          disabled={Boolean(updatingSampleItemIds[item.id])}
+                          className="h-4 w-4 accent-[#174B3D]"
+                        />
+                        <span>Samples</span>
+                        {updatingSampleItemIds[item.id] && (
+                          <FontAwesomeIcon icon={faSpinner} className="h-3.5 w-3.5 animate-spin" />
+                        )}
+                      </label>
                       <button
                         type="button"
                         onClick={() => openDeleteItemModal(item)}
@@ -1718,15 +1798,35 @@ const InventoryManager: React.FC = () => {
         </div>
       </div>
 
-      <label className="mt-4 flex items-center gap-2 text-sm text-gray-700">
-        <input
-          type="checkbox"
-          checked={itemForm.isActive}
-          onChange={(e) => setItemForm((prev) => ({ ...prev, isActive: e.target.checked }))}
-          className="h-4 w-4"
-        />
-        Active in inventory
-      </label>
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
+        <label className="flex items-start gap-2 rounded-md border border-gray-200 bg-white p-3 text-sm text-gray-700">
+          <input
+            type="checkbox"
+            checked={itemForm.isActive}
+            onChange={(e) => setItemForm((prev) => ({ ...prev, isActive: e.target.checked }))}
+            className="mt-0.5 h-4 w-4"
+          />
+          <span>
+            <span className="block font-semibold text-gray-800">Active in inventory</span>
+            <span className="block text-xs text-gray-500">Visible in prices, orders and contract selection when allowed by group.</span>
+          </span>
+        </label>
+
+        <label className="flex items-start gap-2 rounded-md border border-gray-200 bg-white p-3 text-sm text-gray-700">
+          <input
+            type="checkbox"
+            checked={itemForm.availableForSamples}
+            onChange={(e) =>
+              setItemForm((prev) => ({ ...prev, availableForSamples: e.target.checked }))
+            }
+            className="mt-0.5 h-4 w-4"
+          />
+          <span>
+            <span className="block font-semibold text-gray-800">Available for sample requests</span>
+            <span className="block text-xs text-gray-500">Show this coffee in the request samples form when it has sellable stock.</span>
+          </span>
+        </label>
+      </div>
 
       <div className="mt-5 flex justify-end gap-2">
         <button
@@ -2033,6 +2133,131 @@ const InventoryManager: React.FC = () => {
     );
   };
 
+  const sendTestEmail = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setTestEmailStatus(null);
+
+    const recipientEmail = testEmailTo.trim();
+    const subject = testEmailSubject.trim();
+    const message = testEmailMessage.trim();
+
+    if ([recipientEmail, subject, message].some((value) => !value)) {
+      setTestEmailStatus({
+        type: "error",
+        message: "Recipient, subject and message are required.",
+      });
+      return;
+    }
+
+    try {
+      setSendingTestEmail(true);
+      const token = await currentUser?.getIdToken().catch(() => "");
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers.Authorization = "Bearer " + token;
+
+      const response = await fetch(import.meta.env.VITE_FULL_ENDPOINT + "/email/sendEmailMessage", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          recipientEmail,
+          subject,
+          message,
+        }),
+      });
+
+      const responseText = await response.text().catch(() => "");
+
+      if (!response.ok) {
+        throw new Error(responseText || "The email service returned an error.");
+      }
+
+      setTestEmailStatus({
+        type: "success",
+        message: "Test email sent successfully.",
+      });
+    } catch (error) {
+      console.error("Error sending test email:", error);
+      setTestEmailStatus({
+        type: "error",
+        message: error instanceof Error ? error.message : "Failed to send test email.",
+      });
+    } finally {
+      setSendingTestEmail(false);
+    }
+  };
+  const renderEmailTestTool = () => {
+    if (!isDeveloper) {
+      return (
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+          This tool is only available for developer users.
+        </div>
+      );
+    }
+
+    return (
+      <form onSubmit={sendTestEmail} className="max-w-3xl space-y-4 rounded-lg border border-gray-200 bg-white p-4">
+        <div>
+          <h3 className="text-sm font-bold text-gray-900">SES email test</h3>
+          <p className="text-sm text-gray-500">
+            Send a simple test email through the backend email route.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs font-semibold text-gray-700">Recipient email</label>
+            <input
+              type="email"
+              value={testEmailTo}
+              onChange={(event) => setTestEmailTo(event.target.value)}
+              placeholder="name@example.com"
+              className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-700">Subject</label>
+            <input
+              value={testEmailSubject}
+              onChange={(event) => setTestEmailSubject(event.target.value)}
+              className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="text-xs font-semibold text-gray-700">Message</label>
+          <textarea
+            value={testEmailMessage}
+            onChange={(event) => setTestEmailMessage(event.target.value)}
+            rows={6}
+            className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
+          />
+        </div>
+
+        {testEmailStatus && (
+          <div
+            className={
+              testEmailStatus.type === "success"
+                ? "rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800"
+                : "rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+            }
+          >
+            {testEmailStatus.message}
+          </div>
+        )}
+
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={sendingTestEmail}
+            className="h-9 rounded-md border border-[#174B3D] bg-[#174B3D] px-4 text-sm font-semibold text-white hover:bg-[#0f3a2d] disabled:opacity-60"
+          >
+            {sendingTestEmail ? "Sending..." : "Send test email"}
+          </button>
+        </div>
+      </form>
+    );
+  };
   const renderMigrationTool = () => {
     if (!isDeveloper) {
       return (
@@ -2316,6 +2541,7 @@ const InventoryManager: React.FC = () => {
           { id: "invoice" as const, label: "Invoices", icon: faReceipt, show: true },
           { id: "adjust" as const, label: "Adjust stock", icon: faPen, show: true },
           { id: "migration" as const, label: "Migration", icon: faCodeBranch, show: isDeveloper },
+          { id: "emailTest" as const, label: "Email test", icon: faEnvelope, show: isDeveloper },
         ].filter((tab) => tab.show).map((tab) => (
           <button
             key={tab.id}
@@ -2352,6 +2578,7 @@ const InventoryManager: React.FC = () => {
         </>
       )}
       {activeView === "migration" && renderMigrationTool()}
+      {activeView === "emailTest" && renderEmailTestTool()}
     </div>
   );
 };

@@ -15,6 +15,7 @@ interface SheetData {
   Group?: string;
   groupNames?: string[];
   isActive?: boolean;
+  availableForSamples?: boolean;
   bagKg?: number;
 }
 
@@ -136,6 +137,7 @@ const SampleForm: React.FC = () => {
             Group: groupNames.join(", "),
             groupNames,
             isActive: row.isActive !== false,
+            availableForSamples: row.availableForSamples !== false,
             bagKg: toNum(row.bagSizeKg, 24),
           };
         });
@@ -151,6 +153,8 @@ const SampleForm: React.FC = () => {
   }, [currentUser?.uid, isAdmin]);
   // Solo variedades con stock y no SOLD OUT
   const inStockVarieties = sheetData.filter((item) => {
+    if (item.availableForSamples === false) return false;
+
     const rawStock = String(item["30 KG Sacks"] ?? "").trim().toUpperCase();
     if (!rawStock) return false;
     if (rawStock.includes("SOLD OUT")) return false;
@@ -507,7 +511,7 @@ const SampleForm: React.FC = () => {
             onChange={handleVarietySelect}
             className="w-full border px-3 py-2 rounded"
           >
-            <option value="">-- Select a coffee with stock --</option>
+            <option value="">-- Select a coffee available for samples --</option>
             {inStockVarieties.map((item, i) => (
               <option key={i} value={`${item.Variety} (${item.Farm})`}>
                 {item.Variety} ({item.Farm}) - {item.Process}

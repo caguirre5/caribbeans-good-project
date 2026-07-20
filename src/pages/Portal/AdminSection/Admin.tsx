@@ -57,7 +57,7 @@ const Dashboard: React.FC = () => {
   const activeMeta = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
 
   return (
-    <div className="w-full px-4 lg:pr-10" style={{ minHeight: 'calc(100vh - 15rem)' }}>
+    <div className="min-w-0 max-w-full overflow-x-hidden px-4 lg:pr-10" style={{ minHeight: 'calc(100vh - 15rem)' }}>
       <div className="py-5">
         <p className="text-xs tracking-widest uppercase text-[#044421]/60">Admin</p>
         <h1
@@ -71,7 +71,7 @@ const Dashboard: React.FC = () => {
         </p>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-4">
+      <div className="flex min-w-0 max-w-full flex-col gap-4 overflow-hidden lg:flex-row">
         <aside
           className={[
             'w-full shrink-0 transition-all duration-200',
@@ -150,7 +150,7 @@ const Dashboard: React.FC = () => {
           </div>
         </aside>
 
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0 flex-1 overflow-hidden">
           <div className="mb-3 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm">
             <div className="flex items-center gap-3">
               <span className="h-9 w-9 rounded-md bg-[#174B3D]/10 inline-flex items-center justify-center">

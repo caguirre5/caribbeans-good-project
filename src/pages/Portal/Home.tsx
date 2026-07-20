@@ -149,10 +149,10 @@ const PortalHome: React.FC = () => {
 
 
         {/* Center content */}
-        <main className="flex-1 w-full bg-[#f6faf7]">
+        <main className="min-w-0 flex-1 bg-[#f6faf7] overflow-x-hidden">
           
 
-          <div className="w-full mb-[80px]">{renderCenter()}</div>
+          <div className="min-w-0 max-w-full mb-[80px] overflow-x-hidden">{renderCenter()}</div>
         </main>
       </div>
 
