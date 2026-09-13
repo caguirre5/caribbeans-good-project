@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload, faChevronLeft } from "@fortawesome/free-solid-svg-icons";
+import { doc, getDoc, getFirestore } from "firebase/firestore";
 import { useAuth } from "../../contexts/AuthContext"; // ajusta la ruta a tu AuthContext
 
 // ─────────────────────────────
@@ -20,6 +21,11 @@ const parseMaybeNumber = (v: any): number | undefined => {
     return Number.isFinite(f) ? f : undefined;
   }
   return undefined;
+};
+
+const normalizeIds = (raw: any): string[] => {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((value) => String(value || "").trim()).filter(Boolean);
 };
 
 const getSelectionBagKg = (selection: any): number => {
@@ -52,6 +58,7 @@ interface DispatchHistoryEntry {
 export interface Contract {
   id: string;
   contractNo?: string | null;
+  userId?: string | null;
   name: string;
   email: string;
   s3Url: string;
@@ -97,6 +104,10 @@ export interface Contract {
     totalKg?: number;
   } | null;
   dispatchHistory?: DispatchHistoryEntry[] | null;
+  sharedWithCompany?: boolean;
+  companyId?: string | null;
+  companyName?: string | null;
+  companyAccessIds?: string[];
 }
 
 type View = "list" | "detail";
@@ -160,14 +171,34 @@ const ContractsTab: React.FC = () => {
         if (!res.ok) throw new Error("Failed to fetch contracts");
         const data: Contract[] = await res.json();
 
+        const db = getFirestore();
+        let companyIds: string[] = [];
+        try {
+          const userSnap = await getDoc(doc(db, "users", currentUser.uid));
+          companyIds = userSnap.exists()
+            ? normalizeIds(userSnap.data()?.companyIds)
+            : [];
+        } catch (companyLookupError) {
+          console.error("Error fetching user companies for contracts:", companyLookupError);
+        }
+        const companySet = new Set(companyIds);
         const myEmail = currentUser.email?.toLowerCase();
-        const filteredByEmail = myEmail
-          ? data.filter(
-              (c) => c.email && c.email.toLowerCase() === myEmail
-            )
-          : data;
 
-        setContracts(filteredByEmail);
+        const visibleContracts = data.filter((contract) => {
+          const ownByEmail = Boolean(
+            myEmail && contract.email?.toLowerCase() === myEmail
+          );
+          const ownByUserId = contract.userId === currentUser.uid;
+          const accessIds = normalizeIds(contract.companyAccessIds);
+          const ownByCompany =
+            contract.sharedWithCompany === true &&
+            (accessIds.some((companyId) => companySet.has(companyId)) ||
+              Boolean(contract.companyId && companySet.has(contract.companyId)));
+
+          return ownByEmail || ownByUserId || ownByCompany;
+        });
+
+        setContracts(visibleContracts);
       } catch (err) {
         console.error("Error fetching user contracts:", err);
       } finally {
@@ -846,3 +877,6 @@ const ContractsTab: React.FC = () => {
 };
 
 export default ContractsTab;
+
+
+

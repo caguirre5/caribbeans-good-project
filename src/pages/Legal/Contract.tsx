@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { User } from "firebase/auth";
 import { db } from "../../firebase/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, orderBy } from "firebase/firestore";
 import { fetchReadableInventoryDocs } from "../../utils/inventoryVisibility";
 
 interface Replacements {
@@ -55,8 +55,18 @@ interface CoffeeSelection {
   variety: string;
   amount: number;
   price: number;
+  basePrice?: number;
   bagKg?: number;
+  clientKey?: string;
+  priceSource?: "default" | "manual" | "general";
+  discountPercent?: number;
 }
+
+type CompanyDoc = {
+  id: string;
+  name: string;
+  slug?: string;
+};
 
 type PortalUser = {
   uid: string;
@@ -69,6 +79,7 @@ type PortalUser = {
   companyAddress?: string;
   roles?: string[];
   isActive?: boolean;
+  companyIds?: string[];
 };
 
 const initialFormState: Replacements = {
@@ -112,6 +123,8 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
   const [coffeeSelections, setCoffeeSelections] = useState<CoffeeSelection[]>(
     []
   );
+  const [generalDiscountPercent, setGeneralDiscountPercent] = useState("");
+  const [generalDiscountSelection, setGeneralDiscountSelection] = useState<Record<string, boolean>>({});
 
   // ✅ Admin mode
   const [isAdmin, setIsAdmin] = useState(false);
@@ -122,10 +135,43 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
     null
   );
   const [showCustomerOptions, setShowCustomerOptions] = useState(false);
+  const [companies, setCompanies] = useState<CompanyDoc[]>([]);
+  const [shareWithCompany, setShareWithCompany] = useState(false);
+  const [selectedCompanyIds, setSelectedCompanyIds] = useState<string[]>([]);
 
   const [isSelfEmployed, setIsSelfEmployed] = useState(true); // true = self-employed (no company number)
 
+  const monthOptions = useMemo(() => {
+    const monthNames = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
+    const currentYear = new Date().getFullYear();
+    const startYear = currentYear - 3;
+    const endYear = currentYear + 10;
+    const options: { value: string; label: string }[] = [];
 
+    for (let year = startYear; year <= endYear; year += 1) {
+      monthNames.forEach((month, index) => {
+        options.push({
+          value: `${year}-${String(index + 1).padStart(2, "0")}`,
+          label: `${month} ${year}`,
+        });
+      });
+    }
+
+    return options;
+  }, []);
   const toNum = (value: unknown, fallback = 0) => {
     const n =
       typeof value === "number"
@@ -137,6 +183,13 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
   const DEFAULT_BAG_KG = 24;
   const selectionBagKg = (item: Pick<CoffeeSelection, "bagKg">) =>
     toNum(item.bagKg, DEFAULT_BAG_KG);
+  const formatGBP = (value: number) => `GBP ${value.toFixed(2)}`;
+  const selectionKeyFor = (item: CoffeeSelection, index: number) =>
+    item.clientKey || `${item.inventoryItemId || item.variety}-${index}`;
+  const basePriceFor = (item: CoffeeSelection) => toNum(item.basePrice, item.price);
+  const isManualPriced = (item: CoffeeSelection) => item.priceSource === "manual";
+  const canUseGeneralDiscount = (item: CoffeeSelection) =>
+    !isManualPriced(item) && basePriceFor(item) > 0;
 
   const customerLabel = (user: PortalUser) => {
     const name = `${user.firstName || ""} ${user.lastName || ""}`.trim();
@@ -162,6 +215,11 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
     }
 
     return [];
+  };
+
+  const normalizeIds = (raw: any) => {
+    if (!Array.isArray(raw)) return [];
+    return raw.map((value) => String(value || "").trim()).filter(Boolean);
   };
 
   const [hasCredit, setHasCredit] = useState(false);
@@ -269,6 +327,29 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
     fetchUserGroups();
   }, [currentUser?.uid]);
 
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      if (!isAdmin) {
+        setCompanies([]);
+        return;
+      }
+
+      try {
+        const snap = await getDocs(query(collection(db, "companies"), orderBy("name")));
+        setCompanies(
+          snap.docs.map((docSnap) => ({
+            id: docSnap.id,
+            ...(docSnap.data() as any),
+          }))
+        );
+      } catch (e) {
+        console.error("Error fetching companies:", e);
+        setCompanies([]);
+      }
+    };
+
+    fetchCompanies();
+  }, [isAdmin]);
   // -------------------------
   // Admin: fetch all users from backend (same endpoint you already use)
   // -------------------------
@@ -298,6 +379,7 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
             companyAddress: u.companyAddress,
             roles: u.roles,
             isActive: u.isActive,
+            companyIds: normalizeIds(u.companyIds),
           }));
 
         setAllUsers(normalized);
@@ -320,6 +402,26 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
       return true;
     });
   }, [sheetData]);
+
+  const selectedCoffeeForPricing = useMemo(
+    () =>
+      visibleSheetData.find(
+        (item) => `${item.Variety} (${item.Farm})` === formData.VARIETY
+      ) || null,
+    [visibleSheetData, formData.VARIETY]
+  );
+  const selectedBasePrice = toNum(selectedCoffeeForPricing?.Price);
+  const currentUnitPrice = toNum(formData.PRICE);
+  const currentDiscountPerKg =
+    selectedBasePrice > 0 && currentUnitPrice > 0 && currentUnitPrice < selectedBasePrice
+      ? selectedBasePrice - currentUnitPrice
+      : 0;
+  const currentDiscountPercent =
+    currentDiscountPerKg > 0 ? (currentDiscountPerKg / selectedBasePrice) * 100 : 0;
+  const selectedGeneralDiscountCount = coffeeSelections.filter(
+    (item, index) =>
+      canUseGeneralDiscount(item) && generalDiscountSelection[selectionKeyFor(item, index)]
+  ).length;
 
   // -------------------------
   // Admin: filtered customer list based on search
@@ -345,6 +447,21 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
     if (!isAdmin || !selectedCustomerUid) return null;
     return allUsers.find((u) => u.uid === selectedCustomerUid) || null;
   }, [isAdmin, selectedCustomerUid, allUsers]);
+
+  const selectedCustomerCompanies = useMemo(() => {
+    const ids = new Set(selectedCustomer?.companyIds || []);
+    return companies.filter((company) => ids.has(company.id));
+  }, [companies, selectedCustomer]);
+
+  const selectedCompanies = useMemo(
+    () => selectedCustomerCompanies.filter((company) => selectedCompanyIds.includes(company.id)),
+    [selectedCompanyIds, selectedCustomerCompanies]
+  );
+
+  useEffect(() => {
+    setShareWithCompany(false);
+    setSelectedCompanyIds([]);
+  }, [selectedCustomer?.uid]);
 
 
 // -------------------------
@@ -599,7 +716,7 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
       .join("; ");
 
     const priceBreakdown = coffeeSelections
-      .map((item) => `${item.variety} – £${item.price.toFixed(2)}`)
+      .map((item) => `${item.variety} - ${formatGBP(item.price)}`)
       .join("; ");
 
     const replacementsToSend = {
@@ -660,13 +777,30 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
           new Set(coffeeSelections.map((item) => selectionBagKg(item)))
         );
 
+        const companySharingEnabled = isAdmin && shareWithCompany && selectedCompanies.length > 0;
+        const primaryCompany = companySharingEnabled ? selectedCompanies[0] : null;
+        const companySharing = companySharingEnabled
+          ? {
+              sharedWithCompany: true,
+              companyId: primaryCompany?.id || null,
+              companyName: selectedCompanies.map((company) => company.name).join(", "),
+              companyAccessIds: selectedCompanies.map((company) => company.id),
+            }
+          : {
+              sharedWithCompany: false,
+              companyId: null,
+              companyName: null,
+              companyAccessIds: [],
+            };
         const simpleContractPayload = {
           name: formData.NAME,
           email: formData.EMAIL,
           status: "pending",
           userId: contractUserId,
           createdByAdmin: isAdmin ? currentUser?.uid : null,
+          ...companySharing,
           details: {
+            company: companySharing,
             customer: {
               entity: formData.CUSTOMERCOMPANYNAME,
               city: formData.CITY,
@@ -733,6 +867,55 @@ const ContractForm: React.FC<Props> = ({ currentUser }) => {
     } finally {
       setLoading(false);
     }
+  };
+  const applyGeneralDiscountToSelected = () => {
+    const percent = toNum(generalDiscountPercent);
+
+    if (percent <= 0 || percent >= 100) {
+      alert("Enter a discount percentage between 0 and 100.");
+      return;
+    }
+
+    if (selectedGeneralDiscountCount === 0) {
+      alert("Select at least one default-priced coffee for the general discount.");
+      return;
+    }
+
+    setCoffeeSelections((prev) =>
+      prev.map((item, index) => {
+        const key = selectionKeyFor(item, index);
+        if (!generalDiscountSelection[key] || !canUseGeneralDiscount(item)) return item;
+
+        const basePrice = basePriceFor(item);
+        const discountedPrice = Number((basePrice * (1 - percent / 100)).toFixed(2));
+
+        return {
+          ...item,
+          price: discountedPrice,
+          basePrice,
+          priceSource: "general",
+          discountPercent: percent,
+        };
+      })
+    );
+  };
+
+  const clearGeneralDiscountFromSelected = () => {
+    setCoffeeSelections((prev) =>
+      prev.map((item, index) => {
+        const key = selectionKeyFor(item, index);
+        if (!generalDiscountSelection[key] || isManualPriced(item)) return item;
+
+        const basePrice = basePriceFor(item);
+        return {
+          ...item,
+          price: basePrice,
+          basePrice,
+          priceSource: "default",
+          discountPercent: 0,
+        };
+      })
+    );
   };
 
   // -------------------------
@@ -896,6 +1079,66 @@ return (
                 </div>
               </div>
 
+              {selectedCustomer && selectedCustomerCompanies.length > 0 && (
+                <div className="mt-3 rounded-xl border border-amber-200 bg-white/75 p-3">
+                  <label className="flex items-start gap-2 text-sm font-semibold text-amber-950">
+                    <input
+                      type="checkbox"
+                      checked={shareWithCompany}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setShareWithCompany(checked);
+                        setSelectedCompanyIds(checked ? [selectedCustomerCompanies[0].id] : []);
+                      }}
+                      className="mt-1 accent-emerald-600"
+                    />
+                    <span>Share this contract with specific company access</span>
+                  </label>
+
+                  {shareWithCompany && (
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                      {selectedCustomerCompanies.map((company) => {
+                        const checked = selectedCompanyIds.includes(company.id);
+                        return (
+                          <label
+                            key={company.id}
+                            className={[
+                              "flex items-center gap-2 rounded-lg border px-3 py-2 text-sm",
+                              checked
+                                ? "border-emerald-300 bg-emerald-50 text-emerald-950"
+                                : "border-amber-200 bg-white text-gray-700",
+                            ].join(" ")}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(e) =>
+                                setSelectedCompanyIds((prev) =>
+                                  e.target.checked
+                                    ? Array.from(new Set([...prev, company.id]))
+                                    : prev.filter((id) => id !== company.id)
+                                )
+                              }
+                              className="h-4 w-4 accent-[#174B3D]"
+                            />
+                            <span className="font-semibold">{company.name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <p className="mt-2 text-xs text-amber-800">
+                    Default is private. Only selected companies will be able to see this contract and order from its reserved coffee.
+                  </p>
+                </div>
+              )}
+
+              {selectedCustomer && selectedCustomerCompanies.length === 0 && (
+                <p className="mt-3 rounded-xl border border-amber-200 bg-white/70 p-3 text-xs text-amber-800">
+                  This customer is not assigned to a company, so the contract will remain visible only to the customer and admins.
+                </p>
+              )}
               <p className="text-xs text-amber-800 mt-2">
                 Selecting a customer will auto-fill the form and assign the
                 contract to that user.
@@ -1130,20 +1373,33 @@ return (
 
               <div>
                 <label className="block font-medium mb-1 text-sm">
-                  Unit Price (£/kg)
+                  Unit Price (GBP/kg)
                 </label>
                 <input
-                  type="text"
+                  type="number"
                   name="PRICE"
                   value={formData.PRICE}
-                  disabled
-                  className="w-full border border-gray-300 bg-gray-100 rounded-lg px-3 py-2 text-gray-700"
+                  onChange={handleChange}
+                  disabled={!formData.VARIETY}
+                  className="w-full border border-gray-300 bg-white rounded-lg px-3 py-2 text-gray-900 disabled:bg-gray-100 disabled:text-gray-500"
+                  min={0}
+                  step="0.01"
                 />
+                {selectedBasePrice > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Default price: {formatGBP(selectedBasePrice)}/kg
+                  </p>
+                )}
+                {currentDiscountPerKg > 0 && (
+                  <p className="text-xs font-semibold text-emerald-700 mt-1">
+                    Discount applied: {formatGBP(currentDiscountPerKg)}/kg off ({currentDiscountPercent.toFixed(1)}%)
+                  </p>
+                )}
               </div>
 
               <div>
                 <label className="block font-medium mb-1 text-sm">
-                  Subtotal for this selection (£)
+                  Subtotal for this selection (GBP)
                 </label>
                 <input
                   type="text"
@@ -1151,13 +1407,8 @@ return (
                     formData.AMOUNT && formData.PRICE
                       ? (
                           parseInt(formData.AMOUNT, 10) *
-                          toNum(
-                            visibleSheetData.find(
-                              (item) => `${item.Variety} (${item.Farm})` === formData.VARIETY
-                            )?.bagKg,
-                            DEFAULT_BAG_KG
-                          ) *
-                          parseFloat(formData.PRICE)
+                          toNum(selectedCoffeeForPricing?.bagKg, DEFAULT_BAG_KG) *
+                          currentUnitPrice
                         ).toFixed(2)
                       : "0.00"
                   }
@@ -1165,9 +1416,6 @@ return (
                   className="w-full border border-gray-300 bg-gray-100 rounded-lg px-3 py-2 text-gray-700"
                 />
               </div>
-
-              
-
               <div className="lg:col-span-3">
                 <button
                   type="button"
@@ -1186,6 +1434,20 @@ return (
                       return;
                     }
 
+                    const finalPrice = toNum(formData.PRICE);
+                    if (finalPrice <= 0) {
+                      alert("Please enter a valid unit price.");
+                      return;
+                    }
+
+                    const manualPrice =
+                      selectedBasePrice > 0 && Math.abs(finalPrice - selectedBasePrice) > 0.005;
+                    const clientKey = `${selectedCoffeeForPricing?.id || formData.VARIETY}-${Date.now()}`;
+                    setGeneralDiscountSelection((prev) => ({
+                      ...prev,
+                      [clientKey]: !manualPrice,
+                    }));
+
                     setCoffeeSelections((prev) => [
                       ...prev,
                       {
@@ -1195,7 +1457,14 @@ return (
                           )?.id || null,
                         variety: formData.VARIETY,
                         amount: parseInt(formData.AMOUNT, 10),
-                        price: parseFloat(formData.PRICE),
+                        price: finalPrice,
+                        basePrice: selectedBasePrice || finalPrice,
+                        clientKey,
+                        priceSource: manualPrice ? "manual" : "default",
+                        discountPercent:
+                          selectedBasePrice > finalPrice
+                            ? ((selectedBasePrice - finalPrice) / selectedBasePrice) * 100
+                            : 0,
                         bagKg: toNum(
                           visibleSheetData.find(
                             (item) => `${item.Variety} (${item.Farm})` === formData.VARIETY
@@ -1226,6 +1495,46 @@ return (
                 <h4 className="font-semibold mb-2 text-gray-800">
                   Selected Coffees
                 </h4>
+                {coffeeSelections.length > 0 && (
+                  <div className="mb-4 rounded-xl border border-emerald-100 bg-emerald-50/60 p-3">
+                    <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-3 items-end">
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wide text-emerald-900 mb-1">
+                          General discount (%)
+                        </label>
+                        <input
+                          type="number"
+                          value={generalDiscountPercent}
+                          onChange={(e) => setGeneralDiscountPercent(e.target.value)}
+                          className="w-full border border-emerald-200 bg-white rounded-lg px-3 py-2 text-sm text-gray-900"
+                          min={0}
+                          max={99}
+                          step="0.1"
+                          placeholder="Example: 5"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={applyGeneralDiscountToSelected}
+                        disabled={selectedGeneralDiscountCount === 0}
+                        className="h-10 px-4 rounded-lg bg-[#044421] text-white text-sm font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed"
+                      >
+                        Apply discount
+                      </button>
+                      <button
+                        type="button"
+                        onClick={clearGeneralDiscountFromSelected}
+                        disabled={selectedGeneralDiscountCount === 0}
+                        className="h-10 px-4 rounded-lg border border-emerald-200 bg-white text-emerald-900 text-sm font-semibold disabled:text-gray-400 disabled:cursor-not-allowed"
+                      >
+                        Reset selected
+                      </button>
+                    </div>
+                    <p className="mt-2 text-xs text-emerald-900/75">
+                      {selectedGeneralDiscountCount} coffee{selectedGeneralDiscountCount === 1 ? "" : "s"} selected. Manual prices are skipped automatically.
+                    </p>
+                  </div>
+                )}
 
                 {coffeeSelections.length === 0 ? (
                   <p className="text-sm text-gray-500 italic">
@@ -1255,8 +1564,42 @@ return (
                         <div className="font-semibold pr-6">{item.variety}</div>
 
                         <div className="text-gray-700 text-sm mt-1">
-                          {item.amount} bags × {selectionBagKg(item)} kg × £{item.price}/kg = £
-                          {(item.amount * selectionBagKg(item) * item.price).toFixed(2)}
+                          {item.amount} bags x {selectionBagKg(item)} kg x {formatGBP(item.price)}/kg = {formatGBP(item.amount * selectionBagKg(item) * item.price)}
+                        </div>
+                        {toNum(item.basePrice, item.price) > item.price && (
+                          <div className="text-emerald-700 text-xs font-semibold mt-1">
+                            Discount: {formatGBP(toNum(item.basePrice, item.price) - item.price)}/kg off the default {formatGBP(toNum(item.basePrice, item.price))}/kg
+                          </div>
+                        )}
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          <label
+                            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${
+                              canUseGeneralDiscount(item)
+                                ? "border-emerald-200 bg-emerald-50 text-emerald-800 cursor-pointer"
+                                : "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={Boolean(generalDiscountSelection[selectionKeyFor(item, idx)])}
+                              disabled={!canUseGeneralDiscount(item)}
+                              onChange={(e) =>
+                                setGeneralDiscountSelection((prev) => ({
+                                  ...prev,
+                                  [selectionKeyFor(item, idx)]: e.target.checked,
+                                }))
+                              }
+                              className="h-3.5 w-3.5 accent-[#044421]"
+                            />
+                            General discount
+                          </label>
+                          <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">
+                            {item.priceSource === "manual"
+                              ? "Manual price"
+                              : item.priceSource === "general"
+                              ? `${toNum(item.discountPercent).toFixed(1)}% general discount`
+                              : "Default price"}
+                          </span>
                         </div>
                       </li>
                     ))}
@@ -1271,7 +1614,7 @@ return (
                 <div className="space-y-3">
                   <div>
                     <label className="block font-medium mb-1 text-sm">
-                      Estimated Total Price (£)
+                      Estimated Total Price (GBP)
                     </label>
                     <input
                       type="text"
@@ -1370,32 +1713,44 @@ return (
                 <label className="block font-medium mb-1 text-sm">
                   Start Month
                 </label>
-                <input
-                  type="month"
+                <select
                   value={startDate}
                   onChange={(e) => {
                     const v = e.target.value;
                     setStartDate(v);
                     calculateReservationPeriod(v, endDate);
                   }}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                />
+                  className="w-full border border-gray-300 bg-white rounded-lg px-3 py-2 text-gray-900"
+                >
+                  <option value="">Select start month</option>
+                  {monthOptions.map((option) => (
+                    <option key={`start-${option.value}`} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
                 <label className="block font-medium mb-1 text-sm">
                   End Month
                 </label>
-                <input
-                  type="month"
+                <select
                   value={endDate}
                   onChange={(e) => {
                     const v = e.target.value;
                     setEndDate(v);
                     calculateReservationPeriod(startDate, v);
                   }}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                />
+                  className="w-full border border-gray-300 bg-white rounded-lg px-3 py-2 text-gray-900"
+                >
+                  <option value="">Select end month</option>
+                  {monthOptions.map((option) => (
+                    <option key={`end-${option.value}`} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -1467,3 +1822,5 @@ return (
 };
 
 export default ContractForm;
+
+

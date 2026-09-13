@@ -41,6 +41,13 @@ interface SheetData {
   contractSelectionIndex?: number;
   reservedBags?: number;
   reservedKg?: number;
+  companyId?: string | null;
+  companyName?: string | null;
+  companyAccessIds?: string[];
+  sharedWithCompany?: boolean;
+  contractOwnerUserId?: string | null;
+  contractOwnerEmail?: string | null;
+  contractOwnerName?: string | null;
 }
 
 interface CoffeeSelection {
@@ -53,6 +60,13 @@ interface CoffeeSelection {
   contractId?: string;
   contractNo?: string;
   contractSelectionIndex?: number;
+  companyId?: string | null;
+  companyName?: string | null;
+  companyAccessIds?: string[];
+  sharedWithCompany?: boolean;
+  contractOwnerUserId?: string | null;
+  contractOwnerEmail?: string | null;
+  contractOwnerName?: string | null;
 }
 
 interface DonationsData {
@@ -71,6 +85,7 @@ type PortalUser = {
   companyAddress?: string;
   roles?: string[];
   isActive?: boolean;
+  companyIds?: string[];
 };
 
 type OrderItem = {
@@ -83,6 +98,13 @@ type OrderItem = {
   contractId?: string;
   contractNo?: string;
   contractSelectionIndex?: number;
+  companyId?: string | null;
+  companyName?: string | null;
+  companyAccessIds?: string[];
+  sharedWithCompany?: boolean;
+  contractOwnerUserId?: string | null;
+  contractOwnerEmail?: string | null;
+  contractOwnerName?: string | null;
 };
 
 type CreateOrderBody = {
@@ -98,6 +120,10 @@ type CreateOrderBody = {
   // Admin mode
   orderUserId?: string | null;
   createdByAdmin?: string | null;
+  companyId?: string | null;
+  companyName?: string | null;
+  companyAccessIds?: string[];
+  sharedWithCompany?: boolean;
 };
 
 type CreatedOrderResult = {
@@ -108,6 +134,15 @@ type CreatedOrderResult = {
 type BuiltRules = { rules: RuleWithTariff[] };
 
 type QuoteStatus = 'ok' | 'poa' | 'no_match' | 'need_postcode' | 'flat';
+type CompanyMemberRole = 'owner' | 'admin' | 'member' | 'viewer';
+
+const COMPANY_ORDER_ROLES = new Set<CompanyMemberRole>(['owner', 'admin', 'member']);
+
+const canOrderForCompanyMember = (member: any) => {
+  const role = String(member?.role || '').toLowerCase() as CompanyMemberRole;
+  const status = String(member?.status || '').toLowerCase();
+  return status === 'active' && COMPANY_ORDER_ROLES.has(role);
+};
 
 const BAG_KG = 24 as const;
 
@@ -253,7 +288,12 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
 
   const [sheetData, setSheetData] = useState<SheetData[]>([]);
   const [contractCoffeeOptions, setContractCoffeeOptions] = useState<SheetData[]>([]);
+  const [isInventoryLoading, setIsInventoryLoading] = useState(false);
+  const [isContractCoffeeLoading, setIsContractCoffeeLoading] = useState(false);
   const [selectedVariety, setSelectedVariety] = useState('');
+  const [coffeeQuery, setCoffeeQuery] = useState('');
+  const [showCoffeeOptions, setShowCoffeeOptions] = useState(false);
+  const [coffeeOptionScope, setCoffeeOptionScope] = useState<'reserved' | 'all'>('reserved');
   const [amount, setAmount] = useState<number>(0);
   const [price, setPrice] = useState<number>(0);
   const [stockAvailable, setStockAvailable] = useState<number | null>(null);
@@ -289,6 +329,8 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
   const [dateError, setDateError] = useState<string>('');
   const [phone, setPhone] = useState('');
   const [userGroups, setUserGroups] = useState<string[]>([]);
+  const [currentUserOrderCompanyIds, setCurrentUserOrderCompanyIds] = useState<string[]>([]);
+  const [selectedCustomerOrderCompanyIds, setSelectedCustomerOrderCompanyIds] = useState<string[]>([]);
 
   // Admin mode
   const [isAdmin, setIsAdmin] = useState(false);
@@ -302,6 +344,7 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
   const DONATION_BAG_KG = 24;
   const minDateStr = toLocalYMD(addBusinessDays(new Date(), 4));
   const formRef = useRef<HTMLDivElement>(null);
+  const coffeeSelectRef = useRef<HTMLDivElement>(null);
 
   const lineKg = (item: CoffeeSelection) => item.amount * (item.bagKg || BAG_KG);
   const lineSubtotal = (item: CoffeeSelection) => lineKg(item) * item.price;
@@ -330,6 +373,40 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
     return [];
   };
 
+  const normalizeIds = (raw: any) => {
+    if (!Array.isArray(raw)) return [];
+    return raw.map((value) => String(value || '').trim()).filter(Boolean);
+  };
+
+  const uniqueValues = (values: Array<string | null | undefined>) =>
+    Array.from(new Set(values.map((value) => String(value || '').trim()).filter(Boolean)));
+
+  const chunkValues = <T,>(values: T[], size: number) => {
+    const chunks: T[][] = [];
+    for (let index = 0; index < values.length; index += size) {
+      chunks.push(values.slice(index, index + size));
+    }
+    return chunks;
+  };
+
+  const fetchOrderableCompanyIdsForUser = async (db: ReturnType<typeof getFirestore>, uid: string | null | undefined, companyIds: string[]) => {
+    if (!uid || companyIds.length === 0) return [];
+
+    const orderableIds = await Promise.all(
+      companyIds.map(async (companyId) => {
+        try {
+          const memberSnap = await getDoc(doc(db, 'companies', companyId, 'members', uid));
+          if (!memberSnap.exists()) return null;
+          return canOrderForCompanyMember(memberSnap.data()) ? companyId : null;
+        } catch (error) {
+          console.error('Error checking company member role:', companyId, error);
+          return null;
+        }
+      })
+    );
+
+    return orderableIds.filter(Boolean) as string[];
+  };
   const customerLabel = (user: PortalUser) => {
     const name = `${user.firstName || ''} ${user.lastName || ''}`.trim();
     return `${name || 'Unnamed customer'} - ${user.email}`;
@@ -345,6 +422,18 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
     : currentUser?.displayName || '';
 
   const orderCustomerEmail = selectedCustomer?.email || currentUser?.email || '';
+  const orderCustomerUserId =
+    isAdmin && adminOrderMode === 'customer' && selectedCustomerUid
+      ? selectedCustomerUid
+      : currentUser?.uid || null;
+
+  const orderCustomerCompanyIds = useMemo(
+    () =>
+      isAdmin && adminOrderMode === 'customer'
+        ? selectedCustomerOrderCompanyIds
+        : currentUserOrderCompanyIds,
+    [adminOrderMode, currentUserOrderCompanyIds, isAdmin, selectedCustomerOrderCompanyIds]
+  );
 
   const filteredCustomers = useMemo(() => {
     if (!isAdmin || adminOrderMode !== 'customer') return [];
@@ -363,25 +452,80 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
       .slice(0, 30);
   }, [isAdmin, adminOrderMode, allUsers, userSearch]);
 
-  const visibleSheetData = useMemo(() => {
-    const inventoryOptions = sheetData.filter((item) => {
-      const availableBags = toNum(item['30 KG Sacks']);
-      if (item.isActive === false || availableBags <= 0) return false;
-      return true;
-    });
 
-    return [...contractCoffeeOptions, ...inventoryOptions];
-  }, [contractCoffeeOptions, sheetData]);
+  useEffect(() => {
+    const fetchSelectedCustomerCompanyRoles = async () => {
+      if (!isAdmin || adminOrderMode !== 'customer' || !selectedCustomerUid || !selectedCustomer) {
+        setSelectedCustomerOrderCompanyIds([]);
+        return;
+      }
+
+      try {
+        const db = getFirestore();
+        const companyIds = normalizeIds(selectedCustomer.companyIds);
+        setSelectedCustomerOrderCompanyIds(
+          await fetchOrderableCompanyIdsForUser(db, selectedCustomerUid, companyIds)
+        );
+      } catch (error) {
+        console.error('Error fetching selected customer company roles:', error);
+        setSelectedCustomerOrderCompanyIds([]);
+      }
+    };
+
+    fetchSelectedCustomerCompanyRoles();
+  }, [adminOrderMode, isAdmin, selectedCustomer, selectedCustomerUid]);
+  const inventoryCoffeeOptions = useMemo(
+    () =>
+      sheetData.filter((item) => {
+        const availableBags = toNum(item['30 KG Sacks']);
+        if (item.isActive === false || availableBags <= 0) return false;
+        return true;
+      }),
+    [sheetData]
+  );
+
+  const visibleSheetData = useMemo(
+    () => [...contractCoffeeOptions, ...inventoryCoffeeOptions],
+    [contractCoffeeOptions, inventoryCoffeeOptions]
+  );
+
+  const coffeeOptionValue = (item: SheetData) => item.optionValue || item.Variety + ' (' + item.Farm + ')';
+  const coffeeStockBags = (item: SheetData) => parseInt(item['30 KG Sacks'] as any) || 0;
+  const hasContractCoffeeOptions = contractCoffeeOptions.length > 0;
+  const isCoffeeOptionsLoading = isInventoryLoading || isContractCoffeeLoading;
 
   const selectedCoffee = useMemo(
-    () =>
-      visibleSheetData.find(
-        (item) => (item.optionValue || `${item.Variety} (${item.Farm})`) === selectedVariety
-      ) || null,
+    () => visibleSheetData.find((item) => coffeeOptionValue(item) === selectedVariety) || null,
     [selectedVariety, visibleSheetData]
   );
   const selectedBagKg = selectedCoffee ? toNum(selectedCoffee.bagKg, BAG_KG) : null;
 
+  const coffeeOptionsForPicker = useMemo(() => {
+    const base = hasContractCoffeeOptions && coffeeOptionScope === 'reserved'
+      ? contractCoffeeOptions
+      : visibleSheetData;
+    const query = coffeeQuery.trim().toLowerCase();
+
+    if (!query) return base.slice(0, 60);
+
+    return base
+      .filter((item) => {
+        const haystack = [
+          coffeeOptionValue(item),
+          item.Variety,
+          item.Farm,
+          item.Process,
+          item['Our Tasting Notes'],
+          item.contractNo,
+          item.Group,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        return haystack.includes(query);
+      })
+      .slice(0, 60);
+  }, [coffeeOptionScope, coffeeQuery, contractCoffeeOptions, hasContractCoffeeOptions, visibleSheetData]);
   const isAtLeast3DaysFromToday = (dateStr: string) => {
     if (!dateStr) return false;
     return dateStr >= minDateStr;
@@ -516,6 +660,28 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
 
     return () => el.classList.remove('overflow-hidden');
   }, [showStockPanel, showConfirm]);
+  useEffect(() => {
+    setCoffeeOptionScope('reserved');
+    setCoffeeQuery('');
+    setShowCoffeeOptions(false);
+  }, [orderCustomerEmail]);
+
+  useEffect(() => {
+    if (contractCoffeeOptions.length === 0 && !isContractCoffeeLoading) {
+      setCoffeeOptionScope('all');
+    }
+  }, [contractCoffeeOptions.length, isContractCoffeeLoading]);
+
+  useEffect(() => {
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (!coffeeSelectRef.current?.contains(event.target as Node)) {
+        setShowCoffeeOptions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', closeOnOutsideClick);
+    return () => document.removeEventListener('mousedown', closeOnOutsideClick);
+  }, []);
 
   useEffect(() => {
     const checkAdmin = async () => {
@@ -566,6 +732,7 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
             companyAddress: u.companyAddress,
             roles: u.roles,
             isActive: u.isActive,
+            companyIds: normalizeIds(u.companyIds),
           }));
 
         setAllUsers(normalized);
@@ -613,6 +780,7 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
       try {
         if (!currentUser?.uid) {
           setUserGroups([]);
+            setCurrentUserOrderCompanyIds([]);
           return;
         }
 
@@ -622,14 +790,18 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
 
         if (!snap.exists()) {
           setUserGroups([]);
+            setCurrentUserOrderCompanyIds([]);
           return;
         }
 
         const data = snap.data();
+        const companyIds = normalizeIds(data?.companyIds);
         setUserGroups(normalizeGroups(data?.groups));
+        setCurrentUserOrderCompanyIds(await fetchOrderableCompanyIdsForUser(db, currentUser.uid, companyIds));
       } catch (e) {
         console.error('Error fetching user groups:', e);
         setUserGroups([]);
+        setCurrentUserOrderCompanyIds([]);
       }
     };
 
@@ -640,9 +812,11 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
     const fetchInventoryData = async () => {
       if (!currentUser?.uid) {
         setSheetData([]);
+        setIsInventoryLoading(false);
         return;
       }
 
+      setIsInventoryLoading(true);
       try {
         const db = getFirestore();
         const inventoryDocs = await fetchReadableInventoryDocs(db, {
@@ -703,20 +877,63 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
     const fetchContractCoffeeOptions = async () => {
       if (!currentUser?.uid || !orderCustomerEmail) {
         setContractCoffeeOptions([]);
+        setIsContractCoffeeLoading(false);
         return;
       }
 
+      setIsContractCoffeeLoading(true);
       try {
         const db = getFirestore();
-        const snap = await getDocs(
-          query(collection(db, 'contracts'), where('email', '==', orderCustomerEmail))
-        );
+        const contractsRef = collection(db, 'contracts');
+        const contractMap = new Map<string, any>();
 
+        const addContractsFromSnapshot = (snap: Awaited<ReturnType<typeof getDocs>>) => {
+          snap.docs.forEach((contractDoc) => {
+            contractMap.set(contractDoc.id, { id: contractDoc.id, data: contractDoc.data() });
+          });
+        };
+
+        const contractQueries = [
+          getDocs(query(contractsRef, where('email', '==', orderCustomerEmail))),
+        ];
+
+        if (orderCustomerUserId) {
+          contractQueries.push(getDocs(query(contractsRef, where('userId', '==', orderCustomerUserId))));
+        }
+
+        const companyIds = uniqueValues(orderCustomerCompanyIds);
+        chunkValues(companyIds, 30).forEach((chunk) => {
+          if (chunk.length > 0) {
+            contractQueries.push(getDocs(query(contractsRef, where('companyAccessIds', 'array-contains-any', chunk))));
+          }
+        });
+
+        const snaps = await Promise.all(
+          contractQueries.map(async (contractQuery) => {
+            try {
+              return await contractQuery;
+            } catch (queryError) {
+              console.error('Error loading one contract source:', queryError);
+              return null;
+            }
+          })
+        );
+        snaps.filter(Boolean).forEach((snap) => addContractsFromSnapshot(snap as Awaited<ReturnType<typeof getDocs>>));
+
+        const companyIdSet = new Set(companyIds);
         const options: SheetData[] = [];
 
-        snap.docs.forEach((contractDoc) => {
-          const contract = contractDoc.data() as any;
+        contractMap.forEach(({ id, data: contract }) => {
           if (String(contract.status || '').toLowerCase() !== 'active') return;
+
+          const companyAccessIds = normalizeIds(contract.companyAccessIds);
+          const isCompanyShared =
+            contract.sharedWithCompany === true && companyAccessIds.some((companyId) => companyIdSet.has(companyId));
+          const isOwnerContract =
+            (orderCustomerEmail && String(contract.email || '').toLowerCase() === orderCustomerEmail.toLowerCase()) ||
+            (orderCustomerUserId && String(contract.userId || '') === orderCustomerUserId);
+
+          if (!isOwnerContract && !isCompanyShared && !isAdmin) return;
 
           const selections = Array.isArray(contract.details?.selections)
             ? contract.details.selections
@@ -734,7 +951,9 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
             const inventoryMatch = sheetData.find((item) => item.id === inventoryItemId);
             const variety = String(selection.variety || inventoryMatch?.Variety || '').trim();
             const farm = inventoryMatch?.Farm || 'Contract reserved coffee';
-            const optionValue = `${variety} (${farm}) - Contract ${contract.contractNo || contractDoc.id}`;
+            const contractNo = contract.contractNo || id;
+            const companyName = String(contract.companyName || contract.details?.company?.companyName || '').trim();
+            const optionValue = `${variety} (${farm}) - Contract ${contractNo}`;
 
             options.push({
               id: inventoryItemId,
@@ -751,41 +970,56 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
               bagKg,
               optionValue,
               sourceType: 'contract_reserved',
-              contractId: contractDoc.id,
-              contractNo: contract.contractNo || contractDoc.id,
+              contractId: id,
+              contractNo,
               contractSelectionIndex: selectionIndex,
               reservedBags: remainingBags,
               reservedKg: remainingKg,
+              companyId: contract.companyId || companyAccessIds[0] || null,
+              companyName: companyName || null,
+              companyAccessIds,
+              sharedWithCompany: contract.sharedWithCompany === true,
+              contractOwnerUserId: contract.userId || null,
+              contractOwnerEmail: contract.email || null,
+              contractOwnerName: contract.name || null,
             });
           });
         });
+
+        options.sort((a, b) =>
+          String(a.companyName || '').localeCompare(String(b.companyName || '')) ||
+          String(a.contractNo || '').localeCompare(String(b.contractNo || '')) ||
+          a.Variety.localeCompare(b.Variety)
+        );
 
         setContractCoffeeOptions(options);
       } catch (error) {
         console.error('Error loading contract reserved coffees:', error);
         setContractCoffeeOptions([]);
+      } finally {
+        setIsContractCoffeeLoading(false);
       }
     };
 
     fetchContractCoffeeOptions();
-  }, [currentUser?.uid, orderCustomerEmail, sheetData]);
-
-  const handleVarietySelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value;
+  }, [currentUser?.uid, orderCustomerEmail, orderCustomerUserId, orderCustomerCompanyIds, sheetData, isAdmin]);
+const handleVarietySelect = (value: string) => {
     setSelectedVariety(value);
+    setCoffeeQuery('');
+    setShowCoffeeOptions(false);
 
-    const selected = visibleSheetData.find(
-      (item) => (item.optionValue || `${item.Variety} (${item.Farm})`) === value
-    );
+    const selected = visibleSheetData.find((item) => coffeeOptionValue(item) === value);
 
     if (selected) {
       const parsedPrice = toNum(selected.Price);
-      const parsedStock = parseInt(selected['30 KG Sacks']);
+      const parsedStock = coffeeStockBags(selected);
       setPrice(parsedPrice);
       setStockAvailable(parsedStock);
+    } else {
+      setPrice(0);
+      setStockAvailable(null);
     }
   };
-
   const handleAddItem = () => {
     if (!selectedVariety || amount <= 0 || price <= 0) return;
 
@@ -810,9 +1044,18 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
         contractId: selected?.contractId,
         contractNo: selected?.contractNo,
         contractSelectionIndex: selected?.contractSelectionIndex,
+        companyId: selected?.companyId,
+        companyName: selected?.companyName,
+        companyAccessIds: selected?.companyAccessIds,
+        sharedWithCompany: selected?.sharedWithCompany,
+        contractOwnerUserId: selected?.contractOwnerUserId,
+        contractOwnerEmail: selected?.contractOwnerEmail,
+        contractOwnerName: selected?.contractOwnerName,
       },
     ]);
     setSelectedVariety('');
+    setCoffeeQuery('');
+    setShowCoffeeOptions(false);
     setAmount(0);
     setPrice(0);
     setStockAvailable(null);
@@ -968,6 +1211,13 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
           if (typeof item.contractSelectionIndex === 'number') {
             orderItem.contractSelectionIndex = item.contractSelectionIndex;
           }
+          orderItem.companyId = item.companyId || null;
+          orderItem.companyName = item.companyName || null;
+          orderItem.companyAccessIds = item.companyAccessIds || [];
+          orderItem.sharedWithCompany = item.sharedWithCompany || false;
+          orderItem.contractOwnerUserId = item.contractOwnerUserId || null;
+          orderItem.contractOwnerEmail = item.contractOwnerEmail || null;
+          orderItem.contractOwnerName = item.contractOwnerName || null;
         }
 
         return orderItem;
@@ -1002,11 +1252,26 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
           if (typeof item.contractSelectionIndex === 'number') {
             normalizedItem.contractSelectionIndex = item.contractSelectionIndex;
           }
+          normalizedItem.companyId = item.companyId || null;
+          normalizedItem.companyName = item.companyName || null;
+          normalizedItem.companyAccessIds = item.companyAccessIds || [];
+          normalizedItem.sharedWithCompany = item.sharedWithCompany || false;
+          normalizedItem.contractOwnerUserId = item.contractOwnerUserId || null;
+          normalizedItem.contractOwnerEmail = item.contractOwnerEmail || null;
+          normalizedItem.contractOwnerName = item.contractOwnerName || null;
         }
 
         return normalizedItem;
       });
 
+      const orderCompanyAccessIds = uniqueValues(
+        normalizedItems.flatMap((item) => item.companyAccessIds || [])
+      );
+      const reservedCompanyItems = normalizedItems.filter(
+        (item) => item.sourceType === 'contract_reserved' && (item.companyId || item.companyAccessIds?.length)
+      );
+      const orderCompanyIds = uniqueValues(reservedCompanyItems.map((item) => item.companyId));
+      const orderCompanyNames = uniqueValues(reservedCompanyItems.map((item) => item.companyName));
       const totalBags = normalizedItems.reduce((acc, item) => acc + item.bags, 0);
       const totalKg = normalizedItems.reduce((acc, item) => acc + item.lineKg, 0);
       const subtotal = normalizedItems.reduce((acc, item) => acc + item.lineSubtotal, 0);
@@ -1036,6 +1301,31 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
           ? selectedCustomerUid
           : currentUser?.uid;
 
+      const orderableCompanySet = new Set(orderCustomerCompanyIds);
+      const normalizedOrderEmail = orderCustomerEmail.toLowerCase();
+      const unauthorizedCompanyItem = normalizedItems.find((item) => {
+        if (item.sourceType !== 'contract_reserved' || !item.sharedWithCompany) return false;
+
+        const itemAccessIds = normalizeIds(item.companyAccessIds);
+        if (itemAccessIds.length === 0) return false;
+
+        const isOwnerContract =
+          Boolean(orderUserId && item.contractOwnerUserId === orderUserId) ||
+          Boolean(
+            normalizedOrderEmail &&
+              String(item.contractOwnerEmail || '').toLowerCase() === normalizedOrderEmail
+          );
+
+        if (isOwnerContract) return false;
+
+        return !itemAccessIds.some((companyId) => orderableCompanySet.has(companyId));
+      });
+
+      if (unauthorizedCompanyItem) {
+        throw new Error(
+          'This customer can view this company contract, but their company role does not allow placing orders from it.'
+        );
+      }
       const body: CreateOrderBody = {
         customerName: orderCustomerName || null,
         customerEmail: orderCustomerEmail || null,
@@ -1047,6 +1337,10 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
         phone: shippingMode === 'delivery' ? phone.trim() || null : null,
         orderUserId: orderUserId ?? null,
         createdByAdmin: isAdmin ? currentUser?.uid ?? null : null,
+        companyId: orderCompanyIds.length === 1 ? orderCompanyIds[0] : null,
+        companyName: orderCompanyNames.length === 1 ? orderCompanyNames[0] : null,
+        companyAccessIds: orderCompanyAccessIds,
+        sharedWithCompany: orderCompanyAccessIds.length > 0,
       };
 
       const db = getFirestore();
@@ -1092,6 +1386,10 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
           createdByEmail: orderCustomerEmail || null,
           createdByAdmin: body.createdByAdmin || null,
           createdByAdminEmail: isAdmin ? currentUser?.email || null : null,
+          companyId: body.companyId || null,
+          companyName: body.companyName || null,
+          companyAccessIds: body.companyAccessIds || [],
+          sharedWithCompany: body.sharedWithCompany || false,
         });
 
         return {
@@ -1446,37 +1744,174 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
           </div>
         )}
 
-        <div>
+        <div ref={coffeeSelectRef} className="relative">
           <label className="block font-semibold mb-2 text-sm text-gray-800">Select Coffee</label>
-          <select
-            value={selectedVariety}
-            onChange={handleVarietySelect}
-            className="w-full border border-gray-200 px-3 py-2.5 rounded-xl bg-white text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
-          >
-            <option value="">-- Select a coffee --</option>
-            {visibleSheetData.map((item, i) => {
-              const stockBags = parseInt(item['30 KG Sacks'] as any) || 0;
-              const label = item.optionValue || `${item.Variety} (${item.Farm})`;
-              const isSoldOut = stockBags <= 0;
-              const isContractReserved = item.sourceType === 'contract_reserved';
+          <div className="relative">
+            <input
+              type="text"
+              value={showCoffeeOptions ? coffeeQuery : selectedCoffee ? coffeeOptionValue(selectedCoffee) : coffeeQuery}
+              onFocus={() => {
+                setShowCoffeeOptions(true);
+                setCoffeeQuery('');
+              }}
+              onChange={(e) => {
+                setCoffeeQuery(e.target.value);
+                setShowCoffeeOptions(true);
+                if (selectedVariety) {
+                  setSelectedVariety('');
+                  setPrice(0);
+                  setStockAvailable(null);
+                }
+              }}
+              placeholder={hasContractCoffeeOptions ? 'Search your reserved coffees...' : 'Search farm, variety, process or notes...'}
+              className="w-full border border-gray-200 px-3 py-2.5 pr-24 rounded-xl bg-white text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
+              role="combobox"
+              aria-expanded={showCoffeeOptions}
+              aria-controls="coffee-options-picker"
+              autoComplete="off"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                setCoffeeQuery('');
+                setShowCoffeeOptions((open) => !open);
+              }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-50"
+            >
+              {showCoffeeOptions ? 'Close' : 'Browse'}
+            </button>
+          </div>
 
-              return (
-                <option key={i} value={label} disabled={isSoldOut}>
-                  {isContractReserved ? '[Reserved contract] ' : ''}
-                  {label}
-                  {isContractReserved ? ` - ${stockBags} reserved bags` : ''}
-                  {isSoldOut ? ' - SOLD OUT' : ''}
-                  {!isContractReserved && item.Process ? ` - ${item.Process}` : ''}
-                </option>
-              );
-            })}
-          </select>
+          {showCoffeeOptions && (
+            <div
+              id="coffee-options-picker"
+              className="absolute z-40 mt-2 w-full overflow-hidden rounded-2xl border border-emerald-100 bg-white shadow-2xl"
+            >
+              {hasContractCoffeeOptions && (
+                <div className="border-b border-gray-100 bg-[#f7fbf8] p-2">
+                  <div className="grid grid-cols-2 rounded-xl border border-emerald-100 bg-white p-1 text-xs font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCoffeeOptionScope('reserved');
+                        setCoffeeQuery('');
+                      }}
+                      className={[
+                        'rounded-lg px-3 py-2 transition',
+                        coffeeOptionScope === 'reserved'
+                          ? 'bg-[#174B3D] text-white shadow-sm'
+                          : 'text-gray-500 hover:text-[#174B3D]',
+                      ].join(' ')}
+                    >
+                      Reserved
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCoffeeOptionScope('all');
+                        setCoffeeQuery('');
+                      }}
+                      className={[
+                        'rounded-lg px-3 py-2 transition',
+                        coffeeOptionScope === 'all'
+                          ? 'bg-[#174B3D] text-white shadow-sm'
+                          : 'text-gray-500 hover:text-[#174B3D]',
+                      ].join(' ')}
+                    >
+                      All coffees
+                    </button>
+                  </div>
+                  <p className="mt-2 px-1 text-[11px] text-gray-500">
+                    Reserved coffees are shown first and use the remaining volume from that contract.
+                  </p>
+                </div>
+              )}
+
+              <div className="max-h-72 overflow-y-auto p-2">
+                {isCoffeeOptionsLoading && coffeeOptionsForPicker.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-emerald-100 bg-emerald-50/40 p-4 text-center text-sm text-emerald-800">
+                    <span className="mx-auto mb-2 block h-5 w-5 animate-spin rounded-full border-2 border-emerald-200 border-t-[#174B3D]" />
+                    Loading coffees...
+                  </div>
+                ) : coffeeOptionsForPicker.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-gray-200 p-4 text-center text-sm text-gray-500">
+                    No coffees match your search.
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {coffeeOptionsForPicker.map((item, i) => {
+                      const label = coffeeOptionValue(item);
+                      const stockBags = coffeeStockBags(item);
+                      const isContractReserved = item.sourceType === 'contract_reserved';
+                      const isSelected = selectedVariety === label;
+
+                      return (
+                        <button
+                          key={(item.sourceType || 'inventory') + '-' + (item.contractId || item.id || i) + '-' + (item.contractSelectionIndex ?? i)}
+                          type="button"
+                          onClick={() => handleVarietySelect(label)}
+                          className={[
+                            'w-full rounded-xl border px-3 py-3 text-left transition',
+                            isSelected
+                              ? 'border-[#174B3D] bg-emerald-50 shadow-sm'
+                              : isContractReserved
+                                ? 'border-emerald-100 bg-[#f8fcf9] hover:border-[#174B3D]/40 hover:bg-emerald-50/60'
+                                : 'border-transparent hover:border-gray-200 hover:bg-gray-50',
+                          ].join(' ')}
+                        >
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                {isContractReserved && (
+                                  <span className="rounded-full bg-[#174B3D] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                                    Contract
+                                  </span>
+                                )}
+                                <span className="font-semibold text-gray-950">{item.Variety}</span>
+                              </div>
+                              <p className="mt-0.5 text-xs text-gray-500">{item.Farm}</p>
+                              {isContractReserved && (
+                                <>
+                                  <p className="mt-1 text-xs font-medium text-emerald-800">
+                                    Contract {item.contractNo || item.contractId} - {stockBags} reserved bags
+                                    {item.companyName ? ` - ${item.companyName}` : ""}
+                                  </p>
+                                  {item.sharedWithCompany && (
+                                    <p className="mt-1 text-[11px] font-semibold text-amber-700">
+                                      Company shared
+                                      {item.contractOwnerName ? ` - owner: ${item.contractOwnerName}` : ""}
+                                    </p>
+                                  )}
+                                </>
+                              )}
+                              {!isContractReserved && item.Process && (
+                                <p className="mt-1 text-xs text-gray-500">{item.Process}</p>
+                              )}
+                            </div>
+                            <div className="flex shrink-0 items-center gap-2 text-xs sm:flex-col sm:items-end sm:gap-1">
+                              <span className="rounded-full bg-gray-100 px-2 py-1 font-semibold text-gray-700">
+                                {stockBags} bags
+                              </span>
+                              <span className="font-semibold text-gray-900">GBP {toNum(item.Price).toFixed(2)}/kg</span>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           <p className="text-xs text-gray-500 mt-2">
-            Contract reserved coffees appear first when you have remaining contracted volume.
+            {isCoffeeOptionsLoading
+              ? 'Loading coffees for this account...'
+              : hasContractCoffeeOptions
+                ? 'Showing reserved coffees by default. Use All coffees inside the selector when you need regular inventory.'
+                : 'Showing all coffees available to this account.'}
           </p>
         </div>
-
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className="block font-semibold mb-2 text-sm text-gray-800">
@@ -1548,6 +1983,7 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
                   {item.sourceType === 'contract_reserved' && (
                     <div className="mt-1 inline-flex rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800">
                       Reserved contract {item.contractNo || ''}
+                      {item.companyName ? ` - ${item.companyName}` : ""}
                     </div>
                   )}
                   <div className="text-gray-600 text-sm mt-1">
@@ -2080,3 +2516,8 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ onClose }) => {
 };
 
 export default PlaceOrderForm;
+
+
+
+
+

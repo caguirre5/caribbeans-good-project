@@ -1,8 +1,11 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { jsPDF } from "jspdf";
+import autoTableModule from "jspdf-autotable";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowDownWideShort,
   faCodeCompare,
+  faFilePdf,
   faFilter,
   faLayerGroup,
   faMagnifyingGlass,
@@ -65,7 +68,12 @@ const normalizeGroups = (raw: any) => {
 const formatPrice = (value: unknown) => {
   const price = toNum(value);
   if (!price) return "";
-  return `Â£ ${price.toFixed(2)}`;
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "GBP",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(price);
 };
 
 const formatVariety = (row: any) => {
@@ -117,6 +125,12 @@ const sortOptions: { value: SortMode; label: string }[] = [
 ];
 
 const PAGE_SIZE = 10;
+const PDF_OPEN_GROUP_KEY = "__open_coffees__";
+const autoTable = (typeof autoTableModule === "function"
+  ? autoTableModule
+  : (autoTableModule as any).default) as typeof autoTableModule;
+
+const pdfGroupKey = (groupName: string) => `group:${normalizeFilterValue(groupName)}`;
 
 const CompareModal = ({
   open,
@@ -246,6 +260,9 @@ const GoogleSheetTable: React.FC = () => {
   const [processFilter, setProcessFilter] = useState("all");
   const [groupFilter, setGroupFilter] = useState("all");
   const [page, setPage] = useState(1);
+  const [pdfExporting, setPdfExporting] = useState(false);
+  const [pdfModalOpen, setPdfModalOpen] = useState(false);
+  const [selectedPdfGroupKeys, setSelectedPdfGroupKeys] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchUserAccess = async () => {
@@ -462,6 +479,56 @@ const GoogleSheetTable: React.FC = () => {
     return visibleData.slice(start, start + PAGE_SIZE);
   }, [currentPage, visibleData]);
 
+  const pdfGroupOptions = useMemo(() => {
+    let openCount = 0;
+    const groupCounts = new Map<string, { label: string; count: number }>();
+
+    visibleData.forEach((row) => {
+      if (!isExclusive(row)) {
+        openCount += 1;
+        return;
+      }
+
+      row.groupNames.forEach((groupName) => {
+        const cleanName = groupName.trim();
+        if (!cleanName) return;
+        const key = pdfGroupKey(cleanName);
+        const current = groupCounts.get(key);
+        groupCounts.set(key, {
+          label: current?.label || cleanName,
+          count: (current?.count || 0) + 1,
+        });
+      });
+    });
+
+    const privateGroups = Array.from(groupCounts.entries())
+      .map(([key, value]) => ({ key, label: value.label, count: value.count, isOpen: false }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+
+    return [
+      ...(openCount > 0
+        ? [{ key: PDF_OPEN_GROUP_KEY, label: "Open coffees", count: openCount, isOpen: true }]
+        : []),
+      ...privateGroups,
+    ];
+  }, [visibleData]);
+
+  const pdfSelectedRows = useMemo(() => {
+    const selected = new Set(selectedPdfGroupKeys);
+
+    return visibleData.filter((row) => {
+      if (!isExclusive(row)) return selected.has(PDF_OPEN_GROUP_KEY);
+      return row.groupNames.some((groupName) => selected.has(pdfGroupKey(groupName)));
+    });
+  }, [selectedPdfGroupKeys, visibleData]);
+
+  const selectedPdfGroupLabels = useMemo(() => {
+    const selected = new Set(selectedPdfGroupKeys);
+    return pdfGroupOptions
+      .filter((option) => selected.has(option.key))
+      .map((option) => option.label);
+  }, [pdfGroupOptions, selectedPdfGroupKeys]);
+
   const clearFilters = () => {
     setSearchTerm("");
     setStockFilter("all");
@@ -496,6 +563,147 @@ const GoogleSheetTable: React.FC = () => {
     setCompareOpen(false);
   };
 
+  const openPdfExportModal = () => {
+    if (!visibleData.length || pdfExporting) return;
+    setSelectedPdfGroupKeys(pdfGroupOptions.map((option) => option.key));
+    setPdfModalOpen(true);
+  };
+
+  const togglePdfGroup = (key: string) => {
+    setSelectedPdfGroupKeys((prev) =>
+      prev.includes(key) ? prev.filter((current) => current !== key) : [...prev, key]
+    );
+  };
+
+  const setAllPdfGroups = (checked: boolean) => {
+    setSelectedPdfGroupKeys(checked ? pdfGroupOptions.map((option) => option.key) : []);
+  };
+
+  const downloadPricesPdf = () => {
+    if (!pdfSelectedRows.length || pdfExporting) return;
+
+    try {
+      setPdfExporting(true);
+      const generatedAt = new Date();
+      const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const stockLabel = stockFilters.find((option) => option.value === stockFilter)?.label || "All";
+      const sortLabel = sortOptions.find((option) => option.value === sortMode)?.label || "Recommended";
+      const filterSummary = [
+        searchTerm.trim() ? `Search: ${searchTerm.trim()}` : "Search: all",
+        `Stock: ${stockLabel}`,
+        `Sort: ${sortLabel}`,
+        `Process: ${processFilter === "all" ? "All processes" : processFilter}`,
+        ...(groupOptions.length > 0
+          ? [`Group filter: ${groupFilter === "all" ? "All my groups" : groupFilter}`]
+          : []),
+        `Included: ${selectedPdfGroupLabels.join(", ")}`,
+      ];
+
+      doc.setFillColor(23, 75, 61);
+      doc.rect(0, 0, pageWidth, 76, "F");
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(18);
+      doc.text("Caribbean Goods", 36, 34);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.text("Prices & availability", 36, 52);
+      doc.text(generatedAt.toLocaleString("en-GB"), pageWidth - 36, 34, { align: "right" });
+      doc.text(`${pdfSelectedRows.length} coffees exported`, pageWidth - 36, 52, { align: "right" });
+
+      doc.setTextColor(40, 52, 48);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.text("Current availability table", 36, 104);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8.5);
+      const filterLines = doc.splitTextToSize(filterSummary.join("  |  "), pageWidth - 72);
+      doc.text(filterLines, 36, 120);
+
+      const body = pdfSelectedRows.map((row) => [
+        row.Farm || "-",
+        row.Variety || "-",
+        row.Process || "-",
+        row["Our Tasting Notes"] || "-",
+        row.availableBags > 0 ? String(row.availableBags) : "Sold out",
+        row.pricePerKg ? `GBP ${row.pricePerKg.toFixed(2)}` : "-",
+      ]);
+
+      autoTable(doc, {
+        head: [["Farm", "Variety", "Process", "Tasting notes", "Bags", "Price / kg"]],
+        body,
+        startY: 140,
+        theme: "grid",
+        tableWidth: "auto",
+        margin: { top: 96, right: 36, bottom: 42, left: 36 },
+        styles: {
+          font: "helvetica",
+          fontSize: 8,
+          cellPadding: { top: 5, right: 5, bottom: 5, left: 5 },
+          lineColor: [221, 231, 223],
+          lineWidth: 0.5,
+          textColor: [20, 32, 28],
+          overflow: "linebreak",
+          valign: "middle",
+        },
+        headStyles: {
+          fillColor: [157, 167, 147],
+          textColor: [4, 68, 33],
+          fontStyle: "bold",
+          halign: "center",
+        },
+        alternateRowStyles: { fillColor: [247, 250, 246] },
+        columnStyles: {
+          0: { cellWidth: 118 },
+          1: { cellWidth: 140 },
+          2: { cellWidth: 80 },
+          3: { cellWidth: 278 },
+          4: { cellWidth: 60, halign: "right" },
+          5: { cellWidth: 72, halign: "right" },
+        },
+        didParseCell: (data: any) => {
+          if (data.section !== "body") return;
+          const row = pdfSelectedRows[data.row.index];
+          if (!row) return;
+
+          if (isExclusive(row)) {
+            data.cell.styles.fillColor = data.row.index % 2 === 0 ? [255, 252, 232] : [255, 248, 204];
+          }
+
+          if (data.column.index === 4 && row.availableBags <= 0) {
+            data.cell.styles.textColor = [185, 28, 28];
+            data.cell.styles.fontStyle = "bold";
+          }
+        },
+      });
+
+      const totalPages = doc.getNumberOfPages();
+      for (let pageNumber = 1; pageNumber <= totalPages; pageNumber += 1) {
+        doc.setPage(pageNumber);
+        doc.setDrawColor(219, 231, 223);
+        doc.line(36, pageHeight - 30, pageWidth - 36, pageHeight - 30);
+        doc.setTextColor(95, 112, 103);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.text("Caribbean Goods - confidential availability for approved customers", 36, pageHeight - 16);
+        doc.text(`Page ${pageNumber} of ${totalPages}`, pageWidth - 36, pageHeight - 16, {
+          align: "right",
+        });
+      }
+
+      const dateStamp = generatedAt.toISOString().slice(0, 10);
+      doc.save(`caribbean-goods-prices-${dateStamp}.pdf`);
+      setPdfModalOpen(false);
+    } catch (error) {
+      console.error("Error exporting prices PDF:", error);
+      alert("We could not generate the prices PDF. Please try again.");
+    } finally {
+      setPdfExporting(false);
+    }
+  };
   const canCompare = selectedRows.length === 2;
 
   return (
@@ -615,17 +823,30 @@ const GoogleSheetTable: React.FC = () => {
                 ))}
               </div>
 
-              <div className="flex items-center justify-between gap-3 text-xs text-[#044421]/60 sm:justify-end">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#044421]/60 sm:justify-end">
                 <span>
                   {visibleData.length} of {activeData.length} coffees
                 </span>
-                <button
-                  type="button"
-                  onClick={clearFilters}
-                  className="rounded-md border border-[#174B3D]/15 bg-white px-3 py-1.5 font-semibold text-[#174B3D] hover:bg-[#174B3D]/5"
-                >
-                  Reset
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={openPdfExportModal}
+                      disabled={pdfExporting || visibleData.length === 0}
+                      className="inline-flex items-center gap-2 rounded-md border border-[#174B3D]/15 bg-white px-3 py-1.5 font-semibold text-[#174B3D] transition hover:bg-[#174B3D]/5 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <FontAwesomeIcon icon={faFilePdf} />
+                      {pdfExporting ? "Preparing..." : "Download PDF"}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="rounded-md border border-[#174B3D]/15 bg-white px-3 py-1.5 font-semibold text-[#174B3D] hover:bg-[#174B3D]/5"
+                  >
+                    Reset
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -752,6 +973,116 @@ const GoogleSheetTable: React.FC = () => {
         </>
       )}
 
+      {isAdmin && pdfModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-xl overflow-hidden rounded-xl bg-white shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-gray-100 px-5 py-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#174B3D]/60">
+                  Prices PDF
+                </p>
+                <h3 className="mt-1 text-xl font-bold text-gray-950">Choose groups to include</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  The PDF will export the current filtered table using only the selected groups.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPdfModalOpen(false)}
+                className="h-9 w-9 shrink-0 rounded-md border border-gray-200 text-gray-500 transition hover:bg-gray-50"
+                title="Close"
+              >
+                <FontAwesomeIcon icon={faXmark} />
+              </button>
+            </div>
+
+            <div className="px-5 py-4">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <span className="text-sm font-semibold text-gray-800">
+                  {pdfSelectedRows.length} of {visibleData.length} coffees selected
+                </span>
+                <div className="flex items-center gap-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setAllPdfGroups(true)}
+                    className="rounded-md border border-[#174B3D]/15 px-3 py-1.5 font-semibold text-[#174B3D] hover:bg-[#174B3D]/5"
+                  >
+                    Select all
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAllPdfGroups(false)}
+                    className="rounded-md border border-gray-200 px-3 py-1.5 font-semibold text-gray-500 hover:bg-gray-50"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+
+              <div className="max-h-80 space-y-2 overflow-auto pr-1">
+                {pdfGroupOptions.map((option) => {
+                  const checked = selectedPdfGroupKeys.includes(option.key);
+                  return (
+                    <label
+                      key={option.key}
+                      className={[
+                        "flex cursor-pointer items-center justify-between gap-3 rounded-lg border px-4 py-3 transition",
+                        checked
+                          ? "border-[#174B3D]/30 bg-[#f7faf6]"
+                          : "border-gray-200 bg-white hover:bg-gray-50",
+                      ].join(" ")}
+                    >
+                      <span className="flex min-w-0 items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => togglePdfGroup(option.key)}
+                          className="h-4 w-4 rounded border-gray-300 accent-[#174B3D]"
+                        />
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-semibold text-gray-900">
+                            {option.label}
+                          </span>
+                          <span className="block text-xs text-gray-500">
+                            {option.isOpen ? "Public availability" : "Private group availability"}
+                          </span>
+                        </span>
+                      </span>
+                      <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600">
+                        {option.count}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+
+              {pdfSelectedRows.length === 0 && (
+                <p className="mt-3 rounded-md border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  Select at least one group to generate the PDF.
+                </p>
+              )}
+            </div>
+
+            <div className="flex flex-col-reverse gap-2 border-t border-gray-100 bg-gray-50 px-5 py-4 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setPdfModalOpen(false)}
+                className="h-10 rounded-md border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-600 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={downloadPricesPdf}
+                disabled={pdfExporting || pdfSelectedRows.length === 0}
+                className="h-10 rounded-md bg-[#174B3D] px-4 text-sm font-semibold text-white transition hover:bg-[#0f3a2d] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {pdfExporting ? "Preparing..." : "Generate PDF"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {selectedRows.length > 0 && (
         <div className="fixed left-0 right-0 bottom-0 z-40 p-3">
           <div

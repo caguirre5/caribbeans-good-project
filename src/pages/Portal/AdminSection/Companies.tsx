@@ -60,6 +60,10 @@ const slugify = (s: string) =>
 
 const displayUserName = (u: ApiUser) =>
   `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() || u.email;
+const normalizeIds = (raw: any): string[] => {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((value) => String(value || "").trim()).filter(Boolean);
+};
 
 const CompanyManager: React.FC = () => {
   const { currentUser } = useAuth();
@@ -181,7 +185,7 @@ const CompanyManager: React.FC = () => {
     }
   };
 
-  const fetchMembers = async (companyId: string) => {
+  const fetchMembers = async (companyId: string): Promise<MemberDoc[]> => {
     try {
       setMembersLoadingByCompany((prev) => ({ ...prev, [companyId]: true }));
       const q = query(
@@ -191,14 +195,15 @@ const CompanyManager: React.FC = () => {
       const snap = await getDocs(q);
       const list: MemberDoc[] = snap.docs.map((d) => d.data() as any);
       setMembersByCompany((prev) => ({ ...prev, [companyId]: list }));
+      return list;
     } catch (e) {
       console.error("Error loading members:", e);
       setMembersByCompany((prev) => ({ ...prev, [companyId]: [] }));
+      return [];
     } finally {
       setMembersLoadingByCompany((prev) => ({ ...prev, [companyId]: false }));
     }
   };
-
   useEffect(() => {
     fetchCompanies();
     fetchUsers();
@@ -278,7 +283,6 @@ const CompanyManager: React.FC = () => {
       await updateDoc(doc(db, "users", selectedUid), {
         companyIds: arrayUnion(companyId),
       });
-
       // refresh members UI
       await fetchMembers(companyId);
 
@@ -300,6 +304,7 @@ const CompanyManager: React.FC = () => {
   // Remove member
   // ---------------------------
   const removeMemberFromCompany = async (companyId: string, uid: string) => {
+
     try {
       setCompanyActionLoading((prev) => ({
         ...prev,
@@ -310,7 +315,6 @@ const CompanyManager: React.FC = () => {
       await updateDoc(doc(db, "users", uid), {
         companyIds: arrayRemove(companyId),
       });
-
       await fetchMembers(companyId);
     } catch (e) {
       console.error(e);
@@ -394,17 +398,73 @@ const CompanyManager: React.FC = () => {
         [companyId]: { ...(prev[companyId] || {}), delete: true },
       }));
 
+      const memberSnap = await getDocs(collection(db, "companies", companyId, "members"));
+      const memberDocs = memberSnap.docs.map((memberDoc) => ({
+        id: memberDoc.id,
+        ...(memberDoc.data() as MemberDoc),
+      }));
+
+      await Promise.all(
+        memberDocs.map((member) =>
+          updateDoc(doc(db, "users", member.uid || member.id), {
+            companyIds: arrayRemove(companyId),
+          }).catch((error) => {
+            console.error("Error removing company from user:", member.uid || member.id, error);
+          })
+        )
+      );
+
+      const companyNamesById = new Map(companies.map((company) => [company.id, company.name]));
+      const contractsSnap = await getDocs(collection(db, "contracts"));
+      await Promise.all(
+        contractsSnap.docs.map(async (contractDoc) => {
+          const contract = contractDoc.data() as any;
+          const currentAccessIds = normalizeIds(contract.companyAccessIds);
+          const referencesCompany =
+            currentAccessIds.includes(companyId) || contract.companyId === companyId;
+
+          if (!referencesCompany) return;
+
+          const remainingAccessIds = currentAccessIds.filter((id) => id !== companyId);
+          const remainingCompanyNames = remainingAccessIds
+            .map((id) => companyNamesById.get(id))
+            .filter(Boolean) as string[];
+          const nextCompanyPatch = {
+            sharedWithCompany: remainingAccessIds.length > 0,
+            companyId: remainingAccessIds[0] || null,
+            companyName: remainingCompanyNames.length > 0 ? remainingCompanyNames.join(", ") : null,
+            companyAccessIds: remainingAccessIds,
+          };
+
+          await updateDoc(doc(db, "contracts", contractDoc.id), {
+            ...nextCompanyPatch,
+            "details.company": nextCompanyPatch,
+            updatedAt: serverTimestamp(),
+          });
+        })
+      );
+
+      await Promise.all(
+        memberSnap.docs.map((memberDoc) =>
+          deleteDoc(doc(db, "companies", companyId, "members", memberDoc.id))
+        )
+      );
       await deleteDoc(doc(db, "companies", companyId));
 
       setDeleteModalOpen(false);
       setCompanyToDelete(null);
+      setMembersByCompany((prev) => {
+        const next = { ...prev };
+        delete next[companyId];
+        return next;
+      });
 
       if (expandedCompanyId === companyId) setExpandedCompanyId(null);
 
       await fetchCompanies();
     } catch (e) {
       console.error(e);
-      alert("Failed to delete company.");
+      alert("Failed to delete company and clean related access.");
     } finally {
       setCompanyActionLoading((prev) => ({
         ...prev,
@@ -412,7 +472,6 @@ const CompanyManager: React.FC = () => {
       }));
     }
   };
-
   // ---------------------------
   // Derived helpers
   // ---------------------------
@@ -437,7 +496,7 @@ const CompanyManager: React.FC = () => {
   // ---------------------------
   // UI pieces
   // ---------------------------
-  const CompanyExpanded = ({ company }: { company: CompanyDoc }) => {
+  const renderCompanyExpanded = (company: CompanyDoc) => {
     const companyId = company.id;
 
     const companyMembers = membersOf(companyId);
@@ -570,8 +629,7 @@ const CompanyManager: React.FC = () => {
                 <option value="member">member</option>
                 <option value="viewer">viewer</option>
               </select>
-
-              <button
+<button
                 type="button"
                 onClick={() => addSelectedUserToCompany(company)}
                 disabled={disableAdd}
@@ -661,7 +719,6 @@ const CompanyManager: React.FC = () => {
                 </div>
               )}
             </div>
-
             <div className="mt-2 text-xs text-gray-500">
               Note: membership is stored in{" "}
               <span className="font-mono">companies/{companyId}/members</span>
@@ -672,12 +729,12 @@ const CompanyManager: React.FC = () => {
     );
   };
 
-  const CompanyRow = ({ company }: { company: CompanyDoc }) => {
+  const renderCompanyRow = (company: CompanyDoc) => {
     const expanded = expandedCompanyId === company.id;
     const membersCount = membersByCompany[company.id]?.length ?? 0;
 
     return (
-      <div className="border-b">
+      <div key={company.id} className="border-b">
         <button
           type="button"
           onClick={() => toggleExpand(company.id)}
@@ -732,7 +789,7 @@ const CompanyManager: React.FC = () => {
           </div>
         </button>
 
-        {expanded && <div className="pb-3">{<CompanyExpanded company={company} />}</div>}
+        {expanded && <div className="pb-3">{renderCompanyExpanded(company)}</div>}
       </div>
     );
   };
@@ -816,9 +873,7 @@ const CompanyManager: React.FC = () => {
         <p className="text-sm text-gray-500 italic">No companies created yet.</p>
       ) : (
         <div className="divide-y divide-gray-100">
-          {companies.map((c) => (
-            <CompanyRow key={c.id} company={c} />
-          ))}
+          {companies.map((c) => renderCompanyRow(c))}
         </div>
       )}
 
@@ -918,3 +973,12 @@ const CompanyManager: React.FC = () => {
 };
 
 export default CompanyManager;
+
+
+
+
+
+
+
+
+

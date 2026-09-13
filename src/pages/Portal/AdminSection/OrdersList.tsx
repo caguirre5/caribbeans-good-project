@@ -7,6 +7,7 @@ import {
   getDocs,
   runTransaction,
   serverTimestamp,
+  Timestamp,
   updateDoc,
 } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
@@ -198,16 +199,23 @@ const adjustContractRemainingForOrder = async (order: Order, direction: -1 | 1) 
 
     await runTransaction(db, async (transaction) => {
       const snap = await transaction.get(contractRef);
-      if (!snap.exists()) throw new Error(`Contract not found: ${contractId}`);
+      if (!snap.exists()) throw new Error("Contract not found: " + contractId);
 
       const contract = snap.data() as any;
       const details = contract.details || {};
       const selections = Array.isArray(details.selections) ? [...details.selections] : [];
+      const existingHistory = Array.isArray(contract.dispatchHistory)
+        ? [...contract.dispatchHistory]
+        : Array.isArray(details.dispatchHistory)
+          ? [...details.dispatchHistory]
+          : [];
+      const historyWithoutOrder = existingHistory.filter((entry: any) => entry?.orderId !== order.id && entry?.sourceId !== order.id);
+      const dispatchLines: any[] = [];
 
       items.forEach((item) => {
         const index = Number(item.contractSelectionIndex);
         if (!Number.isInteger(index) || index < 0 || index >= selections.length) {
-          throw new Error(`Contract selection is missing for ${item.varietyName || "reserved coffee"}.`);
+          throw new Error("Contract selection is missing for " + (item.varietyName || "reserved coffee") + ".");
         }
 
         const selection = { ...selections[index] };
@@ -220,7 +228,7 @@ const adjustContractRemainingForOrder = async (order: Order, direction: -1 | 1) 
         const nextRemainingKg = currentRemainingKg + direction * kg;
 
         if (nextRemainingBags < 0 || nextRemainingKg < 0) {
-          throw new Error(`Not enough contract reserved coffee remaining for ${item.varietyName || "reserved coffee"}.`);
+          throw new Error("Not enough contract reserved coffee remaining for " + (item.varietyName || "reserved coffee") + ".");
         }
 
         selections[index] = {
@@ -228,12 +236,43 @@ const adjustContractRemainingForOrder = async (order: Order, direction: -1 | 1) 
           remainingBags: nextRemainingBags,
           remainingKg: nextRemainingKg,
         };
+
+        if (direction === -1 && bags > 0) {
+          dispatchLines.push({
+            selectionIndex: index,
+            variety: selection.variety || item.varietyName || "reserved coffee",
+            bags,
+            kg,
+            remainingBags: nextRemainingBags,
+            remainingKg: nextRemainingKg,
+            orderId: order.id,
+            orderNo: order.orderNoShort || null,
+          });
+        }
       });
 
+      const nextDispatchHistory = direction === -1 && dispatchLines.length
+        ? [
+            ...historyWithoutOrder,
+            {
+              sourceType: "order",
+              sourceId: order.id,
+              orderId: order.id,
+              orderNo: order.orderNoShort || null,
+              dispatchId: order.orderNoShort || order.id.slice(-5).toUpperCase(),
+              deliveryMethod: order.deliveryMethod || null,
+              createdAt: Timestamp.now(),
+              lines: dispatchLines,
+            },
+          ]
+        : historyWithoutOrder;
+
       transaction.update(contractRef, {
+        dispatchHistory: nextDispatchHistory,
         details: {
           ...details,
           selections,
+          dispatchHistory: nextDispatchHistory,
         },
         updatedAt: serverTimestamp(),
       });

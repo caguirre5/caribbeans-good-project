@@ -10,6 +10,7 @@ import {
   faPlus,
   faRotateRight,
   faTableCellsLarge,
+  faTableList,
   faXmark,
 } from '@fortawesome/free-solid-svg-icons';
 import { collection, doc, getDocs, getFirestore, serverTimestamp, updateDoc } from 'firebase/firestore';
@@ -91,8 +92,13 @@ const actualsBySelection = (contract: Contract, orders: Order[]) => {
   const ensure = (selectionIndex: number, key: string) => { if (!actuals.has(selectionIndex)) actuals.set(selectionIndex, new Map()); const byMonth = actuals.get(selectionIndex)!; if (!byMonth.has(key)) byMonth.set(key, emptyActual()); return byMonth.get(key)!; };
   const selectionIndexByName = new Map<string, number>();
   selectionsOf(contract).forEach((selection, index) => { selectionIndexByName.set(labelNorm(selectionName(selection, index)), index); });
-  const history = Array.isArray(contract.dispatchHistory) ? contract.dispatchHistory : Array.isArray(contract.details?.dispatchHistory) ? contract.details.dispatchHistory : [];
+  const directHistory = Array.isArray(contract.dispatchHistory) ? contract.dispatchHistory : [];
+  const nestedHistory = Array.isArray(contract.details?.dispatchHistory) ? contract.details.dispatchHistory : [];
+  const history = directHistory.length > 0 ? directHistory : nestedHistory;
+  const historyOrderIds = new Set<string>();
   history.forEach((entry: any) => {
+    const historyOrderId = typeof entry.orderId === 'string' ? entry.orderId : entry.sourceType === 'order' && typeof entry.sourceId === 'string' ? entry.sourceId : '';
+    if (historyOrderId) historyOrderIds.add(historyOrderId);
     const key = monthKey(toDate(entry.createdAt));
     if (!key) return;
     (entry.lines || []).forEach((line: any) => {
@@ -106,6 +112,7 @@ const actualsBySelection = (contract: Contract, orders: Order[]) => {
     });
   });
   orders.forEach((order) => {
+    if (historyOrderIds.has(order.id)) return;
     const key = monthKey(order.preferredDeliveryDate || order.createdAt);
     if (!key) return;
     order.items.forEach((item) => {
@@ -243,7 +250,8 @@ const ContractControlV2: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [extendingId, setExtendingId] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'chart' | 'cards'>('chart');
+  const [viewMode, setViewMode] = useState<'table' | 'chart' | 'cards'>('table');
+  const [tableView, setTableView] = useState<'contracts' | 'coffees'>('contracts');
 
   const updateLocal = (contractId: string, plan: Plan) => setContracts((prev) => prev.map((contract) => contract.id === contractId ? withPlan(contract, plan) : contract));
   const savePlan = async (contract: Contract, plan: Plan) => { const db = getFirestore(); await updateDoc(doc(db, 'contracts', contract.id), { 'details.reservation.controlPlan': plan, updatedAt: serverTimestamp() }); updateLocal(contract.id, plan); };
@@ -315,7 +323,10 @@ const ContractControlV2: React.FC = () => {
             <option value='ahead'>Ahead</option>
             <option value='on_track'>On track</option>
           </select>
-          <div className='grid h-10 grid-cols-2 rounded-md border border-gray-200 bg-gray-50 p-1 text-sm font-semibold'>
+          <div className='hidden'>
+            <button type='button' onClick={() => setViewMode('table')} className={['inline-flex items-center justify-center gap-2 rounded px-3 transition', viewMode === 'table' ? 'bg-[#174B3D] text-white shadow-sm' : 'text-gray-500 hover:text-[#174B3D]'].join(' ')}>
+              <FontAwesomeIcon icon={faTableList} />Table
+            </button>
             <button type='button' onClick={() => setViewMode('chart')} className={['inline-flex items-center justify-center gap-2 rounded px-3 transition', viewMode === 'chart' ? 'bg-[#174B3D] text-white shadow-sm' : 'text-gray-500 hover:text-[#174B3D]'].join(' ')}>
               <FontAwesomeIcon icon={faChartColumn} />Graph
             </button>
@@ -328,6 +339,122 @@ const ContractControlV2: React.FC = () => {
 
       {filteredRows.length === 0 ? (
         <div className='rounded-lg border border-gray-200 bg-white p-8 text-center text-sm text-gray-500'>No active contracts match this view.</div>
+      ) : viewMode === 'table' ? (
+        <section className='overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm'>
+          <div className='flex flex-col gap-3 border-b border-gray-100 px-4 py-3 lg:flex-row lg:items-center lg:justify-between'>
+            <div>
+              <p className='text-[10px] font-semibold uppercase tracking-[0.2em] text-[#5f8375]'>Simple view</p>
+              <h4 className='text-base font-bold text-gray-950'>{tableView === 'contracts' ? 'Contracts at a glance' : 'Reserved coffees by contract'}</h4>
+            </div>
+            <div className='flex flex-col gap-2 sm:flex-row sm:items-center'>
+              <p className='text-xs text-gray-500'>{tableView === 'contracts' ? filteredRows.length + ' active contracts' : filteredRows.reduce((sum, row) => sum + row.varieties.length, 0) + ' coffee lines'}</p>
+              <div className='grid h-9 grid-cols-2 rounded-md border border-gray-200 bg-gray-50 p-1 text-xs font-semibold'>
+                <button type='button' onClick={() => setTableView('contracts')} className={['rounded px-3 transition', tableView === 'contracts' ? 'bg-[#174B3D] text-white shadow-sm' : 'text-gray-500 hover:text-[#174B3D]'].join(' ')}>
+                  Contracts
+                </button>
+                <button type='button' onClick={() => setTableView('coffees')} className={['rounded px-3 transition', tableView === 'coffees' ? 'bg-[#174B3D] text-white shadow-sm' : 'text-gray-500 hover:text-[#174B3D]'].join(' ')}>
+                  Coffees
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {tableView === 'contracts' ? (
+            <div className='max-w-full overflow-x-auto'>
+              <table className='min-w-[920px] w-full border-collapse text-left text-sm'>
+                <thead className='bg-[#e8efe8] text-xs uppercase tracking-wide text-[#174B3D]'>
+                  <tr>
+                    <th className='px-4 py-2 font-bold'>Roaster</th>
+                    <th className='px-4 py-2 font-bold'>Contract ID</th>
+                    <th className='px-4 py-2 font-bold'>Dates</th>
+                    <th className='px-4 py-2 text-right font-bold'>Draw down</th>
+                    <th className='px-4 py-2 text-right font-bold'>Contracted</th>
+                    <th className='px-4 py-2 text-right font-bold'>Remaining</th>
+                    <th className='px-4 py-2 font-bold'>Status</th>
+                    <th className='px-4 py-2 font-bold'>Contract done?</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredRows.map((row) => {
+                    const meta = statusMeta[row.status];
+                    const isDone = row.remainingBags <= 0 || row.completionPct >= 100;
+                    return (
+                      <tr key={row.contract.id} className='border-t border-gray-100 odd:bg-white even:bg-[#f7faf7]'>
+                        <td className='px-4 py-2 font-semibold text-gray-950'>{row.customer}</td>
+                        <td className='px-4 py-2 text-gray-700'>{row.contractNo}</td>
+                        <td className='px-4 py-2 text-gray-600'>{row.periodLabel}</td>
+                        <td className='px-4 py-2 text-right font-semibold text-gray-950'>{fmtBags(row.fulfilledBags)}</td>
+                        <td className='px-4 py-2 text-right text-gray-700'>{fmtBags(row.totalBags)}</td>
+                        <td className='px-4 py-2 text-right font-semibold text-[#d24d2f]'>{fmtBags(row.remainingBags)}</td>
+                        <td className='px-4 py-2'><span className={['inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold', meta.className].join(' ')}>{meta.label}</span></td>
+                        <td className='px-4 py-2'>
+                          <span className={['inline-flex h-5 w-5 items-center justify-center rounded border text-xs', isDone ? 'border-[#174B3D] bg-[#174B3D] text-white' : 'border-gray-300 bg-white text-transparent'].join(' ')}>
+                            <FontAwesomeIcon icon={faCheck} />
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className='max-w-full overflow-x-auto'>
+              <table className='min-w-[1060px] w-full border-collapse text-left text-sm'>
+                <thead className='bg-[#e8efe8] text-xs uppercase tracking-wide text-[#174B3D]'>
+                  <tr>
+                    <th className='px-4 py-2 font-bold'>Roaster</th>
+                    <th className='px-4 py-2 font-bold'>Contract ID</th>
+                    <th className='px-4 py-2 font-bold'>Coffee</th>
+                    <th className='px-4 py-2 text-right font-bold'>Bags</th>
+                    <th className='px-4 py-2 text-right font-bold'>Draw down</th>
+                    <th className='px-4 py-2 text-right font-bold'>Remaining</th>
+                    <th className='px-4 py-2 font-bold'>Dates</th>
+                    <th className='px-4 py-2 font-bold'>Notes</th>
+                    <th className='px-4 py-2 font-bold'>Done?</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredRows.map((row) => (
+                    <React.Fragment key={row.contract.id}>
+                      {row.varieties.map((variety, varietyIndex) => {
+                        const isDone = variety.remainingBags <= 0;
+                        const varietyOpenKg = variety.cells.reduce((sum, cell) => sum + cell.openKg, 0);
+                        const note = variety.remainingBags <= 0 ? 'Completed' : varietyOpenKg > 0 ? fmtKg(varietyOpenKg) + ' in open orders' : statusMeta[row.status].label;
+                        return (
+                          <tr key={row.contract.id + '-' + variety.selectionIndex} className={['border-gray-100', varietyIndex === 0 ? 'border-t-2 border-t-[#dbe7df]' : 'border-t', varietyIndex % 2 === 0 ? 'bg-white' : 'bg-[#f7faf7]'].join(' ')}>
+                            {varietyIndex === 0 && (
+                              <td rowSpan={row.varieties.length} className='border-r border-gray-100 bg-[#fbfdfb] px-4 py-3 align-top font-semibold text-gray-950'>
+                                {row.customer}
+                              </td>
+                            )}
+                            {varietyIndex === 0 && (
+                              <td rowSpan={row.varieties.length} className='border-r border-gray-100 bg-[#fbfdfb] px-4 py-3 align-top text-gray-700'>
+                                <span className='font-semibold text-gray-950'>{row.contractNo}</span>
+                                <span className='mt-1 block text-xs text-gray-500'>{row.varieties.length} coffee{row.varieties.length === 1 ? '' : 's'}</span>
+                              </td>
+                            )}
+                            <td className='px-4 py-2 text-gray-800'>{variety.variety}</td>
+                            <td className='px-4 py-2 text-right font-semibold text-gray-950'>{fmtBags(variety.totalBags)}</td>
+                            <td className='px-4 py-2 text-right text-gray-700'>{fmtBags(variety.fulfilledBags)}</td>
+                            <td className='px-4 py-2 text-right font-semibold text-[#d24d2f]'>{fmtBags(variety.remainingBags)}</td>
+                            <td className='px-4 py-2 text-gray-600'>{row.periodLabel}</td>
+                            <td className='px-4 py-2 text-gray-600'>{note}</td>
+                            <td className='px-4 py-2'>
+                              <span className={['inline-flex h-5 w-5 items-center justify-center rounded border text-xs', isDone ? 'border-[#174B3D] bg-[#174B3D] text-white' : 'border-gray-300 bg-white text-transparent'].join(' ')}>
+                                <FontAwesomeIcon icon={faCheck} />
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
       ) : (
         <div className='space-y-3'>
           {filteredRows.map((row) => {

@@ -11,7 +11,16 @@ import {
 import { useAuth } from "../../../../contexts/AuthContext";
 import { AnimatePresence, motion } from "framer-motion";
 import ContractLoader from "./Contracts"; // <-- ajusta la ruta si difiere
-
+import {
+  collection,
+  doc,
+  getDocs,
+  getFirestore,
+  orderBy,
+  query,
+  serverTimestamp,
+  updateDoc,
+} from "firebase/firestore";
 import {
   buildStatusEmailHTML,
   buildDispatchEmailHTML,
@@ -46,6 +55,12 @@ interface DispatchHistoryEntry {
 
   lines?: DispatchHistoryLine[];
 }
+
+type CompanyDoc = {
+  id: string;
+  name: string;
+  slug?: string;
+};
 
 interface Contract {
   id: string;
@@ -96,6 +111,10 @@ interface Contract {
       }
     | null;
   dispatchHistory?: DispatchHistoryEntry[] | null;
+  sharedWithCompany?: boolean;
+  companyId?: string | null;
+  companyName?: string | null;
+  companyAccessIds?: string[];
 }
 
 const statusColors: Record<string, string> = {
@@ -127,6 +146,16 @@ const getSelectionBagKg = (selection: any): number => {
 };
 
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
+const normalizeIds = (raw: any): string[] => {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((value) => String(value || "").trim()).filter(Boolean);
+};
+
+const sameStringSet = (a: string[], b: string[]) => {
+  const left = Array.from(new Set(a)).sort();
+  const right = Array.from(new Set(b)).sort();
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+};
 
 const contractReportMetrics = (selections: any[]) => {
   const rows = selections.map((it: any) => {
@@ -423,6 +452,11 @@ const ContractsList: React.FC = () => {
 
   const [selected, setSelected] = useState<Contract | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [companies, setCompanies] = useState<CompanyDoc[]>([]);
+  const [companiesLoading, setCompaniesLoading] = useState(false);
+  const [companyAccessDraft, setCompanyAccessDraft] = useState<string[]>([]);
+  const [companyAccessSaving, setCompanyAccessSaving] = useState(false);
+  const [companyAccessMessage, setCompanyAccessMessage] = useState("");
 
   const [contractToDelete, setContractToDelete] = useState<Contract | null>(
     null
@@ -497,6 +531,95 @@ const ContractsList: React.FC = () => {
     };
     fetchContracts();
   }, [currentUser]);
+  useEffect(() => {
+    const fetchCompaniesForAccess = async () => {
+      try {
+        setCompaniesLoading(true);
+        const snap = await getDocs(query(collection(getFirestore(), "companies"), orderBy("name")));
+        setCompanies(
+          snap.docs.map((companyDoc) => ({
+            id: companyDoc.id,
+            ...(companyDoc.data() as any),
+          }))
+        );
+      } catch (error) {
+        console.error("Error fetching companies for contract access:", error);
+        setCompanies([]);
+      } finally {
+        setCompaniesLoading(false);
+      }
+    };
+
+    fetchCompaniesForAccess();
+  }, []);
+
+  const companyAccessIdsFor = (contract: Contract | null) => {
+    if (!contract) return [];
+    const accessIds = normalizeIds(contract.companyAccessIds);
+    if (accessIds.length > 0) return accessIds;
+    return contract.companyId ? [contract.companyId] : [];
+  };
+
+  useEffect(() => {
+    setCompanyAccessDraft(companyAccessIdsFor(selected));
+    setCompanyAccessMessage("");
+  }, [selected?.id]);
+
+  const toggleCompanyAccess = (companyId: string, checked: boolean) => {
+    setCompanyAccessDraft((prev) =>
+      checked
+        ? Array.from(new Set([...prev, companyId]))
+        : prev.filter((id) => id !== companyId)
+    );
+    setCompanyAccessMessage("");
+  };
+
+  const saveCompanyAccess = async () => {
+    if (!selected) return;
+
+    try {
+      setCompanyAccessSaving(true);
+      setCompanyAccessMessage("");
+
+      const selectedCompanies = companies.filter((company) =>
+        companyAccessDraft.includes(company.id)
+      );
+      const accessIds = selectedCompanies.map((company) => company.id);
+      const primaryCompany = selectedCompanies[0] || null;
+      const localPatch = {
+        sharedWithCompany: accessIds.length > 0,
+        companyId: primaryCompany?.id || null,
+        companyName: accessIds.length > 0
+          ? selectedCompanies.map((company) => company.name).join(", ")
+          : null,
+        companyAccessIds: accessIds,
+      };
+
+      await updateDoc(doc(getFirestore(), "contracts", selected.id), {
+        ...localPatch,
+        "details.company": localPatch,
+        updatedAt: serverTimestamp(),
+      });
+
+      setSelected((prev) => (prev ? { ...prev, ...localPatch } : prev));
+      setContracts((prev) =>
+        prev.map((contract) =>
+          contract.id === selected.id ? { ...contract, ...localPatch } : contract
+        )
+      );
+      setCompanyAccessDraft(accessIds);
+      setCompanyAccessMessage(
+        accessIds.length > 0
+          ? "Company access updated."
+          : "Contract is private now."
+      );
+    } catch (error) {
+      console.error("Error saving company access:", error);
+      setCompanyAccessMessage("Could not update company access. Check Firestore rules.");
+    } finally {
+      setCompanyAccessSaving(false);
+    }
+  };
 
   const formatDate = (timestamp: any) => {
     if (!timestamp) return "—";
@@ -1216,6 +1339,76 @@ const ContractsList: React.FC = () => {
           )}
         </div>
 
+
+        {/* Company access */}
+        <div className="mb-5 rounded-xl border border-emerald-100 bg-emerald-50/40 p-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.18em] text-emerald-900/70">
+                Company access
+              </p>
+              <h3 className="mt-1 text-base font-semibold text-gray-950">
+                {companyAccessDraft.length > 0 ? "Shared contract" : "Private contract"}
+              </h3>
+              <p className="mt-1 text-sm text-gray-600">
+                Select exactly which companies can see this contract and order from its reserved coffee.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={saveCompanyAccess}
+              disabled={companyAccessSaving || sameStringSet(companyAccessDraft, companyAccessIdsFor(c))}
+              className={[
+                "h-10 rounded-lg px-4 text-sm font-semibold transition",
+                companyAccessSaving || sameStringSet(companyAccessDraft, companyAccessIdsFor(c))
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  : "bg-[#174B3D] text-white hover:bg-[#0f3a2d]",
+              ].join(" ")}
+            >
+              {companyAccessSaving ? "Saving..." : "Save access"}
+            </button>
+          </div>
+
+          <div className="mt-4">
+            {companiesLoading ? (
+              <p className="text-sm text-gray-500">Loading companies...</p>
+            ) : companies.length === 0 ? (
+              <p className="text-sm text-gray-500">No companies created yet.</p>
+            ) : (
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                {companies.map((company) => {
+                  const checked = companyAccessDraft.includes(company.id);
+                  return (
+                    <label
+                      key={company.id}
+                      className={[
+                        "flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition",
+                        checked
+                          ? "border-emerald-300 bg-white text-emerald-950 shadow-sm"
+                          : "border-gray-200 bg-white/70 text-gray-700 hover:border-emerald-200",
+                      ].join(" ")}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) => toggleCompanyAccess(company.id, e.target.checked)}
+                        className="h-4 w-4 accent-[#174B3D]"
+                      />
+                      <span className="font-semibold truncate">{company.name}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {companyAccessMessage && (
+            <p className="mt-3 text-sm font-semibold text-emerald-900">
+              {companyAccessMessage}
+            </p>
+          )}
+        </div>
         {/* Meta */}
         <div className="grid md:grid-cols-2 gap-6 mb-6">
           <div>
@@ -2154,3 +2347,9 @@ const ContractsList: React.FC = () => {
 };
 
 export default ContractsList;
+
+
+
+
+
+
